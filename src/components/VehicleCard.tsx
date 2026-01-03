@@ -23,30 +23,21 @@ const VehicleCard = ({
   isNew,
 }: VehicleCardProps) => {
   return (
-    <div className="group relative bg-card rounded-xl overflow-hidden hover-lift border border-border/50">
+    <div className="group relative bg-background rounded-lg overflow-hidden hover-lift border border-border shadow-soft">
       {/* Image Container */}
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
         <img
           src={image}
           alt={`${brand} ${model}`}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-60" />
         
         {/* Badge */}
         {isNew && (
-          <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider">
+          <div className="absolute top-3 left-3 px-3 py-1 rounded bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide">
             Neu eingetroffen
           </div>
         )}
-
-        {/* Quick View Button */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <Button variant="hero" size="sm" className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-            Details ansehen
-            <ArrowRight className="w-4 h-4" />
-          </Button>
-        </div>
       </div>
 
       {/* Content */}
@@ -56,7 +47,7 @@ const VehicleCard = ({
           <span className="text-xs text-primary font-semibold uppercase tracking-wider">
             {brand}
           </span>
-          <h3 className="font-display text-2xl text-foreground mt-1">
+          <h3 className="font-display text-xl text-foreground mt-1">
             {model}
           </h3>
         </div>
@@ -78,14 +69,14 @@ const VehicleCard = ({
         </div>
 
         {/* Price */}
-        <div className="flex items-center justify-between pt-4 border-t border-border/50">
+        <div className="flex items-center justify-between pt-4 border-t border-border">
           <div>
             <span className="text-xs text-muted-foreground">Preis ab</span>
-            <div className="font-display text-3xl text-primary">
+            <div className="font-display text-2xl text-primary">
               {price.toLocaleString("de-DE")} €
             </div>
           </div>
-          <Button variant="outline" size="icon" className="rounded-full group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors">
+          <Button variant="outline" size="icon" className="rounded-full">
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>

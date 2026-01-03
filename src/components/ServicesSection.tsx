@@ -7,7 +7,6 @@ import {
   FileCheck,
   ArrowRight
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const services = [
   {
@@ -50,20 +49,15 @@ const services = [
 
 const ServicesSection = () => {
   return (
-    <section id="services" className="py-24 relative overflow-hidden">
-      {/* Background Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/20 to-background" />
-      
-      <div className="container mx-auto px-6 relative z-10">
+    <section id="services" className="py-20 bg-secondary/50">
+      <div className="container mx-auto px-6">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <span className="inline-block text-primary font-semibold uppercase tracking-wider text-sm mb-4">
-            Unser Service
-          </span>
-          <h2 className="font-display text-4xl md:text-6xl text-foreground mb-4">
-            Alles aus einer Hand
+        <div className="text-center mb-12">
+          <h2 className="font-display text-3xl md:text-4xl text-primary mb-4">
+            Unser Service für Sie
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <div className="section-divider mb-4" />
+          <p className="text-muted-foreground max-w-2xl mx-auto">
             Von der Finanzierung bis zur Zulassung – wir kümmern uns um alles, 
             damit Sie sich voll und ganz auf Ihr neues Fahrzeug freuen können.
           </p>
@@ -74,51 +68,32 @@ const ServicesSection = () => {
           {services.map((service, index) => (
             <div
               key={index}
-              className="group p-8 rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-all duration-300 hover-lift animate-fade-up"
+              className="group p-6 rounded-lg bg-background border border-border hover:border-primary/30 transition-all duration-300 hover-lift animate-fade-up"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               {/* Icon */}
-              <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                <service.icon className="w-7 h-7 text-primary" />
+              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                <service.icon className="w-6 h-6 text-primary" />
               </div>
 
               {/* Content */}
-              <h3 className="font-display text-2xl text-foreground mb-3">
+              <h3 className="font-display text-xl text-foreground mb-2">
                 {service.title}
               </h3>
-              <p className="text-muted-foreground mb-6 leading-relaxed">
+              <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
                 {service.description}
               </p>
 
               {/* Link */}
               <a
                 href={service.link}
-                className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all"
+                className="inline-flex items-center gap-2 text-primary text-sm font-medium hover:gap-3 transition-all"
               >
-                Mehr erfahren
+                Weiterlesen
                 <ArrowRight className="w-4 h-4" />
               </a>
             </div>
           ))}
-        </div>
-
-        {/* Bottom CTA */}
-        <div className="mt-16 p-8 md:p-12 rounded-2xl glass-card text-center">
-          <h3 className="font-display text-3xl md:text-4xl text-foreground mb-4">
-            Haben Sie Fragen zu unseren Services?
-          </h3>
-          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Unser Team steht Ihnen gerne zur Verfügung. Kontaktieren Sie uns 
-            für eine individuelle Beratung.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="hero" size="lg">
-              Jetzt anfragen
-            </Button>
-            <Button variant="outline" size="lg">
-              02151 94 222 62
-            </Button>
-          </div>
         </div>
       </div>
     </section>
