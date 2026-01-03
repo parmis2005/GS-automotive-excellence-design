@@ -1,0 +1,177 @@
+import { Button } from "@/components/ui/button";
+import { Phone, Mail, MapPin, Clock, ArrowRight, Facebook } from "lucide-react";
+
+const ContactSection = () => {
+  return (
+    <section id="contact" className="py-24 relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/10 to-background" />
+
+      <div className="container mx-auto px-6 relative z-10">
+        {/* Section Header */}
+        <div className="text-center mb-16">
+          <span className="inline-block text-primary font-semibold uppercase tracking-wider text-sm mb-4">
+            Kontakt
+          </span>
+          <h2 className="font-display text-4xl md:text-6xl text-foreground mb-4">
+            Besuchen Sie uns
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            Wir freuen uns auf Ihren Besuch in unserem Showroom in Krefeld.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-12">
+          {/* Contact Info */}
+          <div className="space-y-8 animate-fade-up">
+            {/* Address Card */}
+            <div className="p-8 rounded-2xl bg-card border border-border/50">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-display text-2xl text-foreground mb-2">Adresse</h3>
+                  <p className="text-muted-foreground">
+                    GS Automobile Rheinland GmbH<br />
+                    Kuhleshütte 149<br />
+                    47809 Krefeld
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Methods */}
+            <div className="grid sm:grid-cols-2 gap-6">
+              <a 
+                href="tel:021519422262"
+                className="p-6 rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-colors group"
+              >
+                <Phone className="w-8 h-8 text-primary mb-4" />
+                <h4 className="font-semibold text-foreground mb-1">Telefon</h4>
+                <p className="text-muted-foreground group-hover:text-primary transition-colors">
+                  02151 94 222 62
+                </p>
+              </a>
+              <a 
+                href="mailto:info@gsauto.de"
+                className="p-6 rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-colors group"
+              >
+                <Mail className="w-8 h-8 text-primary mb-4" />
+                <h4 className="font-semibold text-foreground mb-1">E-Mail</h4>
+                <p className="text-muted-foreground group-hover:text-primary transition-colors">
+                  info@gsauto.de
+                </p>
+              </a>
+            </div>
+
+            {/* Opening Hours */}
+            <div className="p-8 rounded-2xl bg-card border border-border/50">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-display text-2xl text-foreground mb-2">Öffnungszeiten</h3>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center pb-3 border-b border-border/50">
+                  <span className="text-foreground">Montag - Freitag</span>
+                  <span className="text-primary font-semibold">09:30 - 17:30 Uhr</span>
+                </div>
+                <div className="flex justify-between items-center pb-3 border-b border-border/50">
+                  <span className="text-foreground">Samstag</span>
+                  <span className="text-primary font-semibold">10:00 - 13:00 Uhr</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-foreground">Sonntag</span>
+                  <span className="text-muted-foreground">Geschlossen</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Social Links */}
+            <div className="flex gap-4">
+              <a
+                href="https://www.facebook.com/GSAutomobileRheinland/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-12 h-12 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-primary hover:border-primary hover:text-primary-foreground transition-colors"
+              >
+                <Facebook className="w-5 h-5" />
+              </a>
+            </div>
+          </div>
+
+          {/* Contact Form */}
+          <div className="p-8 rounded-2xl bg-card border border-border/50 animate-fade-up stagger-2">
+            <h3 className="font-display text-3xl text-foreground mb-6">
+              Kontaktformular
+            </h3>
+            <form className="space-y-6">
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Vorname
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 rounded-lg bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground"
+                    placeholder="Max"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Nachname
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 rounded-lg bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground"
+                    placeholder="Mustermann"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  E-Mail
+                </label>
+                <input
+                  type="email"
+                  className="w-full px-4 py-3 rounded-lg bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground"
+                  placeholder="max@beispiel.de"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Telefon
+                </label>
+                <input
+                  type="tel"
+                  className="w-full px-4 py-3 rounded-lg bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground"
+                  placeholder="+49 123 456789"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Nachricht
+                </label>
+                <textarea
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-lg bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground resize-none"
+                  placeholder="Ihre Nachricht..."
+                />
+              </div>
+              <Button variant="hero" size="lg" className="w-full group">
+                Nachricht senden
+                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default ContactSection;
