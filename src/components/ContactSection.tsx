@@ -3,36 +3,31 @@ import { Phone, Mail, MapPin, Clock, ArrowRight, Facebook } from "lucide-react";
 
 const ContactSection = () => {
   return (
-    <section id="contact" className="py-24 relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/10 to-background" />
-
-      <div className="container mx-auto px-6 relative z-10">
+    <section id="contact" className="py-20 bg-secondary/50">
+      <div className="container mx-auto px-6">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <span className="inline-block text-primary font-semibold uppercase tracking-wider text-sm mb-4">
+        <div className="text-center mb-12">
+          <h2 className="font-display text-3xl md:text-4xl text-primary mb-4">
             Kontakt
-          </span>
-          <h2 className="font-display text-4xl md:text-6xl text-foreground mb-4">
-            Besuchen Sie uns
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <div className="section-divider mb-4" />
+          <p className="text-muted-foreground max-w-2xl mx-auto">
             Wir freuen uns auf Ihren Besuch in unserem Showroom in Krefeld.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
+        <div className="grid lg:grid-cols-2 gap-10">
           {/* Contact Info */}
-          <div className="space-y-8 animate-fade-up">
+          <div className="space-y-6 animate-fade-up">
             {/* Address Card */}
-            <div className="p-8 rounded-2xl bg-card border border-border/50">
+            <div className="p-6 rounded-lg bg-background border border-border">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-6 h-6 text-primary" />
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-display text-2xl text-foreground mb-2">Adresse</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="font-display text-lg text-foreground mb-2">Adresse</h3>
+                  <p className="text-muted-foreground text-sm">
                     GS Automobile Rheinland GmbH<br />
                     Kuhleshütte 149<br />
                     47809 Krefeld
@@ -42,45 +37,45 @@ const ContactSection = () => {
             </div>
 
             {/* Contact Methods */}
-            <div className="grid sm:grid-cols-2 gap-6">
+            <div className="grid sm:grid-cols-2 gap-4">
               <a 
                 href="tel:021519422262"
-                className="p-6 rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-colors group"
+                className="p-5 rounded-lg bg-background border border-border hover:border-primary/30 transition-colors group"
               >
-                <Phone className="w-8 h-8 text-primary mb-4" />
-                <h4 className="font-semibold text-foreground mb-1">Telefon</h4>
-                <p className="text-muted-foreground group-hover:text-primary transition-colors">
+                <Phone className="w-6 h-6 text-primary mb-3" />
+                <h4 className="font-semibold text-foreground mb-1 text-sm">Telefon</h4>
+                <p className="text-muted-foreground text-sm group-hover:text-primary transition-colors">
                   02151 94 222 62
                 </p>
               </a>
               <a 
                 href="mailto:info@gsauto.de"
-                className="p-6 rounded-xl bg-card border border-border/50 hover:border-primary/50 transition-colors group"
+                className="p-5 rounded-lg bg-background border border-border hover:border-primary/30 transition-colors group"
               >
-                <Mail className="w-8 h-8 text-primary mb-4" />
-                <h4 className="font-semibold text-foreground mb-1">E-Mail</h4>
-                <p className="text-muted-foreground group-hover:text-primary transition-colors">
+                <Mail className="w-6 h-6 text-primary mb-3" />
+                <h4 className="font-semibold text-foreground mb-1 text-sm">E-Mail</h4>
+                <p className="text-muted-foreground text-sm group-hover:text-primary transition-colors">
                   info@gsauto.de
                 </p>
               </a>
             </div>
 
             {/* Opening Hours */}
-            <div className="p-8 rounded-2xl bg-card border border-border/50">
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-6 h-6 text-primary" />
+            <div className="p-6 rounded-lg bg-background border border-border">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-display text-2xl text-foreground mb-2">Öffnungszeiten</h3>
+                  <h3 className="font-display text-lg text-foreground">Öffnungszeiten</h3>
                 </div>
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center pb-3 border-b border-border/50">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center pb-2 border-b border-border">
                   <span className="text-foreground">Montag - Freitag</span>
                   <span className="text-primary font-semibold">09:30 - 17:30 Uhr</span>
                 </div>
-                <div className="flex justify-between items-center pb-3 border-b border-border/50">
+                <div className="flex justify-between items-center pb-2 border-b border-border">
                   <span className="text-foreground">Samstag</span>
                   <span className="text-primary font-semibold">10:00 - 13:00 Uhr</span>
                 </div>
@@ -92,12 +87,12 @@ const ContactSection = () => {
             </div>
 
             {/* Social Links */}
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <a
                 href="https://www.facebook.com/GSAutomobileRheinland/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-12 h-12 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-primary hover:border-primary hover:text-primary-foreground transition-colors"
+                className="w-10 h-10 rounded-lg bg-background border border-border flex items-center justify-center hover:bg-primary hover:border-primary hover:text-primary-foreground transition-colors"
               >
                 <Facebook className="w-5 h-5" />
               </a>
@@ -105,19 +100,19 @@ const ContactSection = () => {
           </div>
 
           {/* Contact Form */}
-          <div className="p-8 rounded-2xl bg-card border border-border/50 animate-fade-up stagger-2">
-            <h3 className="font-display text-3xl text-foreground mb-6">
+          <div className="p-6 rounded-lg bg-background border border-border animate-fade-up stagger-2">
+            <h3 className="font-display text-xl text-foreground mb-6">
               Kontaktformular
             </h3>
-            <form className="space-y-6">
-              <div className="grid sm:grid-cols-2 gap-6">
+            <form className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Vorname
                   </label>
                   <input
                     type="text"
-                    className="w-full px-4 py-3 rounded-lg bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground"
+                    className="w-full px-4 py-3 rounded-md bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground text-sm"
                     placeholder="Max"
                   />
                 </div>
@@ -127,7 +122,7 @@ const ContactSection = () => {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-4 py-3 rounded-lg bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground"
+                    className="w-full px-4 py-3 rounded-md bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground text-sm"
                     placeholder="Mustermann"
                   />
                 </div>
@@ -138,7 +133,7 @@ const ContactSection = () => {
                 </label>
                 <input
                   type="email"
-                  className="w-full px-4 py-3 rounded-lg bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground"
+                  className="w-full px-4 py-3 rounded-md bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground text-sm"
                   placeholder="max@beispiel.de"
                 />
               </div>
@@ -148,7 +143,7 @@ const ContactSection = () => {
                 </label>
                 <input
                   type="tel"
-                  className="w-full px-4 py-3 rounded-lg bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground"
+                  className="w-full px-4 py-3 rounded-md bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground text-sm"
                   placeholder="+49 123 456789"
                 />
               </div>
@@ -158,7 +153,7 @@ const ContactSection = () => {
                 </label>
                 <textarea
                   rows={4}
-                  className="w-full px-4 py-3 rounded-lg bg-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground resize-none"
+                  className="w-full px-4 py-3 rounded-md bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground resize-none text-sm"
                   placeholder="Ihre Nachricht..."
                 />
               </div>

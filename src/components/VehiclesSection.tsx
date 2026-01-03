@@ -74,24 +74,22 @@ const vehicles = [
 
 const VehiclesSection = () => {
   return (
-    <section id="vehicles" className="py-24 bg-background">
+    <section id="vehicles" className="py-20 bg-background">
       <div className="container mx-auto px-6">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <span className="inline-block text-primary font-semibold uppercase tracking-wider text-sm mb-4">
-            Unsere Fahrzeuge
-          </span>
-          <h2 className="font-display text-4xl md:text-6xl text-foreground mb-4">
-            Aktuelle Angebote
+        <div className="text-center mb-12">
+          <h2 className="font-display text-3xl md:text-4xl text-primary mb-4">
+            Aktuelle Fahrzeugangebote
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <div className="section-divider mb-4" />
+          <p className="text-muted-foreground max-w-2xl mx-auto">
             Entdecken Sie unsere handverlesene Auswahl an Premium-Gebrauchtwagen 
             und Jahreswagen zu attraktiven Konditionen.
           </p>
         </div>
 
         {/* Vehicles Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {vehicles.map((vehicle, index) => (
             <div 
               key={index} 
@@ -104,8 +102,8 @@ const VehiclesSection = () => {
         </div>
 
         {/* CTA */}
-        <div className="text-center mt-16">
-          <Button variant="hero" size="xl" className="group">
+        <div className="text-center mt-12">
+          <Button variant="hero" size="lg" className="group">
             Alle Fahrzeuge anzeigen
             <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
           </Button>
