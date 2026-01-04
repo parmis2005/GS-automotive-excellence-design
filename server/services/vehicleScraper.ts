@@ -13,8 +13,96 @@ const VEHICLE_LIST_URL = "https://fahrzeuge.gs-automobile-rheinland.de/Fahrzeugs
  * Helper function to build cargate360 image URL
  * vid = vehicle ID, bid = business ID (1790 for GS Automobile), ino = image number
  */
-function cargateImage(vid: string, ino: number = 1, format: string = "xlrm"): string {
+function cargateImage(vid: string, ino: number = 1, format: string = "xl"): string {
   return `https://img.cargate360.de/default.aspx?vid=${vid}&bid=1790&format=${format}&ino=${ino}&app=Kiste-Default`;
+}
+
+/**
+ * Determines vehicle category based on brand, model, and characteristics
+ * Improved algorithm to prevent vehicles from appearing in wrong categories
+ */
+function determineVehicleCategory(brand: string, model: string, power?: number, mileage: number = 0, price?: number, fuel?: string): string {
+  const modelLower = model.toLowerCase();
+  const brandLower = brand.toLowerCase();
+  const fuelLower = fuel?.toLowerCase() || "";
+  const titleLower = `${brand} ${model}`.toLowerCase();
+  
+  // Elektro / E-Fahrzeuge (höchste Priorität - check first)
+  const electricKeywords = ['elektro', 'electric', 'e-', 'edrive', 'eq', 'id.', 'id ', 'ioniq', 'kona electric', 'e-tron', 'etron', 'tesla', 'model', 'i3', 'i4', 'i5', 'i7', 'ix', 'id3', 'id4', 'id5', 'id7', 'id buzz'];
+  if (fuelLower.includes('elektro') || fuelLower.includes('electric') || 
+      electricKeywords.some(keyword => modelLower.includes(keyword) || titleLower.includes(keyword)) ||
+      brandLower === 'tesla') {
+    return "Elektro";
+  }
+  
+  // Kleinwagen / Kompakt (check VERY EARLY - before Sport, before everything else except Elektro)
+  // Explicitly prioritize Mini and Fiat brands - they should NEVER be Sport
+  if (brandLower === 'mini' || brandLower === 'fiat' || brandLower === 'smart') {
+    return "Kleinwagen";
+  }
+  
+  // Van / Transporter (check before SUV to avoid conflicts)
+  const vanKeywords = ['multivan', 'transporter', 'crafter', 'sprinter', 'vivaro', 'trafic', 'master', 't6', 't7', 'vito', 'v-class', 'viano', 'transit', 'trafic', 'master', 'ducato', 'boxer', 'jumper'];
+  if (vanKeywords.some(keyword => modelLower.includes(keyword) || titleLower.includes(keyword))) {
+    return "Van";
+  }
+  
+  // SUV (check before Sport to avoid conflicts - SUVs should not be Sport)
+  const suvKeywords = ['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7', 'q3', 'q5', 'q7', 'q8', 'gle', 'glc', 'gla', 'glb', 'tiguan', 'touareg', 'kuga', 'sportage', 'tucson', 'rav4', 'cr-v', 'suv', 'macan', 'cayenne', 'nx', 'rx', 'gx', 'lx'];
+  if (suvKeywords.some(keyword => modelLower.includes(keyword) || titleLower.includes(keyword))) {
+    return "SUV";
+  }
+  
+  // Kombi (check before Sport/Familie to avoid conflicts)
+  const kombiKeywords = ['avant', 'touring', 'kombi', 'estate', 'wagon', 'break', 'variant'];
+  if (kombiKeywords.some(keyword => modelLower.includes(keyword) || titleLower.includes(keyword))) {
+    return "Kombi";
+  }
+  
+  // Sportwagen / Performance (must NOT be SUV, must be sedan/limousine)
+  // Only if it's clearly a sport model AND not an SUV AND not Mini/Fiat/Smart
+  const sportKeywords = ['m3', 'm4', 'm5', 'm6', 'amg', 'rs', 's3', 's4', 's5', 's6', 'gt', 'gti', 'r', 'turbo', 'coupe', 'coupé', 'm-sport', 'm sport'];
+  // Exclude "sport" keyword if it's part of Mini model names (e.g., "Mini Cooper S" should not be Sport)
+  const isSportKeyword = sportKeywords.some(keyword => modelLower.includes(keyword) || titleLower.includes(keyword));
+  const isHighPower = power && power > 200;
+  
+  // Only mark as Sport if it's a sport model AND not an SUV AND not Mini/Fiat/Smart
+  if ((isSportKeyword || isHighPower) && 
+      !suvKeywords.some(kw => modelLower.includes(kw) || titleLower.includes(kw)) &&
+      brandLower !== 'mini' && brandLower !== 'fiat' && brandLower !== 'smart') {
+    return "Sport";
+  }
+  
+  // Luxus (check before Familienwagen)
+  const luxuryBrands = ['mercedes-benz', 'bmw', 'audi', 'porsche', 'lexus', 'tesla'];
+  const luxuryModels = ['s-klasse', 's-class', '7er', '7 series', 'a8', 'panamera'];
+  if (luxuryBrands.includes(brandLower) && (price && price > 50000 || luxuryModels.some(m => modelLower.includes(m) || titleLower.includes(m)))) {
+    // But not if it's an SUV (already handled above)
+    if (!suvKeywords.some(kw => modelLower.includes(kw) || titleLower.includes(kw))) {
+      return "Luxus";
+    }
+  }
+  
+  // Kleinwagen / Kompakt (additional check for other compact models)
+  
+  const compactKeywords = ['polo', 'golf', 'a1', 'a3', '1er', '1 series', 'a-klasse', 'a-class', 'up!', 'up ', 'fabia', 'ibiza', 'fiesta', 'focus', 'corsa', 'astra', '500', 'panda', 'punto', 'aygo', 'iq', 'cooper', 'countryman', 'clubman', 'paceman', 'roadster', 'coupe'];
+  if (compactKeywords.some(keyword => modelLower.includes(keyword) || titleLower.includes(keyword)) || 
+      (power && power < 100 && !suvKeywords.some(kw => modelLower.includes(kw) || titleLower.includes(kw)))) {
+    return "Kleinwagen";
+  }
+  
+  // Familienwagen (Mittelklasse, größere Fahrzeuge) - but not SUVs, not Vans, not Kombis
+  const familyKeywords = ['passat', 'arteon', 'a4', 'a6', 'c-klasse', 'c-class', '3er', '3 series', '5er', '5 series', 'e-klasse', 'e-class'];
+  if (familyKeywords.some(keyword => modelLower.includes(keyword) || titleLower.includes(keyword)) || 
+      (power && power >= 100 && power <= 200 && 
+       !suvKeywords.some(kw => modelLower.includes(kw) || titleLower.includes(kw)) &&
+       !vanKeywords.some(kw => modelLower.includes(kw) || titleLower.includes(kw)) &&
+       !kombiKeywords.some(kw => modelLower.includes(kw) || titleLower.includes(kw)))) {
+    return "Familienwagen";
+  }
+  
+  // Default: Mittelklasse
+  return "Mittelklasse";
 }
 
 /**
@@ -228,6 +316,154 @@ async function fetchVehicleDetails(offerUrl: string, vehicleId: string): Promise
       details.internalNumber = internalNumber;
     }
 
+    // Extract arrival date (Eintreffdatum / Standtage) from cargate
+    // Based on cargate UI: "Angelegt am: DD.MM.YYYY" and "Anzahl Standtage: XX"
+    // Try multiple approaches: HTML patterns, structured data, and cheerio queries
+    let arrivalDateFound = false;
+    
+    // Approach 1: Try to find "Angelegt am" (Created on) - this is the arrival date in cargate
+    const angelegtPattern = /Angelegt am[^<]*(\d{1,2})\.(\d{1,2})\.(\d{4})/i;
+    const angelegtMatch = html.match(angelegtPattern);
+    if (angelegtMatch) {
+      try {
+        const [, day, month, year] = angelegtMatch;
+        const dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          const now = new Date();
+          const maxDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const minDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          if (date <= maxDate && date >= minDate) {
+            details.arrivalDate = date.toISOString().split('T')[0];
+            console.log(`✅ Extracted arrivalDate (Angelegt am) for vehicle ${vehicleId}: ${details.arrivalDate}`);
+            arrivalDateFound = true;
+          }
+        }
+      } catch (e) {
+        console.warn(`⚠️ Error parsing "Angelegt am" date for vehicle ${vehicleId}:`, e);
+      }
+    }
+    
+    // Approach 2: Try to find in HTML using cheerio (more reliable for structured HTML)
+    if (!arrivalDateFound) {
+      const arrivalDateSelectors = [
+        'li:contains("Angelegt am")',
+        'li:contains("eingetroffen")',
+        'li:contains("seit")',
+        'li:contains("Standtage")',
+        'td:contains("Angelegt am")',
+        'td:contains("eingetroffen")',
+        'td:contains("Eintreffdatum")',
+        '[data-arrival-date]',
+        '[data-standtage]',
+        '*:contains("Angelegt am")',
+      ];
+      
+      for (const selector of arrivalDateSelectors) {
+        try {
+          const element = $(selector).first();
+          if (element.length > 0) {
+            const text = element.text();
+            // Try to extract date from text
+            const dateMatch = text.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+            if (dateMatch) {
+              const [, day, month, year] = dateMatch;
+              const dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+              const date = new Date(dateStr);
+              if (!isNaN(date.getTime())) {
+                const now = new Date();
+                const maxDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                const minDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                if (date <= maxDate && date >= minDate) {
+                  details.arrivalDate = date.toISOString().split('T')[0];
+                  console.log(`✅ Extracted arrivalDate for vehicle ${vehicleId} using selector: ${details.arrivalDate}`);
+                  arrivalDateFound = true;
+                  break;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // Continue to next selector
+        }
+      }
+    }
+    
+    // Approach 3: Try regex patterns in HTML if cheerio didn't work
+    if (!arrivalDateFound) {
+      const arrivalDatePatterns = [
+        // Pattern 1: "Angelegt am DD.MM.YYYY" (highest priority - this is what cargate shows)
+        /Angelegt am[^<]*(\d{1,2})\.(\d{1,2})\.(\d{4})/i,
+        // Pattern 2: "eingetroffen am DD.MM.YYYY" or "seit DD.MM.YYYY"
+        /(?:eingetroffen|seit)[^<]*(\d{1,2})\.(\d{1,2})\.(\d{4})/i,
+        // Pattern 3: "eingetroffen: DD.MM.YYYY"
+        /eingetroffen[:\s]+(\d{1,2})\.(\d{1,2})\.(\d{4})/i,
+        // Pattern 4: Look for "Standtage" or "Tage" with date nearby
+        /(?:standtage|tage)[^<]*(\d{1,2})\.(\d{1,2})\.(\d{4})/i,
+        // Pattern 5: Meta tags
+        /"datePublished"[^>]*content="([^"]+)"/,
+        /"dateCreated"[^>]*content="([^"]+)"/,
+        // Pattern 6: Structured data
+        /"datePublished":\s*"([^"]+)"/,
+        /"dateCreated":\s*"([^"]+)"/,
+        // Pattern 7: Table row with "Eintreffdatum" or similar
+        /(?:eintreffdatum|eingetroffen|angelegt)[^<]*<td[^>]*>([^<]*)<\/td>/i,
+        // Pattern 8: Look in list items
+        /<li[^>]*>(?:eingetroffen|seit|standtage|angelegt)[^<]*(\d{1,2})\.(\d{1,2})\.(\d{4})/i,
+        // Pattern 9: Data attributes
+        /data-arrival-date="([^"]+)"/i,
+        /data-standtage="([^"]+)"/i,
+        /data-angelegt="([^"]+)"/i,
+      ];
+      
+      for (const pattern of arrivalDatePatterns) {
+        const match = html.match(pattern);
+        if (match) {
+          try {
+            let dateStr: string;
+            if (match.length === 4) {
+              // DD.MM.YYYY format
+              const [, day, month, year] = match;
+              dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            } else if (match.length === 2) {
+              // ISO format or other from meta tags
+              dateStr = match[1];
+              // Try to parse and reformat if needed
+              const parsed = new Date(dateStr);
+              if (!isNaN(parsed.getTime())) {
+                dateStr = parsed.toISOString().split('T')[0];
+              }
+            } else {
+              continue; // Skip if format doesn't match
+            }
+            
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+              // Validate date is reasonable (not in future, not too old)
+              const now = new Date();
+              const maxDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // Max 7 days in future
+              const minDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // Max 1 year ago
+              
+              if (date <= maxDate && date >= minDate) {
+                details.arrivalDate = date.toISOString().split('T')[0];
+                console.log(`✅ Extracted arrivalDate for vehicle ${vehicleId} using regex: ${details.arrivalDate}`);
+                arrivalDateFound = true;
+                break;
+              }
+            }
+          } catch (e) {
+            // Continue to next pattern
+            console.warn(`⚠️ Error parsing arrival date pattern for vehicle ${vehicleId}:`, e);
+          }
+        }
+      }
+    }
+    
+    // If no arrivalDate found, log it for debugging (but don't fail - it's optional data)
+    if (!arrivalDateFound) {
+      console.warn(`⚠️ Could not extract arrivalDate for vehicle ${vehicleId} from cargate - this is optional data`);
+    }
+
     return details;
   } catch (error) {
     console.error(`❌ Error fetching details for vehicle ${vehicleId}:`, error);
@@ -343,24 +579,32 @@ export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
           }
         }
         
-        // Build image URL (use cargate360 if image-url is not available or use the provided one)
+        // Build image URL - use the exact URL from cargate (vehicle-image-url) if available
+        // This ensures we use the exact image URL that cargate provides, maintaining full quality
         let image = imageUrl;
-        if (!image || !image.includes("cargate360")) {
-          image = cargateImage(vehicleId, 1);
+        if (!image || !image.trim()) {
+          // Only fallback to generating URL if no image URL is provided
+          image = cargateImage(vehicleId, 1, "xl"); // Use "xl" for higher quality fallback
         }
+        
+        const brand = details.brand || "Unbekannt";
+        const model = details.model || title;
+        const power = details.power;
+        const mileage = details.mileage || 0;
         
         const vehicle: Vehicle = {
           id: vehicleId,
           image,
-          brand: details.brand || "Unbekannt",
-          model: details.model || title,
+          brand,
+          model,
           price,
           year: details.year || new Date().getFullYear() - 1,
-          mileage: details.mileage || 0,
+          mileage,
           fuel,
           transmission,
           isNew: details.isNew || false,
           offerUrl: offerUrl || undefined,
+          category: determineVehicleCategory(brand, model, power, mileage, price, fuel),
         };
         
         vehicles.push(vehicle);
@@ -380,10 +624,33 @@ export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
         if (!vehicle.offerUrl) return vehicle;
         
         const additionalDetails = await fetchVehicleDetails(vehicle.offerUrl, vehicle.id);
-        return {
+        
+        // Update category if we got more information (power, etc.)
+        const updatedVehicle = {
           ...vehicle,
           ...additionalDetails,
         };
+        
+        // Re-determine category with updated data
+        if (additionalDetails.power !== undefined || additionalDetails.mileage !== undefined) {
+          updatedVehicle.category = determineVehicleCategory(
+            updatedVehicle.brand,
+            updatedVehicle.model,
+            updatedVehicle.power,
+            updatedVehicle.mileage,
+            updatedVehicle.price,
+            updatedVehicle.fuel
+          );
+        }
+        
+        // Determine isNew based on arrival date (if available)
+        if (updatedVehicle.arrivalDate) {
+          const arrivalDate = new Date(updatedVehicle.arrivalDate);
+          const daysSinceArrival = Math.floor((new Date().getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24));
+          updatedVehicle.isNew = daysSinceArrival < 10; // Less than 10 days old
+        }
+        
+        return updatedVehicle;
       }
     );
     

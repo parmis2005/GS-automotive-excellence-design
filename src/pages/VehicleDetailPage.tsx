@@ -1,4 +1,4 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useVehicle } from "@/hooks/useVehicles";
 import Navbar from "@/components/Navbar";
@@ -27,7 +27,7 @@ import { Separator } from "@/components/ui/separator";
 /**
  * Helper function to build cargate360 image URL
  */
-function cargateImage(vid: string, ino: number = 1, format: string = "xlrm"): string {
+function cargateImage(vid: string, ino: number = 1, format: string = "xl"): string {
   return `https://img.cargate360.de/default.aspx?vid=${vid}&bid=1790&format=${format}&ino=${ino}&app=Kiste-Default`;
 }
 
@@ -36,12 +36,98 @@ const VehicleDetailPage = () => {
   const navigate = useNavigate();
   const { data: vehicle, isLoading, error } = useVehicle(id || "");
 
-  // Generate image URLs - try up to 30 images (cargate360 typically has 10-30 images per vehicle)
-  const imageUrls = vehicle ? Array.from({ length: 30 }, (_, i) => 
-    cargateImage(vehicle.id, i + 1, "xlrm")
-  ) : [];
-  
-  const [selectedImageIndex, setSelectedImageIndex] = React.useState(0);
+  // State for available images (only images that actually exist)
+  const [availableImages, setAvailableImages] = useState<string[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isLoadingImages, setIsLoadingImages] = useState(true);
+
+  // Check which images actually exist (only if vehicle has a valid image already)
+  useEffect(() => {
+    if (!vehicle) {
+      setAvailableImages([]);
+      setIsLoadingImages(false);
+      return;
+    }
+
+    // Start with the main image if it exists and is valid
+    const images: string[] = [];
+    if (vehicle.image && 
+        vehicle.image.startsWith('http') && 
+        !vehicle.image.includes('placeholder') &&
+        vehicle.image.trim() !== '') {
+      images.push(vehicle.image);
+    }
+
+    // Check up to 30 images, but only add ones that exist
+    // Use image loading approach instead of HEAD requests to avoid CORS issues
+    const checkImages = async () => {
+      setIsLoadingImages(true);
+      const validImages: string[] = [...images];
+      
+      // If we already have the main image, check if it's actually valid
+      if (validImages.length > 0) {
+        // Verify the main image exists
+        const mainImageCheck = new Promise<boolean>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          img.src = validImages[0];
+          setTimeout(() => resolve(false), 2000);
+        });
+        
+        const mainImageValid = await mainImageCheck;
+        if (!mainImageValid) {
+          validImages.pop(); // Remove invalid main image
+        }
+      }
+      
+      // Check images sequentially and stop after 3 consecutive failures
+      // This prevents loading placeholder images that cargate returns for non-existent images
+      const startFrom = validImages.length > 0 ? 2 : 1;
+      let consecutiveFailures = 0;
+      const maxConsecutiveFailures = 3; // Stop after 3 consecutive failures
+      const maxImagesToCheck = 30;
+      
+      for (let imageNum = startFrom; imageNum <= maxImagesToCheck && consecutiveFailures < maxConsecutiveFailures; imageNum++) {
+        const url = cargateImage(vehicle.id, imageNum, "xl");
+        
+        try {
+          const imageExists = await new Promise<boolean>((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              // Check if image is a placeholder by checking its dimensions
+              // Real car photos are usually larger (at least 600px width)
+              // Placeholder images from cargate are typically smaller
+              if (img.naturalWidth > 600 && img.naturalHeight > 400) {
+                resolve(true);
+              } else {
+                // Likely a placeholder
+                resolve(false);
+              }
+            };
+            img.onerror = () => resolve(false);
+            img.src = url;
+            // Timeout after 2 seconds
+            setTimeout(() => resolve(false), 2000);
+          });
+          
+          if (imageExists) {
+            validImages.push(url);
+            consecutiveFailures = 0; // Reset counter on success
+          } else {
+            consecutiveFailures++;
+          }
+        } catch (e) {
+          consecutiveFailures++;
+        }
+      }
+
+      setAvailableImages(validImages);
+      setIsLoadingImages(false);
+    };
+
+    checkImages();
+  }, [vehicle]);
 
   if (isLoading) {
     return (
@@ -103,53 +189,87 @@ const VehicleDetailPage = () => {
           <div className="space-y-4">
             {/* Main Image with Navigation */}
             <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-secondary group">
-              <img
-                key={selectedImageIndex}
-                src={imageUrls[selectedImageIndex] || vehicle.image}
-                alt={`${vehicle.brand} ${vehicle.model} - Bild ${selectedImageIndex + 1}`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  // Hide image if it doesn't exist (404)
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
-              {vehicle.isNew && (
-                <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground z-10">
-                  Neu eingetroffen
-                </Badge>
-              )}
-              
-              {/* Navigation Arrows */}
-              {imageUrls.length > 1 && (
+              {isLoadingImages ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : availableImages.length > 0 ? (
                 <>
-                  <button
-                    onClick={() => setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : imageUrls.length - 1))}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                    aria-label="Vorheriges Bild"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setSelectedImageIndex((prev) => (prev < imageUrls.length - 1 ? prev + 1 : 0))}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                    aria-label="Nächstes Bild"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
+                  <img
+                    key={selectedImageIndex}
+                    src={availableImages[selectedImageIndex]}
+                    alt={`${vehicle.brand} ${vehicle.model} - Bild ${selectedImageIndex + 1}`}
+                    className="w-full h-full object-cover"
+                    loading={selectedImageIndex === 0 ? "eager" : "lazy"}
+                    fetchPriority={selectedImageIndex === 0 ? "high" : "auto"}
+                    decoding="async"
+                    style={{ imageRendering: 'auto' }}
+                  />
+                  {/* Calculate isNew based on arrivalDate or fallback indicators */}
+                  {(() => {
+                    // Priority 1: Use arrivalDate if available
+                    if (vehicle.arrivalDate) {
+                      try {
+                        const arrival = new Date(vehicle.arrivalDate);
+                        if (!isNaN(arrival.getTime())) {
+                          const daysSinceArrival = Math.floor((new Date().getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24));
+                          if (daysSinceArrival >= 0 && daysSinceArrival < 30) {
+                            return true;
+                          }
+                        }
+                      } catch {
+                        // Continue to fallback
+                      }
+                    }
+                    
+                    // Priority 2: Fallback indicators - since arrivalDate is not available via scraping
+                    const currentYear = new Date().getFullYear();
+                    const isVeryNewYear = vehicle.year >= currentYear - 1;
+                    const isVeryLowMileage = vehicle.mileage < 1000;
+                    const isLowMileage = vehicle.mileage < 5000;
+                    return (isVeryNewYear && isLowMileage) || isVeryLowMileage;
+                  })() && (
+                    <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground z-10">
+                      Neu eingetroffen
+                    </Badge>
+                  )}
                   
-                  {/* Image Counter */}
-                  <div className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded-full text-sm z-10">
-                    {selectedImageIndex + 1} / {imageUrls.length}
-                  </div>
+                  {/* Navigation Arrows */}
+                  {availableImages.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : availableImages.length - 1))}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        aria-label="Vorheriges Bild"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setSelectedImageIndex((prev) => (prev < availableImages.length - 1 ? prev + 1 : 0))}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        aria-label="Nächstes Bild"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                      
+                      {/* Image Counter */}
+                      <div className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded-full text-sm z-10">
+                        {selectedImageIndex + 1} / {availableImages.length}
+                      </div>
+                    </>
+                  )}
                 </>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                  Kein Bild verfügbar
+                </div>
               )}
             </div>
 
-            {/* Thumbnail Gallery - Show all available images */}
-            {imageUrls.length > 1 && (
+            {/* Thumbnail Gallery - Show only available images */}
+            {availableImages.length > 1 && (
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-64 overflow-y-auto">
-                {imageUrls.map((url, index) => (
+                {availableImages.map((url, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImageIndex(index)}
@@ -164,11 +284,8 @@ const VehicleDetailPage = () => {
                       src={url}
                       alt={`${vehicle.brand} ${vehicle.model} - Bild ${index + 1}`}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // Hide thumbnail if image doesn't exist
-                        const target = e.target as HTMLImageElement;
-                        target.parentElement!.style.display = 'none';
-                      }}
+                      loading={index === 0 ? "eager" : "lazy"}
+                      decoding="async"
                     />
                   </button>
                 ))}

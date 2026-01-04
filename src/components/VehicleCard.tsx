@@ -3,7 +3,9 @@ import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 
-interface VehicleCardProps extends Vehicle {}
+interface VehicleCardProps extends Vehicle {
+  showCategory?: boolean; // Optional prop to show/hide category badge
+}
 
 const VehicleCard = ({
   id,
@@ -14,7 +16,7 @@ const VehicleCard = ({
   year,
   mileage,
   fuel,
-  isNew,
+  isNew: isNewProp,
   power,
   powerKw,
   transmission,
@@ -22,20 +24,73 @@ const VehicleCard = ({
   interiorColor,
   exposeUrl,
   offerUrl,
+  category,
+  arrivalDate,
+  showCategory = false, // Default: don't show category (only on homepage)
 }: VehicleCardProps) => {
+  // Determine if vehicle should show "Neu eingetroffen" badge
+  // Priority 1: Use arrivalDate if available (from cargate) - but this data is loaded via JS, so usually not available
+  // Priority 2: Fallback - since arrivalDate is not available, use indicators based on vehicle characteristics
+  const isNew = (() => {
+    // Priority 1: Use arrivalDate if available
+    if (arrivalDate) {
+      try {
+        const arrival = new Date(arrivalDate);
+        if (!isNaN(arrival.getTime())) {
+          const daysSinceArrival = Math.floor((new Date().getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24));
+          // Only show if less than 30 days AND not negative (future dates)
+          if (daysSinceArrival >= 0 && daysSinceArrival < 30) {
+            return true;
+          }
+        }
+      } catch (e) {
+        // Continue to fallback
+      }
+    }
+    
+    // Priority 2: Fallback indicators - since arrivalDate is not available via scraping
+    // Show badge for vehicles that are likely "new arrivals":
+    // - Very new year (current year or last year) AND low mileage (< 5000 km)
+    // OR very low mileage (< 1000 km) regardless of year
+    const currentYear = new Date().getFullYear();
+    const isVeryNewYear = year >= currentYear - 1;
+    const isVeryLowMileage = mileage < 1000;
+    const isLowMileage = mileage < 5000;
+    
+    return (isVeryNewYear && isLowMileage) || isVeryLowMileage;
+  })();
   return (
-    <div className="group relative bg-background rounded-lg overflow-hidden hover-lift border border-border shadow-soft">
+    <div className="group relative bg-background rounded-lg overflow-hidden hover-lift border border-border shadow-soft h-full flex flex-col">
       {/* Image Container */}
       <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
         <img
           src={image}
           alt={`${brand} ${model}`}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
+          style={{ imageRendering: 'auto' }}
         />
         
-        {/* Badge */}
+        {/* Category Badge - oben links im Bild (nur auf Startseite) */}
+        {showCategory && category && (
+          <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm border border-primary/30 text-primary text-xs font-medium">
+            {category === "Elektro" && "Elektro"}
+            {category === "Sport" && "Sportlich"}
+            {category === "SUV" && "SUV"}
+            {category === "Familienwagen" && "Familie"}
+            {category === "Kleinwagen" && "Kleinwagen"}
+            {category === "Kombi" && "Kombi"}
+            {category === "Luxus" && "Luxus"}
+            {category === "Van" && "Van"}
+            {category === "Mittelklasse" && "Mittelklasse"}
+            {!["Elektro", "Sport", "SUV", "Familienwagen", "Kleinwagen", "Kombi", "Luxus", "Van", "Mittelklasse"].includes(category) && category}
+          </div>
+        )}
+        
+        {/* New Badge - rechts oben, wenn vorhanden */}
         {isNew && (
-          <div className="absolute top-3 left-3 px-3 py-1 rounded bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide">
+          <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide">
             Neu eingetroffen
           </div>
         )}
@@ -43,98 +98,77 @@ const VehicleCard = ({
 
       {/* Content */}
       <div className="p-5">
-        {/* Brand & Model */}
-        <div className="mb-3">
+        {/* Brand & Model - Modellname größer/stärker */}
+        <div className="mb-4">
           <span className="text-xs text-primary font-semibold uppercase tracking-wider">
             {brand}
           </span>
-          <h3 className="font-display text-xl text-foreground mt-1">
+          <h3 className="font-display text-2xl font-bold text-foreground mt-1">
             {model}
           </h3>
         </div>
 
-        {/* Specs */}
-        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mb-4">
-          <div className="flex items-center gap-1">
-            <Calendar className="w-4 h-4" />
-            {year}
+        {/* Price - visuell dominanter */}
+        <div className="mb-4">
+          <div className="font-display text-3xl font-bold text-primary">
+            {price.toLocaleString("de-DE")} €
           </div>
+        </div>
+
+        {/* Specs - Eckdaten kompakt */}
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-4">
           {mileage > 0 && (
-            <div className="flex items-center gap-1">
-              <Gauge className="w-4 h-4" />
-              {mileage.toLocaleString("de-DE")} km
-            </div>
+            <>
+              <span>{mileage.toLocaleString("de-DE")} km</span>
+              <span>·</span>
+            </>
           )}
-          <div className="flex items-center gap-1">
-            <Fuel className="w-4 h-4" />
-            {fuel}
-          </div>
+          <span>{year}</span>
+          <span>·</span>
+          <span>{fuel}</span>
           {transmission && (
-            <div className="flex items-center gap-1">
-              {transmission}
-            </div>
-          )}
-          {power && (
-            <div className="flex items-center gap-1">
-              <Zap className="w-4 h-4" />
-              {power} PS
-            </div>
+            <>
+              <span>·</span>
+              <span>{transmission}</span>
+            </>
           )}
         </div>
 
-        {/* Colors */}
+        {/* Colors - nur wenn vorhanden, kompakter */}
         {(exteriorColor || interiorColor) && (
-          <div className="mb-4 text-xs text-muted-foreground space-y-1">
-            {exteriorColor && (
-              <div>
-                <span className="font-medium">Außen:</span> {exteriorColor}
-              </div>
-            )}
-            {interiorColor && (
-              <div>
-                <span className="font-medium">Innen:</span> {interiorColor}
-              </div>
-            )}
+          <div className="mb-4 text-xs text-muted-foreground">
+            {exteriorColor && <span>Außen: {exteriorColor}</span>}
+            {exteriorColor && interiorColor && <span className="mx-2">·</span>}
+            {interiorColor && <span>Innen: {interiorColor}</span>}
           </div>
         )}
 
-        {/* Price & Actions */}
-        <div className="pt-4 border-t border-border space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs text-muted-foreground">Preis ab</span>
-              <div className="font-display text-2xl text-primary">
-                {price.toLocaleString("de-DE")} €
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex gap-2">
-            {exposeUrl && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(exposeUrl, '_blank');
-                }}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Exposé
-              </Button>
-            )}
-            <Link to={`/fahrzeuge/${id}`} className={exposeUrl ? "flex-1" : "w-full"}>
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full"
-              >
-                Details
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-          </div>
+        {/* Actions */}
+        <div className="pt-4 border-t border-border space-y-2 mt-auto">
+          <Link to={`/fahrzeuge/${id}`} className="block w-full">
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full"
+            >
+              Fahrzeug ansehen
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
+          {exposeUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(exposeUrl, '_blank');
+              }}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Exposé herunterladen
+            </Button>
+          )}
         </div>
       </div>
     </div>

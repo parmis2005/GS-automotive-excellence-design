@@ -1,11 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useVehicles } from "@/hooks/useVehicles";
-import VehicleCard from "@/components/VehicleCard";
+import VehicleListItem from "@/components/VehicleListItem";
 import VehicleFilters from "@/components/VehicleFilters";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Loader2, AlertCircle, X } from "lucide-react";
+import { Loader2, AlertCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import type { Vehicle } from "@/types/vehicle";
 
 export interface VehicleFiltersState {
@@ -32,6 +34,10 @@ const VehiclesPage = () => {
     equipment: [],
     searchQuery: "",
   });
+
+  const [itemsPerPage, setItemsPerPage] = useState<number>(20);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [sortBy, setSortBy] = useState<string>("price-desc");
 
   // Get available filter options from vehicles
   const filterOptions = useMemo(() => {
@@ -60,11 +66,12 @@ const VehiclesPage = () => {
     return { brands, fuelTypes, transmissionTypes, exteriorColors, equipment };
   }, [vehicles]);
 
-  // Filter vehicles
-  const filteredVehicles = useMemo(() => {
+  // Filter and sort vehicles
+  const filteredAndSortedVehicles = useMemo(() => {
     if (!vehicles) return [];
     
-    return vehicles.filter((vehicle) => {
+    // First filter
+    let filtered = vehicles.filter((vehicle) => {
       // Brand filter
       if (filters.brands.length > 0 && !filters.brands.includes(vehicle.brand)) {
         return false;
@@ -117,7 +124,52 @@ const VehiclesPage = () => {
       
       return true;
     });
-  }, [vehicles, filters]);
+
+    // Then sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "price-asc":
+          return a.price - b.price;
+        case "price-desc":
+          return b.price - a.price;
+        case "year-desc":
+          return b.year - a.year;
+        case "year-asc":
+          return a.year - b.year;
+        case "mileage-asc":
+          return a.mileage - b.mileage;
+        case "mileage-desc":
+          return b.mileage - a.mileage;
+        case "brand-asc":
+          return a.brand.localeCompare(b.brand);
+        default:
+          return b.price - a.price;
+      }
+    });
+
+    return sorted;
+  }, [vehicles, filters, sortBy]);
+
+  // Paginate
+  const paginatedVehicles = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredAndSortedVehicles.slice(startIndex, endIndex);
+  }, [filteredAndSortedVehicles, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredAndSortedVehicles.length / itemsPerPage);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  // Reset to page 1 if current page is out of bounds
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -143,7 +195,9 @@ const VehiclesPage = () => {
       equipment: [],
       searchQuery: "",
     });
+    setCurrentPage(1);
   };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -152,20 +206,60 @@ const VehiclesPage = () => {
         <div className="container mx-auto px-4 md:px-6">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Fahrzeugsuche
-            </h1>
-            <p className="text-muted-foreground">
-              {filteredVehicles.length} {filteredVehicles.length === 1 ? "Fahrzeug" : "Fahrzeuge"} gefunden
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={clearAllFilters}
-                  className="ml-2 text-primary hover:underline"
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+                  Fahrzeugsuche
+                </h1>
+                <p className="text-muted-foreground">
+                  {filteredAndSortedVehicles.length} {filteredAndSortedVehicles.length === 1 ? "Fahrzeug" : "Fahrzeuge"} gefunden
+                  {activeFilterCount > 0 && (
+                    <button
+                      onClick={clearAllFilters}
+                      className="ml-2 text-primary hover:underline"
+                    >
+                      Filter zurücksetzen
+                    </button>
+                  )}
+                </p>
+              </div>
+
+              {/* Sort & Items per Page */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Sortieren nach" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="price-desc">Preis: Höchste zuerst</SelectItem>
+                    <SelectItem value="price-asc">Preis: Niedrigste zuerst</SelectItem>
+                    <SelectItem value="year-desc">Jahr: Neueste zuerst</SelectItem>
+                    <SelectItem value="year-asc">Jahr: Älteste zuerst</SelectItem>
+                    <SelectItem value="mileage-asc">Kilometerstand: Niedrigste zuerst</SelectItem>
+                    <SelectItem value="mileage-desc">Kilometerstand: Höchste zuerst</SelectItem>
+                    <SelectItem value="brand-asc">Marke: A-Z</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select 
+                  value={itemsPerPage.toString()} 
+                  onValueChange={(value) => {
+                    setItemsPerPage(Number(value));
+                    setCurrentPage(1);
+                  }}
                 >
-                  Filter zurücksetzen
-                </button>
-              )}
-            </p>
+                  <SelectTrigger className="w-full sm:w-[150px]">
+                    <SelectValue placeholder="Pro Seite" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 pro Seite</SelectItem>
+                    <SelectItem value="20">20 pro Seite</SelectItem>
+                    <SelectItem value="50">50 pro Seite</SelectItem>
+                    <SelectItem value="100">100 pro Seite</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
           {/* Loading State */}
@@ -201,12 +295,71 @@ const VehiclesPage = () => {
 
               {/* Vehicles List */}
               <div className="flex-1">
-                {filteredVehicles.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredVehicles.map((vehicle) => (
-                      <VehicleCard key={vehicle.id} {...vehicle} />
-                    ))}
-                  </div>
+                {filteredAndSortedVehicles.length > 0 ? (
+                  <>
+                    <div className="space-y-4 mb-8">
+                      {paginatedVehicles.map((vehicle, index) => (
+                        <VehicleListItem key={vehicle.id} {...vehicle} isFirst={index === 0} />
+                      ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 mt-8">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="w-4 h-4 mr-1" />
+                          Zurück
+                        </Button>
+                        
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum: number;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={currentPage === pageNum ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(pageNum)}
+                                className="min-w-[40px]"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Weiter
+                          <ChevronRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Page Info */}
+                    <div className="text-center text-sm text-muted-foreground mt-4">
+                      Zeige {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedVehicles.length)} von {filteredAndSortedVehicles.length} Fahrzeugen
+                    </div>
+                  </>
                 ) : (
                   <div className="text-center py-20 bg-muted/50 rounded-lg">
                     <X className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
