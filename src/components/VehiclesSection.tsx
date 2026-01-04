@@ -1,78 +1,22 @@
 import VehicleCard from "./VehicleCard";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
-
-import car1 from "@/assets/car-1.jpg";
-import car2 from "@/assets/car-2.jpg";
-import car3 from "@/assets/car-3.jpg";
-import car4 from "@/assets/car-4.jpg";
-import car5 from "@/assets/car-5.jpg";
-import car6 from "@/assets/car-6.jpg";
-
-const vehicles = [
-  {
-    image: car1,
-    brand: "BMW",
-    model: "520d Luxury Line",
-    price: 34990,
-    year: 2023,
-    mileage: 18500,
-    fuel: "Diesel",
-    isNew: true,
-  },
-  {
-    image: car2,
-    brand: "Mercedes-Benz",
-    model: "C 300 Coupé AMG",
-    price: 42990,
-    year: 2022,
-    mileage: 25000,
-    fuel: "Benzin",
-    isNew: true,
-  },
-  {
-    image: car3,
-    brand: "Audi",
-    model: "A4 Avant 40 TDI",
-    price: 38500,
-    year: 2023,
-    mileage: 15000,
-    fuel: "Diesel",
-    isNew: false,
-  },
-  {
-    image: car4,
-    brand: "Volkswagen",
-    model: "Golf GTI",
-    price: 28990,
-    year: 2023,
-    mileage: 12000,
-    fuel: "Benzin",
-    isNew: false,
-  },
-  {
-    image: car5,
-    brand: "BMW",
-    model: "X3 xDrive30d",
-    price: 52990,
-    year: 2022,
-    mileage: 35000,
-    fuel: "Diesel",
-    isNew: false,
-  },
-  {
-    image: car6,
-    brand: "Mercedes-Benz",
-    model: "GLC 300 4MATIC",
-    price: 48500,
-    year: 2023,
-    mileage: 22000,
-    fuel: "Benzin",
-    isNew: true,
-  },
-];
+import { ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { useVehicles } from "@/hooks/useVehicles";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Link } from "react-router-dom";
+import { useMemo } from "react";
 
 const VehiclesSection = () => {
+  const { data: vehicles, isLoading, error } = useVehicles();
+
+  // Get 6 most expensive vehicles for homepage
+  const featuredVehicles = useMemo(() => {
+    if (!vehicles) return [];
+    return [...vehicles]
+      .sort((a, b) => b.price - a.price)
+      .slice(0, 6);
+  }, [vehicles]);
+
   return (
     <section id="vehicles" className="py-20 bg-background">
       <div className="container mx-auto px-6">
@@ -88,26 +32,60 @@ const VehiclesSection = () => {
           </p>
         </div>
 
-        {/* Vehicles Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {vehicles.map((vehicle, index) => (
-            <div 
-              key={index} 
-              className="animate-fade-up"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <VehicleCard {...vehicle} />
-            </div>
-          ))}
-        </div>
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <span className="ml-3 text-muted-foreground">Fahrzeuge werden geladen...</span>
+          </div>
+        )}
 
-        {/* CTA */}
-        <div className="text-center mt-12">
-          <Button variant="hero" size="lg" className="group">
-            Alle Fahrzeuge anzeigen
-            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-          </Button>
-        </div>
+        {/* Error State */}
+        {error && (
+          <Alert variant="destructive" className="max-w-2xl mx-auto">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Fehler beim Laden der Fahrzeuge</AlertTitle>
+            <AlertDescription>
+              {error instanceof Error ? error.message : "Unbekannter Fehler"}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Vehicles Grid - Show only 6 most expensive */}
+        {featuredVehicles && featuredVehicles.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredVehicles.map((vehicle, index) => (
+                <div 
+                  key={vehicle.id} 
+                  className="animate-fade-up"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <VehicleCard {...vehicle} />
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="text-center mt-12">
+              <Link to="/fahrzeuge">
+                <Button variant="default" size="lg" className="group bg-primary hover:bg-primary/90 text-white shadow-md">
+                  Alle Fahrzeuge anzeigen
+                  <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
+            </div>
+          </>
+        )}
+
+        {/* Empty State */}
+        {featuredVehicles && featuredVehicles.length === 0 && !isLoading && (
+          <div className="text-center py-20">
+            <p className="text-muted-foreground text-lg">
+              Aktuell sind keine Fahrzeuge verfügbar.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

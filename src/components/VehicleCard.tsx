@@ -1,18 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Fuel, Gauge, Calendar, ArrowRight } from "lucide-react";
+import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap } from "lucide-react";
+import { Link } from "react-router-dom";
+import type { Vehicle } from "@/types/vehicle";
 
-interface VehicleCardProps {
-  image: string;
-  brand: string;
-  model: string;
-  price: number;
-  year: number;
-  mileage: number;
-  fuel: string;
-  isNew?: boolean;
-}
+interface VehicleCardProps extends Vehicle {}
 
 const VehicleCard = ({
+  id,
   image,
   brand,
   model,
@@ -21,6 +15,13 @@ const VehicleCard = ({
   mileage,
   fuel,
   isNew,
+  power,
+  powerKw,
+  transmission,
+  exteriorColor,
+  interiorColor,
+  exposeUrl,
+  offerUrl,
 }: VehicleCardProps) => {
   return (
     <div className="group relative bg-background rounded-lg overflow-hidden hover-lift border border-border shadow-soft">
@@ -53,32 +54,87 @@ const VehicleCard = ({
         </div>
 
         {/* Specs */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mb-4">
           <div className="flex items-center gap-1">
             <Calendar className="w-4 h-4" />
             {year}
           </div>
-          <div className="flex items-center gap-1">
-            <Gauge className="w-4 h-4" />
-            {mileage.toLocaleString("de-DE")} km
-          </div>
+          {mileage > 0 && (
+            <div className="flex items-center gap-1">
+              <Gauge className="w-4 h-4" />
+              {mileage.toLocaleString("de-DE")} km
+            </div>
+          )}
           <div className="flex items-center gap-1">
             <Fuel className="w-4 h-4" />
             {fuel}
           </div>
+          {transmission && (
+            <div className="flex items-center gap-1">
+              {transmission}
+            </div>
+          )}
+          {power && (
+            <div className="flex items-center gap-1">
+              <Zap className="w-4 h-4" />
+              {power} PS
+            </div>
+          )}
         </div>
 
-        {/* Price */}
-        <div className="flex items-center justify-between pt-4 border-t border-border">
-          <div>
-            <span className="text-xs text-muted-foreground">Preis ab</span>
-            <div className="font-display text-2xl text-primary">
-              {price.toLocaleString("de-DE")} €
+        {/* Colors */}
+        {(exteriorColor || interiorColor) && (
+          <div className="mb-4 text-xs text-muted-foreground space-y-1">
+            {exteriorColor && (
+              <div>
+                <span className="font-medium">Außen:</span> {exteriorColor}
+              </div>
+            )}
+            {interiorColor && (
+              <div>
+                <span className="font-medium">Innen:</span> {interiorColor}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Price & Actions */}
+        <div className="pt-4 border-t border-border space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-xs text-muted-foreground">Preis ab</span>
+              <div className="font-display text-2xl text-primary">
+                {price.toLocaleString("de-DE")} €
+              </div>
             </div>
           </div>
-          <Button variant="outline" size="icon" className="rounded-full">
-            <ArrowRight className="w-4 h-4" />
-          </Button>
+          
+          <div className="flex gap-2">
+            {exposeUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(exposeUrl, '_blank');
+                }}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Exposé
+              </Button>
+            )}
+            <Link to={`/fahrzeuge/${id}`} className={exposeUrl ? "flex-1" : "w-full"}>
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full"
+              >
+                Details
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

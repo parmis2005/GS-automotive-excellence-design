@@ -190,20 +190,26 @@
   animation: float 3s ease-in-out infinite;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Subtle */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(210 15% 95%);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(216 65% 32%);
-  border-radius: 4px;
+  background: hsl(216 65% 32% / 0.3);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(216 65% 42%);
+  background: hsl(216 65% 32% / 0.5);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(216 65% 32% / 0.3) transparent;
 }
