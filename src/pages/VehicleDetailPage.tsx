@@ -49,46 +49,21 @@ const VehicleDetailPage = () => {
       return;
     }
 
-    // Start with the main image if it exists and is valid
-    const images: string[] = [];
-    if (vehicle.image && 
-        vehicle.image.startsWith('http') && 
-        !vehicle.image.includes('placeholder') &&
-        vehicle.image.trim() !== '') {
-      images.push(vehicle.image);
-    }
-
     // Check up to 30 images, but only add ones that exist
     // Use image loading approach instead of HEAD requests to avoid CORS issues
+    // IMPORTANT: All images (including the first one) use the same "xl" format for consistent quality
+    // This ensures the first image is not a thumbnail/small format that gets upscaled and looks blurry
     const checkImages = async () => {
       setIsLoadingImages(true);
-      const validImages: string[] = [...images];
+      const validImages: string[] = [];
       
-      // If we already have the main image, check if it's actually valid
-      if (validImages.length > 0) {
-        // Verify the main image exists
-        const mainImageCheck = new Promise<boolean>((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve(true);
-          img.onerror = () => resolve(false);
-          img.src = validImages[0];
-          setTimeout(() => resolve(false), 2000);
-        });
-        
-        const mainImageValid = await mainImageCheck;
-        if (!mainImageValid) {
-          validImages.pop(); // Remove invalid main image
-        }
-      }
-      
-      // Check images sequentially and stop after 3 consecutive failures
+      // Check images sequentially starting from image 1, all using "xl" format
       // This prevents loading placeholder images that cargate returns for non-existent images
-      const startFrom = validImages.length > 0 ? 2 : 1;
       let consecutiveFailures = 0;
       const maxConsecutiveFailures = 3; // Stop after 3 consecutive failures
       const maxImagesToCheck = 30;
       
-      for (let imageNum = startFrom; imageNum <= maxImagesToCheck && consecutiveFailures < maxConsecutiveFailures; imageNum++) {
+      for (let imageNum = 1; imageNum <= maxImagesToCheck && consecutiveFailures < maxConsecutiveFailures; imageNum++) {
         const url = cargateImage(vehicle.id, imageNum, "xl");
         
         try {

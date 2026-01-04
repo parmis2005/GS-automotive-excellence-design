@@ -8,6 +8,20 @@ interface VehicleListItemProps extends Vehicle {
   isFirst?: boolean; // Optional prop to mark first item
 }
 
+/**
+ * Ensures the image URL uses "xl" format for high quality
+ * Replaces any format parameter (xlrm, xlrg, etc.) with "xl"
+ */
+function ensureHighQualityImageUrl(imageUrl: string, vehicleId: string): string {
+  if (!imageUrl || !imageUrl.includes('cargate360')) {
+    // If not a cargate URL, return as-is or generate one
+    return `https://img.cargate360.de/default.aspx?vid=${vehicleId}&bid=1790&format=xl&ino=1&app=Kiste-Default`;
+  }
+  
+  // Replace any format parameter with "xl" for consistent high quality
+  return imageUrl.replace(/format=[^&]*/i, 'format=xl');
+}
+
 const VehicleListItem = ({
   id,
   image,
@@ -27,6 +41,8 @@ const VehicleListItem = ({
   internalNumber,
   isFirst = false,
 }: VehicleListItemProps) => {
+  // Ensure image URL uses "xl" format for high quality
+  const highQualityImage = ensureHighQualityImageUrl(image, id);
   return (
     <div className="group bg-background border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200">
       <div className="flex flex-col md:flex-row">
@@ -34,7 +50,7 @@ const VehicleListItem = ({
         <div className="relative w-full md:w-96 lg:w-[32rem] flex-shrink-0 bg-secondary overflow-hidden">
           <div className="relative w-full aspect-[4/3] p-1">
             <img
-              src={image}
+              src={highQualityImage}
               alt={`${brand} ${model}`}
               className="w-full h-full object-cover"
               loading="lazy"

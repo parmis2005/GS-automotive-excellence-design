@@ -7,6 +7,20 @@ interface VehicleCardProps extends Vehicle {
   showCategory?: boolean; // Optional prop to show/hide category badge
 }
 
+/**
+ * Ensures the image URL uses "xl" format for high quality
+ * Replaces any format parameter (xlrm, xlrg, etc.) with "xl"
+ */
+function ensureHighQualityImageUrl(imageUrl: string, vehicleId: string): string {
+  if (!imageUrl || !imageUrl.includes('cargate360')) {
+    // If not a cargate URL, return as-is or generate one
+    return `https://img.cargate360.de/default.aspx?vid=${vehicleId}&bid=1790&format=xl&ino=1&app=Kiste-Default`;
+  }
+  
+  // Replace any format parameter with "xl" for consistent high quality
+  return imageUrl.replace(/format=[^&]*/i, 'format=xl');
+}
+
 const VehicleCard = ({
   id,
   image,
@@ -28,6 +42,8 @@ const VehicleCard = ({
   arrivalDate,
   showCategory = false, // Default: don't show category (only on homepage)
 }: VehicleCardProps) => {
+  // Ensure image URL uses "xl" format for high quality
+  const highQualityImage = ensureHighQualityImageUrl(image, id);
   // Determine if vehicle should show "Neu eingetroffen" badge
   // Priority 1: Use arrivalDate if available (from cargate) - but this data is loaded via JS, so usually not available
   // Priority 2: Fallback - since arrivalDate is not available, use indicators based on vehicle characteristics
@@ -64,7 +80,7 @@ const VehicleCard = ({
       {/* Image Container */}
       <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
         <img
-          src={image}
+          src={highQualityImage}
           alt={`${brand} ${model}`}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
