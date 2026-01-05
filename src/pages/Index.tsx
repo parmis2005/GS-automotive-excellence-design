@@ -7,9 +7,12 @@ import ServicesSection from "@/components/ServicesSection";
 import AboutSection from "@/components/AboutSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
+import { getDefaultSEO } from "@/utils/seo";
 
 const Index = () => {
   const location = useLocation();
+  const seoData = getDefaultSEO();
 
   // Handle hash navigation - scroll to section when hash is present in URL
   useEffect(() => {
@@ -27,6 +30,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO data={seoData} />
       <Navbar />
       <main>
         <Hero />

@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import type { Vehicle } from "@/types/vehicle";
+import { normalizeColorToBasic, BASIC_COLORS } from "@/lib/colorUtils";
 
 export interface VehicleFiltersState {
   brands: string[];
@@ -52,7 +53,19 @@ const VehiclesPage = () => {
     const brands = Array.from(new Set(vehicles.map(v => v.brand))).sort();
     const fuelTypes = Array.from(new Set(vehicles.map(v => v.fuel))).sort();
     const transmissionTypes = Array.from(new Set(vehicles.map(v => v.transmission).filter(Boolean))).sort();
-    const exteriorColors = Array.from(new Set(vehicles.map(v => v.exteriorColor).filter(Boolean))).sort();
+    
+    // Normalize exterior colors to basic colors for filter options
+    const allExteriorColors = new Set<string>();
+    vehicles.forEach(v => {
+      if (v.exteriorColor) {
+        allExteriorColors.add(normalizeColorToBasic(v.exteriorColor));
+      }
+    });
+    const exteriorColors = BASIC_COLORS.filter(color => allExteriorColors.has(color)).sort((a, b) => {
+      const indexA = BASIC_COLORS.indexOf(a);
+      const indexB = BASIC_COLORS.indexOf(b);
+      return indexA - indexB;
+    });
     
     // Collect all equipment items
     const allEquipment = new Set<string>();
@@ -97,9 +110,12 @@ const VehiclesPage = () => {
         return false;
       }
       
-      // Exterior color filter
-      if (filters.exteriorColors.length > 0 && vehicle.exteriorColor && !filters.exteriorColors.includes(vehicle.exteriorColor)) {
-        return false;
+      // Exterior color filter (normalize to basic colors for comparison)
+      if (filters.exteriorColors.length > 0 && vehicle.exteriorColor) {
+        const normalizedVehicleColor = normalizeColorToBasic(vehicle.exteriorColor);
+        if (!filters.exteriorColors.includes(normalizedVehicleColor)) {
+          return false;
+        }
       }
       
       // Equipment filter (vehicle must have all selected equipment items)
@@ -203,7 +219,7 @@ const VehiclesPage = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="pt-8 pb-20">
-        <div className="container mx-auto px-4 md:px-6">
+        <div className="max-w-[1560px] mx-auto px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
@@ -285,7 +301,7 @@ const VehiclesPage = () => {
           {vehicles && !isLoading && (
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Filters Sidebar */}
-              <aside className="lg:w-80 flex-shrink-0">
+              <aside className="lg:w-72 flex-shrink-0">
                 <VehicleFilters
                   filters={filters}
                   setFilters={setFilters}

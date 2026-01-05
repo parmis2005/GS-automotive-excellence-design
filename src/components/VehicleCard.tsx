@@ -1,24 +1,12 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
+import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
 
 interface VehicleCardProps extends Vehicle {
   showCategory?: boolean; // Optional prop to show/hide category badge
-}
-
-/**
- * Ensures the image URL uses "xl" format for high quality
- * Replaces any format parameter (xlrm, xlrg, etc.) with "xl"
- */
-function ensureHighQualityImageUrl(imageUrl: string, vehicleId: string): string {
-  if (!imageUrl || !imageUrl.includes('cargate360')) {
-    // If not a cargate URL, return as-is or generate one
-    return `https://img.cargate360.de/default.aspx?vid=${vehicleId}&bid=1790&format=xl&ino=1&app=Kiste-Default`;
-  }
-  
-  // Replace any format parameter with "xl" for consistent high quality
-  return imageUrl.replace(/format=[^&]*/i, 'format=xl');
 }
 
 const VehicleCard = ({
@@ -42,8 +30,82 @@ const VehicleCard = ({
   arrivalDate,
   showCategory = false, // Default: don't show category (only on homepage)
 }: VehicleCardProps) => {
-  // Ensure image URL uses "xl" format for high quality
-  const highQualityImage = ensureHighQualityImageUrl(image, id);
+  // Get image URL with fallback to placeholder
+  const initialImageUrl = getVehicleImageWithFallback(image, id);
+  const placeholderImageUrl = getPlaceholderImage();
+  
+  // State for image error handling and placeholder detection
+  const [imageError, setImageError] = useState(false);
+  const [usePlaceholder, setUsePlaceholder] = useState(!image || !image.trim());
+  
+  // Check if the image is a placeholder (only one image exists AND it's a placeholder)
+  useEffect(() => {
+    // Only check if we have an image URL from cargate
+    if (!image || !image.trim() || !image.includes('cargate360')) {
+      setUsePlaceholder(true);
+      return;
+    }
+    
+    // Check if image 1 is a real photo (by loading it and checking dimensions)
+    // and if image 2 exists
+    const checkImages = async () => {
+      try {
+        // First check if image 2 exists - if it does, we definitely have real photos
+        const image2Url = `https://img.cargate360.de/default.aspx?vid=${id}&bid=1790&format=xl&ino=2&app=Kiste-Default`;
+        const controller2 = new AbortController();
+        const timeout2 = setTimeout(() => controller2.abort(), 2000);
+        
+        try {
+          const response2 = await fetch(image2Url, {
+            method: 'HEAD',
+            signal: controller2.signal,
+          });
+          clearTimeout(timeout2);
+          
+          // If image 2 exists and is an image, we have real photos - use original
+          if (response2.ok && response2.headers.get('content-type')?.startsWith('image/')) {
+            setUsePlaceholder(false);
+            return;
+          }
+        } catch (error) {
+          clearTimeout(timeout2);
+        }
+        
+        // Image 2 doesn't exist, so check if image 1 is a real photo by loading it
+        const image1Url = initialImageUrl;
+        const img = new Image();
+        
+        const image1Check = new Promise<boolean>((resolve) => {
+          img.onload = () => {
+            // Real car photos are usually larger (at least 600px width)
+            // Placeholder images from cargate are typically smaller
+            if (img.naturalWidth > 600 && img.naturalHeight > 400) {
+              resolve(true); // Real photo
+            } else {
+              resolve(false); // Likely placeholder
+            }
+          };
+          img.onerror = () => resolve(false);
+          img.src = image1Url;
+          
+          // Timeout after 3 seconds
+          setTimeout(() => resolve(false), 3000);
+        });
+        
+        const isRealPhoto = await image1Check;
+        
+        // If image 1 is a real photo, use it; otherwise use placeholder
+        setUsePlaceholder(!isRealPhoto);
+      } catch (error) {
+        // On error, keep current state (don't change)
+      }
+    };
+    
+    checkImages();
+  }, [image, id, initialImageUrl]);
+  
+  const displayImageUrl = (imageError || usePlaceholder) ? placeholderImageUrl : initialImageUrl;
+  const isPlaceholderDisplay = imageError || usePlaceholder;
   // Determine if vehicle should show "Neu eingetroffen" badge
   // Priority 1: Use arrivalDate if available (from cargate) - but this data is loaded via JS, so usually not available
   // Priority 2: Fallback - since arrivalDate is not available, use indicators based on vehicle characteristics
@@ -80,12 +142,16 @@ const VehicleCard = ({
       {/* Image Container */}
       <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
         <img
-          src={highQualityImage}
+          src={displayImageUrl}
           alt={`${brand} ${model}`}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full transition-transform duration-500 group-hover:scale-105"
+          style={{ 
+            objectFit: isPlaceholderDisplay ? 'contain' : 'cover',
+            imageRendering: 'auto'
+          }}
           loading="lazy"
           decoding="async"
-          style={{ imageRendering: 'auto' }}
+          onError={() => setImageError(true)}
         />
         
         {/* Category Badge - oben links im Bild (nur auf Startseite) */}

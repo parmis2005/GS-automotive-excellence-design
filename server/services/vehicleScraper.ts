@@ -262,10 +262,51 @@ async function fetchVehicleDetails(offerUrl: string, vehicleId: string): Promise
       details.interiorColor = interiorColorRow.text().trim();
     }
 
-    // Extract fuel and transmission if not already extracted from URL
-    // Try to extract from structured data or HTML
-    if (!details.fuel) {
-      // Could extract from URL or HTML structure if needed
+    // Extract fuel type (Kraftstoff) from HTML
+    if (!details.fuel || details.fuel === "Unbekannt") {
+      // Try multiple approaches to extract fuel type
+      // Approach 1: Try structured data (JSON-LD)
+      const fuelMatchStructured = html.match(/"fuelType":\s*"([^"]+)"/i) || 
+                                  html.match(/"fuel":\s*"([^"]+)"/i);
+      if (fuelMatchStructured && fuelMatchStructured[1]) {
+        details.fuel = fuelMatchStructured[1].trim();
+      } else {
+        // Approach 2: Try HTML table/list items
+        const fuelRow = $('th:contains("Kraftstoff"), th:contains("Fuel"), li:contains("Kraftstoff")').first();
+        if (fuelRow.length > 0) {
+          const fuelText = fuelRow.parent().find('td').first().text().trim() || 
+                          fuelRow.text().replace(/Kraftstoff[:\s]*/i, '').trim();
+          if (fuelText && fuelText.length > 0 && fuelText !== "Unbekannt") {
+            // Normalize fuel type
+            const fuelLower = fuelText.toLowerCase();
+            if (fuelLower.includes('plugin') || fuelLower.includes('plug-in')) {
+              if (fuelLower.includes('diesel')) {
+                details.fuel = 'Plug-in-Hybrid-Diesel';
+              } else if (fuelLower.includes('benzin') || fuelLower.includes('petrol')) {
+                details.fuel = 'Plug-in-Hybrid-Benzin';
+              } else {
+                details.fuel = 'Plug-in-Hybrid';
+              }
+            } else if (fuelLower.includes('hybrid')) {
+              if (fuelLower.includes('diesel')) {
+                details.fuel = 'Hybrid-Diesel';
+              } else if (fuelLower.includes('benzin') || fuelLower.includes('petrol')) {
+                details.fuel = 'Hybrid-Benzin';
+              } else {
+                details.fuel = 'Hybrid';
+              }
+            } else if (fuelLower.includes('elektro') || fuelLower.includes('electric')) {
+              details.fuel = 'Elektro';
+            } else if (fuelLower.includes('diesel')) {
+              details.fuel = 'Diesel';
+            } else if (fuelLower.includes('benzin') || fuelLower.includes('petrol')) {
+              details.fuel = 'Benzin';
+            } else {
+              details.fuel = fuelText;
+            }
+          }
+        }
+      }
     }
     
     // Extract equipment list from description meta tag
@@ -472,6 +513,51 @@ async function fetchVehicleDetails(offerUrl: string, vehicleId: string): Promise
 }
 
 /**
+ * Checks if only one image exists for a vehicle (likely a placeholder)
+ * Returns true if only image 1 exists and image 2 doesn't exist
+ */
+async function hasOnlyOneImage(vehicleId: string): Promise<boolean> {
+  try {
+    // Check if image 1 exists
+    const image1Url = cargateImage(vehicleId, 1, "xl");
+    const image1Exists = await checkImageExists(image1Url);
+    
+    if (!image1Exists) {
+      return false; // No images at all
+    }
+    
+    // Check if image 2 exists
+    const image2Url = cargateImage(vehicleId, 2, "xl");
+    const image2Exists = await checkImageExists(image2Url);
+    
+    // If image 1 exists but image 2 doesn't, it's likely only a placeholder
+    return image1Exists && !image2Exists;
+  } catch (error) {
+    console.warn(`⚠️ Error checking images for vehicle ${vehicleId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Checks if an image URL exists using a HEAD request
+ */
+async function checkImageExists(imageUrl: string): Promise<boolean> {
+  try {
+    const response = await fetch(imageUrl, {
+      method: 'HEAD',
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+    });
+    
+    // Consider it exists if status is OK and content-type is an image
+    return response.ok && response.headers.get('content-type')?.startsWith('image/') === true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
  * Processes vehicles in batches to avoid overwhelming the server
  */
 async function processVehiclesInBatches<T, R>(
@@ -565,13 +651,48 @@ export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
         let transmission = details.transmission || "Unbekannt";
         if (offerUrl) {
           const urlParts = offerUrl.split('/').filter(p => p.length > 0);
-          // Common fuel types in German
-          const fuelTypes = ['Benzin', 'Diesel', 'Elektro', 'Hybrid', 'CNG', 'LPG'];
+          // Common fuel types in German (including variants) - ordered by specificity
+          const fuelTypes = [
+            'Plug-in-Hybrid-Benzin', 'Plugin-Hybrid-Benzin',
+            'Plug-in-Hybrid-Diesel', 'Plugin-Hybrid-Diesel',
+            'Plug-in-Hybrid', 'Plugin-Hybrid',
+            'Hybrid-Benzin', 'Hybrid-Diesel',
+            'Benzin', 'Diesel', 'Elektro', 'Hybrid', 'CNG', 'LPG',
+            'Plug-in', 'Plugin'
+          ];
           const transmissionTypes = ['Automatik', 'Schaltgetriebe', 'Automatisch', 'Manuell'];
           
+          // Try to find fuel type (check all URL parts, prioritize exact matches)
           for (const part of urlParts) {
+            // Exact match (check most specific first)
             if (fuelTypes.includes(part)) {
               fuel = part;
+            } else if (fuel === "Unbekannt") {
+              // Partial match for variants only if we haven't found anything yet
+              const partLower = part.toLowerCase();
+              if (partLower.includes('plugin') || partLower.includes('plug-in')) {
+                if (partLower.includes('diesel')) {
+                  fuel = 'Plug-in-Hybrid-Diesel';
+                } else if (partLower.includes('benzin') || partLower.includes('petrol')) {
+                  fuel = 'Plug-in-Hybrid-Benzin';
+                } else if (partLower.includes('hybrid')) {
+                  fuel = 'Plug-in-Hybrid';
+                }
+              } else if (partLower.includes('hybrid')) {
+                if (partLower.includes('diesel')) {
+                  fuel = 'Hybrid-Diesel';
+                } else if (partLower.includes('benzin') || partLower.includes('petrol')) {
+                  fuel = 'Hybrid-Benzin';
+                } else {
+                  fuel = 'Hybrid';
+                }
+              } else if (partLower.includes('elektro') || partLower.includes('electric')) {
+                fuel = 'Elektro';
+              } else if (partLower.includes('diesel')) {
+                fuel = 'Diesel';
+              } else if (partLower.includes('benzin') || partLower.includes('petrol')) {
+                fuel = 'Benzin';
+              }
             }
             if (transmissionTypes.includes(part)) {
               transmission = part;
@@ -648,6 +769,15 @@ export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
           const arrivalDate = new Date(updatedVehicle.arrivalDate);
           const daysSinceArrival = Math.floor((new Date().getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24));
           updatedVehicle.isNew = daysSinceArrival < 10; // Less than 10 days old
+        }
+        
+        // Check if vehicle has only one image (likely placeholder) - if so, clear the image field
+        if (updatedVehicle.image && updatedVehicle.image.includes('cargate360')) {
+          const onlyOneImage = await hasOnlyOneImage(updatedVehicle.id);
+          if (onlyOneImage) {
+            console.log(`⚠️ Vehicle ${updatedVehicle.id} has only one image (placeholder), clearing image field`);
+            updatedVehicle.image = ''; // Clear image field so placeholder is used
+          }
         }
         
         return updatedVehicle;

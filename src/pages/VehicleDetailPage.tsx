@@ -3,8 +3,10 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useVehicle } from "@/hooks/useVehicles";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { getVehicleSEO, generateVehicleSchema } from "@/utils/seo";
 import { 
   Loader2, 
   AlertCircle, 
@@ -23,6 +25,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { getPlaceholderImage } from "@/lib/vehicleImage";
+import { splitModelName } from "@/lib/vehicleNameUtils";
 
 /**
  * Helper function to build cargate360 image URL
@@ -235,8 +239,12 @@ const VehicleDetailPage = () => {
                   )}
                 </>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                  Kein Bild verfügbar
+                <div className="w-full h-full flex items-center justify-center bg-secondary">
+                  <img
+                    src={getPlaceholderImage()}
+                    alt="GS Automobile Rheinland"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               )}
             </div>
@@ -272,14 +280,21 @@ const VehicleDetailPage = () => {
           <div className="space-y-6">
             {/* Header */}
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-primary font-semibold uppercase tracking-wider">
-                  {vehicle.brand}
-                </span>
-              </div>
-              <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-2">
-                {vehicle.model}
-              </h1>
+              {(() => {
+                const { base, variant } = splitModelName(vehicle.model);
+                return (
+                  <div className="mb-2">
+                    <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground">
+                      {vehicle.brand} {base}
+                    </h1>
+                    {variant && (
+                      <p className="text-base text-muted-foreground mt-1">
+                        {variant}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
               
               {/* Internal Number */}
               {vehicle.internalNumber && (

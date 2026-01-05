@@ -5,8 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { Search, X } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Search, ChevronDown } from "lucide-react";
 import type { VehicleFiltersState } from "@/pages/VehiclesPage";
+import { getColorHex } from "@/lib/colorUtils";
 
 interface VehicleFiltersProps {
   filters: VehicleFiltersState;
@@ -21,6 +23,7 @@ interface VehicleFiltersProps {
 }
 
 const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersProps) => {
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const currentYear = new Date().getFullYear();
   const maxPrice = 200000;
   const minPrice = 0;
@@ -99,9 +102,9 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
 
       <Separator className="mb-6" />
 
-      {/* Price Range */}
+      {/* Price Range - PRIMARY FILTER */}
       <div className="mb-6">
-        <Label className="mb-4 block">
+        <Label className="mb-4 block font-medium">
           Preis: {filters.priceRange[0].toLocaleString("de-DE")} € - {filters.priceRange[1].toLocaleString("de-DE")} €
         </Label>
         <Slider
@@ -120,28 +123,7 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
 
       <Separator className="mb-6" />
 
-      {/* Year Range */}
-      <div className="mb-6">
-        <Label className="mb-4 block">
-          Baujahr: {filters.yearRange[0]} - {filters.yearRange[1]}
-        </Label>
-        <Slider
-          value={filters.yearRange}
-          onValueChange={(value) => updateFilters({ yearRange: value as [number, number] })}
-          min={minYear}
-          max={maxYear}
-          step={1}
-          className="w-full"
-        />
-        <div className="flex justify-between text-xs text-muted-foreground mt-2">
-          <span>{minYear}</span>
-          <span>{maxYear}</span>
-        </div>
-      </div>
-
-      <Separator className="mb-6" />
-
-      {/* Brands */}
+      {/* Brands - PRIMARY FILTER */}
       <div className="mb-6">
         <Label className="mb-3 block">Marke</Label>
         <div className="space-y-3 max-h-48 overflow-y-auto">
@@ -165,9 +147,9 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
 
       <Separator className="mb-6" />
 
-      {/* Fuel Types */}
+      {/* Fuel Types - PRIMARY FILTER */}
       <div className="mb-6">
-        <Label className="mb-3 block">Kraftstoff</Label>
+        <Label className="mb-3 block font-medium">Kraftstoff</Label>
         <div className="space-y-3">
           {filterOptions.fuelTypes.map((fuel) => (
             <div key={fuel} className="flex items-center space-x-2">
@@ -187,93 +169,133 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
         </div>
       </div>
 
-      <Separator className="mb-6" />
-
-      {/* Transmission */}
-      {filterOptions.transmissionTypes.length > 0 && (
-        <>
-          <Separator className="mb-6" />
+      {/* Advanced Filters - Collapsible */}
+      <Separator className="mb-4" />
+      <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className="w-full justify-between p-0 h-auto font-normal text-sm text-muted-foreground hover:text-foreground mb-4"
+          >
+            <span>Weitere Filter anzeigen</span>
+            <ChevronDown
+              className={`w-4 h-4 transition-transform duration-200 ${
+                showAdvancedFilters ? "transform rotate-180" : ""
+              }`}
+            />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-6">
+          {/* Year Range */}
           <div className="mb-6">
-            <Label className="mb-3 block">Getriebe</Label>
-            <div className="space-y-3">
-              {filterOptions.transmissionTypes.map((transmission) => (
-                <div key={transmission} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`transmission-${transmission}`}
-                    checked={filters.transmissionTypes.includes(transmission)}
-                    onCheckedChange={() => toggleTransmission(transmission)}
-                  />
-                  <Label
-                    htmlFor={`transmission-${transmission}`}
-                    className="text-sm font-normal cursor-pointer flex-1"
-                  >
-                    {transmission}
-                  </Label>
-                </div>
-              ))}
+            <Label className="mb-4 block">
+              Baujahr: {filters.yearRange[0]} - {filters.yearRange[1]}
+            </Label>
+            <Slider
+              value={filters.yearRange}
+              onValueChange={(value) => updateFilters({ yearRange: value as [number, number] })}
+              min={minYear}
+              max={maxYear}
+              step={1}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-2">
+              <span>{minYear}</span>
+              <span>{maxYear}</span>
             </div>
           </div>
-        </>
-      )}
 
-      {/* Exterior Colors */}
-      {filterOptions.exteriorColors.length > 0 && (
-        <>
-          <Separator className="mb-6" />
-          <div className="mb-6">
-            <Label className="mb-3 block">Außenfarbe</Label>
-            <div className="space-y-3 max-h-48 overflow-y-auto">
-              {filterOptions.exteriorColors.map((color) => (
-                <div key={color} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`color-${color}`}
-                    checked={filters.exteriorColors.includes(color)}
-                    onCheckedChange={() => toggleExteriorColor(color)}
-                  />
-                  <Label
-                    htmlFor={`color-${color}`}
-                    className="text-sm font-normal cursor-pointer flex-1"
-                  >
-                    {color}
-                  </Label>
+          {/* Transmission */}
+          {filterOptions.transmissionTypes.length > 0 && (
+            <>
+              <Separator className="mb-6" />
+              <div className="mb-6">
+                <Label className="mb-3 block">Getriebe</Label>
+                <div className="space-y-3">
+                  {filterOptions.transmissionTypes.map((transmission) => (
+                    <div key={transmission} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`transmission-${transmission}`}
+                        checked={filters.transmissionTypes.includes(transmission)}
+                        onCheckedChange={() => toggleTransmission(transmission)}
+                      />
+                      <Label
+                        htmlFor={`transmission-${transmission}`}
+                        className="text-sm font-normal cursor-pointer flex-1"
+                      >
+                        {transmission}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+              </div>
+            </>
+          )}
 
-      {/* Equipment - Show top 20 most common items */}
-      {filterOptions.equipment.length > 0 && (
-        <>
-          <Separator className="mb-6" />
-          <div className="mb-6">
-            <Label className="mb-3 block">Ausstattung</Label>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {filterOptions.equipment.slice(0, 50).map((eq) => (
-                <div key={eq} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`equipment-${eq}`}
-                    checked={filters.equipment.includes(eq)}
-                    onCheckedChange={() => toggleEquipment(eq)}
-                  />
-                  <Label
-                    htmlFor={`equipment-${eq}`}
-                    className="text-sm font-normal cursor-pointer flex-1"
-                  >
-                    {eq}
-                  </Label>
+          {/* Exterior Colors */}
+          {filterOptions.exteriorColors.length > 0 && (
+            <>
+              <Separator className="mb-6" />
+              <div className="mb-6">
+                <Label className="mb-3 block">Außenfarbe</Label>
+                <div className="space-y-3 max-h-48 overflow-y-auto">
+                  {filterOptions.exteriorColors.map((color) => (
+                    <div key={color} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`color-${color}`}
+                        checked={filters.exteriorColors.includes(color)}
+                        onCheckedChange={() => toggleExteriorColor(color)}
+                      />
+                      <div 
+                        className="w-4 h-4 rounded-full border border-border flex-shrink-0"
+                        style={{ backgroundColor: getColorHex(color) }}
+                      />
+                      <Label
+                        htmlFor={`color-${color}`}
+                        className="text-sm font-normal cursor-pointer flex-1"
+                      >
+                        {color}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            {filterOptions.equipment.length > 50 && (
-              <p className="text-xs text-muted-foreground mt-2">
-                + {filterOptions.equipment.length - 50} weitere Ausstattungen
-              </p>
-            )}
-          </div>
-        </>
-      )}
+              </div>
+            </>
+          )}
+
+          {/* Equipment */}
+          {filterOptions.equipment.length > 0 && (
+            <>
+              <Separator className="mb-6" />
+              <div className="mb-6">
+                <Label className="mb-3 block">Ausstattung</Label>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {filterOptions.equipment.slice(0, 50).map((eq) => (
+                    <div key={eq} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`equipment-${eq}`}
+                        checked={filters.equipment.includes(eq)}
+                        onCheckedChange={() => toggleEquipment(eq)}
+                      />
+                      <Label
+                        htmlFor={`equipment-${eq}`}
+                        className="text-sm font-normal cursor-pointer flex-1"
+                      >
+                        {eq}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                {filterOptions.equipment.length > 50 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    + {filterOptions.equipment.length - 50} weitere Ausstattungen
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 };
