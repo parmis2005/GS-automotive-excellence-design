@@ -5,16 +5,23 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, ChevronDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Search, ChevronDown, Check, ChevronsUpDown } from "lucide-react";
 import type { VehicleFiltersState } from "@/pages/VehiclesPage";
 import { getColorHex } from "@/lib/colorUtils";
+import { cn } from "@/lib/utils";
 
 interface VehicleFiltersProps {
   filters: VehicleFiltersState;
   setFilters: React.Dispatch<React.SetStateAction<VehicleFiltersState>>;
   filterOptions: {
     brands: string[];
+    models: string[];
+    brandCounts: Map<string, number>;
+    modelCounts: Map<string, number>;
     fuelTypes: string[];
     transmissionTypes: string[];
     exteriorColors: string[];
@@ -35,11 +42,38 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
   };
 
   const toggleBrand = (brand: string) => {
+    setFilters((prev) => {
+      const newBrands = prev.brands.includes(brand)
+        ? prev.brands.filter((b) => b !== brand)
+        : [...prev.brands, brand];
+      
+      // Wenn alle Marken abgewählt werden, auch Modelle zurücksetzen
+      if (newBrands.length === 0) {
+        return {
+          ...prev,
+          brands: newBrands,
+          models: [],
+        };
+      }
+      
+      // Wenn eine Marke abgewählt wird, Modelle entfernen, die nicht mehr zu den verbleibenden Marken gehören
+      // Dies wird durch die filterOptions-Logik in VehiclesPage.tsx gehandhabt,
+      // aber wir können hier auch präventiv Modelle entfernen, die nicht mehr verfügbar sind
+      // Die tatsächliche Filterung erfolgt in VehiclesPage.tsx basierend auf filterOptions
+      
+      return {
+        ...prev,
+        brands: newBrands,
+      };
+    });
+  };
+
+  const toggleModel = (model: string) => {
     setFilters((prev) => ({
       ...prev,
-      brands: prev.brands.includes(brand)
-        ? prev.brands.filter((b) => b !== brand)
-        : [...prev.brands, brand],
+      models: prev.models.includes(model)
+        ? prev.models.filter((m) => m !== model)
+        : [...prev.models, model],
     }));
   };
 
@@ -125,24 +159,142 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
 
       {/* Brands - PRIMARY FILTER */}
       <div className="mb-6">
-        <Label className="mb-3 block">Marke</Label>
-        <div className="space-y-3 max-h-48 overflow-y-auto">
-          {filterOptions.brands.map((brand) => (
-            <div key={brand} className="flex items-center space-x-2">
-              <Checkbox
-                id={`brand-${brand}`}
-                checked={filters.brands.includes(brand)}
-                onCheckedChange={() => toggleBrand(brand)}
-              />
-              <Label
-                htmlFor={`brand-${brand}`}
-                className="text-sm font-normal cursor-pointer flex-1"
+        <Label className="mb-3 block font-medium">Marke</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className={cn(
+                "w-full justify-between",
+                !filters.brands.length && "text-muted-foreground"
+              )}
+            >
+              {filters.brands.length > 0
+                ? filters.brands.length === 1
+                  ? filters.brands[0]
+                  : `${filters.brands.length} Marken ausgewählt`
+                : "Alle Marken"}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Marke suchen..." />
+              <CommandList>
+                <CommandEmpty>Keine Marke gefunden.</CommandEmpty>
+                <CommandGroup>
+                  {filterOptions.brands && filterOptions.brands.map((brand) => {
+                    const count = filterOptions.brandCounts.get(brand) || 0;
+                    return (
+                      <CommandItem
+                        key={brand}
+                        value={brand}
+                        onSelect={() => toggleBrand(brand)}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            filters.brands.includes(brand) ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {brand} ({count})
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        {filters.brands.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {filters.brands.map((brand) => (
+              <Button
+                key={brand}
+                variant="secondary"
+                size="sm"
+                onClick={() => toggleBrand(brand)}
+                className="h-7 text-xs"
               >
                 {brand}
-              </Label>
-            </div>
-          ))}
-        </div>
+                <span className="ml-1">×</span>
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Models - PRIMARY FILTER */}
+      <div className="mb-6">
+        <Label className="mb-3 block font-medium">Modell</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              disabled={filters.brands.length === 0}
+              className={cn(
+                "w-full justify-between",
+                !filters.models.length && "text-muted-foreground",
+                filters.brands.length === 0 && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              {filters.brands.length === 0
+                ? "Bitte zuerst Marke wählen"
+                : filters.models.length > 0
+                ? filters.models.length === 1
+                  ? filters.models[0]
+                  : `${filters.models.length} Modelle ausgewählt`
+                : "Alle Modelle"}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Modell suchen..." />
+              <CommandList>
+                <CommandEmpty>Kein Modell gefunden.</CommandEmpty>
+                <CommandGroup>
+                  {filterOptions.models && filterOptions.models.map((model) => {
+                    const count = filterOptions.modelCounts.get(model) || 0;
+                    return (
+                      <CommandItem
+                        key={model}
+                        value={model}
+                        onSelect={() => toggleModel(model)}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            filters.models.includes(model) ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {model} ({count})
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        {filters.models.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {filters.models.map((model) => (
+              <Button
+                key={model}
+                variant="secondary"
+                size="sm"
+                onClick={() => toggleModel(model)}
+                className="h-7 text-xs"
+              >
+                {model}
+                <span className="ml-1">×</span>
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       <Separator className="mb-6" />
@@ -151,7 +303,7 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
       <div className="mb-6">
         <Label className="mb-3 block font-medium">Kraftstoff</Label>
         <div className="space-y-3">
-          {filterOptions.fuelTypes.map((fuel) => (
+          {filterOptions.fuelTypes && filterOptions.fuelTypes.map((fuel) => (
             <div key={fuel} className="flex items-center space-x-2">
               <Checkbox
                 id={`fuel-${fuel}`}
@@ -205,35 +357,77 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
             </div>
           </div>
 
-          {/* Transmission */}
-          {filterOptions.transmissionTypes.length > 0 && (
-            <>
-              <Separator className="mb-6" />
-              <div className="mb-6">
-                <Label className="mb-3 block">Getriebe</Label>
-                <div className="space-y-3">
-                  {filterOptions.transmissionTypes.map((transmission) => (
-                    <div key={transmission} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`transmission-${transmission}`}
-                        checked={filters.transmissionTypes.includes(transmission)}
-                        onCheckedChange={() => toggleTransmission(transmission)}
-                      />
-                      <Label
-                        htmlFor={`transmission-${transmission}`}
-                        className="text-sm font-normal cursor-pointer flex-1"
-                      >
-                        {transmission}
-                      </Label>
+              {/* Transmission */}
+              {filterOptions.transmissionTypes && filterOptions.transmissionTypes.length > 0 && (
+                <>
+                  <Separator className="mb-6" />
+                  <div className="mb-6">
+                    <Label className="mb-3 block">Getriebe</Label>
+                    <div className="space-y-3">
+                      {filterOptions.transmissionTypes.map((transmission) => (
+                        <div key={transmission} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`transmission-${transmission}`}
+                            checked={filters.transmissionTypes.includes(transmission)}
+                            onCheckedChange={() => toggleTransmission(transmission)}
+                          />
+                          <Label
+                            htmlFor={`transmission-${transmission}`}
+                            className="text-sm font-normal cursor-pointer flex-1"
+                          >
+                            {transmission}
+                          </Label>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                </>
+              )}
+
+              {/* MwSt. (VAT) Filter */}
+              <div>
+                <Separator className="mb-6" />
+                <Label className="mb-3 block font-medium">MwSt.</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="vat-displayable"
+                      checked={filters.vatDisplayable === true}
+                      onCheckedChange={(checked) => {
+                        updateFilters({
+                          vatDisplayable: checked ? true : null,
+                        });
+                      }}
+                    />
+                    <Label
+                      htmlFor="vat-displayable"
+                      className="text-sm font-normal cursor-pointer flex-1"
+                    >
+                      MwSt. ausweisbar
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="vat-not-displayable"
+                      checked={filters.vatDisplayable === false}
+                      onCheckedChange={(checked) => {
+                        updateFilters({
+                          vatDisplayable: checked ? false : null,
+                        });
+                      }}
+                    />
+                    <Label
+                      htmlFor="vat-not-displayable"
+                      className="text-sm font-normal cursor-pointer flex-1"
+                    >
+                      MwSt. nicht ausweisbar
+                    </Label>
+                  </div>
                 </div>
               </div>
-            </>
-          )}
 
           {/* Exterior Colors */}
-          {filterOptions.exteriorColors.length > 0 && (
+          {filterOptions.exteriorColors && filterOptions.exteriorColors.length > 0 && (
             <>
               <Separator className="mb-6" />
               <div className="mb-6">
@@ -264,7 +458,7 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
           )}
 
           {/* Equipment */}
-          {filterOptions.equipment.length > 0 && (
+          {filterOptions.equipment && filterOptions.equipment.length > 0 && (
             <>
               <Separator className="mb-6" />
               <div className="mb-6">

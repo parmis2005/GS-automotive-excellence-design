@@ -3,6 +3,45 @@
  */
 
 /**
+ * Extracts the base model name from a full model string for filtering
+ * This returns only the basic model name (e.g., "1er", "2er", "i4", "X1") without variants
+ * Example: "i4 eDrive40 GC M-SPORT-PRO" -> "i4"
+ * Example: "1er 118d" -> "1er"
+ * Example: "X1 F48 sDrive18d" -> "X1"
+ */
+export function getBaseModelName(fullModelName: string): string {
+  if (!fullModelName) return "";
+  
+  // Common patterns for base models
+  // Match: number + "er" (1er, 2er, 3er, etc.)
+  const numberErMatch = fullModelName.match(/^(\d+er)/i);
+  if (numberErMatch) {
+    return numberErMatch[1];
+  }
+  
+  // Match: single letter + number (i4, i5, X1, X2, etc.) - but stop before space if followed by more details
+  const letterNumberMatch = fullModelName.match(/^([A-Z]\d+)/i);
+  if (letterNumberMatch) {
+    return letterNumberMatch[1];
+  }
+  
+  // Match: word + number (Golf 8, Polo 6, etc.)
+  const wordNumberMatch = fullModelName.match(/^([A-Za-z]+\s?\d+)/i);
+  if (wordNumberMatch) {
+    return wordNumberMatch[1].trim();
+  }
+  
+  // Match: single word or first word (Mini Cooper, Fiesta, etc.)
+  const firstWordMatch = fullModelName.match(/^([A-Za-z]+)/i);
+  if (firstWordMatch) {
+    return firstWordMatch[1];
+  }
+  
+  // Fallback: return first part before space
+  return fullModelName.split(' ')[0] || fullModelName;
+}
+
+/**
  * Splits a vehicle model name into base model (Baureihe) and variant/trim
  * Base model includes: first word (Baureihe like "X1", "i4", "A4") + optional generation code (like "F48", "G20")
  * Everything else goes to variant

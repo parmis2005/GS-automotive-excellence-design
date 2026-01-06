@@ -1,10 +1,10 @@
-import { Facebook, Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-primary text-primary-foreground">
+    <footer className="bg-gray-900 text-gray-100">
       <div className="container mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
@@ -13,23 +13,13 @@ const Footer = () => {
               <span className="font-display text-2xl font-bold">
                 GS AUTOMOBILE
               </span>
-              <div className="text-xs opacity-80 tracking-[0.2em] uppercase mt-1">
+              <div className="text-xs text-gray-400 tracking-[0.2em] uppercase mt-1">
                 Rheinland
               </div>
             </div>
-            <p className="text-sm opacity-80 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Ihr Partner für Premium-Gebrauchtwagen und Jahreswagen in Krefeld.
             </p>
-            <div className="flex gap-3">
-              <a
-                href="https://www.facebook.com/GSAutomobileRheinland/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded bg-primary-foreground/10 flex items-center justify-center hover:bg-primary-foreground/20 transition-colors"
-              >
-                <Facebook className="w-4 h-4" />
-              </a>
-            </div>
           </div>
 
           {/* Quick Links */}
@@ -40,7 +30,7 @@ const Footer = () => {
                 <li key={link}>
                   <a
                     href={`#${link.toLowerCase()}`}
-                    className="opacity-80 hover:opacity-100 transition-opacity"
+                    className="text-gray-400 hover:text-gray-100 transition-colors"
                   >
                     {link}
                   </a>
@@ -57,7 +47,7 @@ const Footer = () => {
                 <li key={service}>
                   <a
                     href="#services"
-                    className="opacity-80 hover:opacity-100 transition-opacity"
+                    className="text-gray-400 hover:text-gray-100 transition-colors"
                   >
                     {service}
                   </a>
@@ -71,18 +61,18 @@ const Footer = () => {
             <h4 className="font-display text-lg mb-4">Kontakt</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="tel:021519422262" className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
+                <a href="tel:021519422262" className="flex items-center gap-2 text-gray-400 hover:text-gray-100 transition-colors">
                   <Phone className="w-4 h-4" />
                   02151 94 222 62
                 </a>
               </li>
               <li>
-                <a href="mailto:info@gsauto.de" className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
+                <a href="mailto:info@gsauto.de" className="flex items-center gap-2 text-gray-400 hover:text-gray-100 transition-colors">
                   <Mail className="w-4 h-4" />
                   info@gsauto.de
                 </a>
               </li>
-              <li className="flex items-start gap-2 opacity-80">
+              <li className="flex items-start gap-2 text-gray-400">
                 <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>
                   Kuhleshütte 149<br />
@@ -94,18 +84,18 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-10 pt-6 border-t border-primary-foreground/20 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs opacity-70">
+        <div className="mt-10 pt-6 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-gray-500">
             © {currentYear} GS Automobile Rheinland GmbH. Alle Rechte vorbehalten.
           </p>
           <div className="flex gap-6 text-xs">
-            <a href="/impressum" className="opacity-70 hover:opacity-100 transition-opacity">
+            <a href="/impressum" className="text-gray-500 hover:text-gray-300 transition-colors">
               Impressum
             </a>
-            <a href="/datenschutz" className="opacity-70 hover:opacity-100 transition-opacity">
+            <a href="/datenschutz" className="text-gray-500 hover:text-gray-300 transition-colors">
               Datenschutz
             </a>
-            <a href="/haftungsausschluss" className="opacity-70 hover:opacity-100 transition-opacity">
+            <a href="/haftungsausschluss" className="text-gray-500 hover:text-gray-300 transition-colors">
               Haftungsausschluss
             </a>
           </div>

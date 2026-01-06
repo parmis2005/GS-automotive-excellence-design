@@ -5,6 +5,7 @@ import { useVehicles } from "@/hooks/useVehicles";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
+import type { Vehicle } from "@/types/vehicle";
 
 const VehiclesSection = () => {
   const { data: vehicles, isLoading, error } = useVehicles();

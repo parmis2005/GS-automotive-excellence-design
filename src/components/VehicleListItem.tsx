@@ -28,6 +28,7 @@ const VehicleListItem = ({
   exposeUrl,
   offerUrl,
   internalNumber,
+  vatDisplayable,
   isFirst = false,
 }: VehicleListItemProps) => {
   // Get image URL with fallback to placeholder
@@ -162,6 +163,20 @@ const VehicleListItem = ({
               <div className="font-display text-3xl md:text-4xl font-bold text-primary">
                 {price.toLocaleString("de-DE")} €
               </div>
+              {vatDisplayable !== undefined && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  {vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
+                </div>
+              )}
+              <Link to={`/fahrzeuge/${id}#kaufanfrage`} className="mt-3 inline-block">
+                <Button
+                  variant="default"
+                  className="bg-primary hover:bg-primary/90 text-white font-semibold"
+                >
+                  Kaufanfrage
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
             </div>
           </div>
 
@@ -233,9 +248,8 @@ const VehicleListItem = ({
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3 mt-auto pt-4 border-t border-border">
             <Link to={`/fahrzeuge/${id}`} className="flex-1">
-              <Button variant="default" className="w-full">
+              <Button variant="outline" className="w-full">
                 Details ansehen
-                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
             {exposeUrl && (

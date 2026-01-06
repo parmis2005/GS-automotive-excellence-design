@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { useVehicle } from "@/hooks/useVehicles";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -25,6 +25,11 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getPlaceholderImage } from "@/lib/vehicleImage";
 import { splitModelName } from "@/lib/vehicleNameUtils";
 
@@ -38,12 +43,32 @@ function cargateImage(vid: string, ino: number = 1, format: string = "xl"): stri
 const VehicleDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: vehicle, isLoading, error } = useVehicle(id || "");
 
   // State for available images (only images that actually exist)
   const [availableImages, setAvailableImages] = useState<string[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLoadingImages, setIsLoadingImages] = useState(true);
+
+  // Form state for purchase inquiry
+  const [formData, setFormData] = useState({
+    salutation: "",
+    firstName: "",
+    lastName: "",
+    company: "",
+    street: "",
+    houseNumber: "",
+    zipCode: "",
+    city: "",
+    email: "",
+    phone: "",
+    birthDay: "",
+    birthMonth: "",
+    birthYear: "",
+    message: "",
+    privacyAccepted: false,
+  });
 
   // Check which images actually exist (only if vehicle has a valid image already)
   useEffect(() => {
@@ -107,6 +132,32 @@ const VehicleDetailPage = () => {
 
     checkImages();
   }, [vehicle]);
+
+  // Scroll to top of page when vehicle loads (if no hash)
+  useEffect(() => {
+    if (!isLoading && vehicle && !location.hash) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [isLoading, vehicle, location.hash]);
+
+  // Scroll to purchase inquiry form if hash is present
+  useEffect(() => {
+    if (location.hash === '#kaufanfrage' && !isLoading && vehicle) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        const element = document.getElementById('kaufanfrage');
+        if (element) {
+          const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
+          const offsetTop = 80; // Navbar height
+          window.scrollTo({
+            top: elementTop - offsetTop,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [location.hash, isLoading, vehicle]);
 
   if (isLoading) {
     return (
@@ -310,6 +361,11 @@ const VehicleDetailPage = () => {
                 <div className="text-4xl font-display font-bold text-primary">
                   {vehicle.price.toLocaleString("de-DE")} €
                 </div>
+                {vehicle.vatDisplayable !== undefined && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {vehicle.vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -395,7 +451,8 @@ const VehicleDetailPage = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
                 size="lg"
-                className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                variant="outline"
+                className="flex-1"
                 onClick={() => window.location.href = "tel:021519422262"}
               >
                 <Phone className="w-5 h-5 mr-2" />
@@ -421,6 +478,260 @@ const VehicleDetailPage = () => {
                   Exposé PDF
                 </Button>
               )}
+            </div>
+
+            <Separator />
+
+            {/* Purchase Inquiry Form */}
+            <div id="kaufanfrage" className="bg-card border border-border rounded-lg p-6 scroll-mt-20">
+              <h3 className="text-xl font-bold mb-4">Kaufanfrage</h3>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  // TODO: Implement form submission
+                  console.log("Form submitted:", formData);
+                }}
+                className="space-y-4"
+              >
+                {/* Anrede */}
+                <div>
+                  <Label htmlFor="salutation">Anrede *</Label>
+                  <Select
+                    value={formData.salutation}
+                    onValueChange={(value) => setFormData({ ...formData, salutation: value })}
+                    required
+                  >
+                    <SelectTrigger id="salutation">
+                      <SelectValue placeholder="Bitte wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Herr">Herr</SelectItem>
+                      <SelectItem value="Frau">Frau</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Vorname & Nachname */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="firstName">Vorname *</Label>
+                    <Input
+                      id="firstName"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Nachname *</Label>
+                    <Input
+                      id="lastName"
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Firma (optional) */}
+                <div>
+                  <Label htmlFor="company">Firma</Label>
+                  <Input
+                    id="company"
+                    value={formData.company}
+                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  />
+                </div>
+
+                {/* Straße & Hausnummer */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    <Label htmlFor="street">Straße *</Label>
+                    <Input
+                      id="street"
+                      value={formData.street}
+                      onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="houseNumber">Hausnummer *</Label>
+                    <Input
+                      id="houseNumber"
+                      value={formData.houseNumber}
+                      onChange={(e) => setFormData({ ...formData, houseNumber: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* PLZ & Ort */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="zipCode">PLZ *</Label>
+                    <Input
+                      id="zipCode"
+                      value={formData.zipCode}
+                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="city">Ort *</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Email & Telefon */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="email">E-Mail *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Telefon *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Geburtsdatum */}
+                <div>
+                  <Label>Geburtsdatum *</Label>
+                  <div className="grid grid-cols-3 gap-4 mt-2">
+                    <div>
+                      <Label htmlFor="birthDay" className="text-xs text-muted-foreground">Tag</Label>
+                      <Input
+                        id="birthDay"
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="TT"
+                        value={formData.birthDay}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 2);
+                          setFormData({ ...formData, birthDay: value });
+                        }}
+                        onBlur={(e) => {
+                          const numValue = parseInt(e.target.value);
+                          if (e.target.value && (isNaN(numValue) || numValue < 1 || numValue > 31)) {
+                            // Reset if invalid
+                            setFormData({ ...formData, birthDay: '' });
+                          }
+                        }}
+                        required
+                        className="text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="birthMonth" className="text-xs text-muted-foreground">Monat</Label>
+                      <Input
+                        id="birthMonth"
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="MM"
+                        value={formData.birthMonth}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 2);
+                          setFormData({ ...formData, birthMonth: value });
+                        }}
+                        onBlur={(e) => {
+                          const numValue = parseInt(e.target.value);
+                          if (e.target.value && (isNaN(numValue) || numValue < 1 || numValue > 12)) {
+                            // Reset if invalid
+                            setFormData({ ...formData, birthMonth: '' });
+                          }
+                        }}
+                        required
+                        className="text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="birthYear" className="text-xs text-muted-foreground">Jahr</Label>
+                      <Input
+                        id="birthYear"
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="JJJJ"
+                        value={formData.birthYear}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          setFormData({ ...formData, birthYear: value });
+                        }}
+                        onBlur={(e) => {
+                          const numValue = parseInt(e.target.value);
+                          if (e.target.value && (isNaN(numValue) || numValue < 1925 || numValue > 2026)) {
+                            // Reset if invalid
+                            setFormData({ ...formData, birthYear: '' });
+                          }
+                        }}
+                        required
+                        className="text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Nachricht */}
+                <div>
+                  <Label htmlFor="message">Nachricht</Label>
+                  <Textarea
+                    id="message"
+                    value={formData.message}
+                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    rows={4}
+                    placeholder="Ihre Nachricht an uns..."
+                  />
+                </div>
+
+                {/* Datenschutzerklärung */}
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="privacy"
+                    checked={formData.privacyAccepted}
+                    onCheckedChange={(checked) => setFormData({ ...formData, privacyAccepted: checked === true })}
+                    required
+                  />
+                  <Label
+                    htmlFor="privacy"
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Ich habe die{" "}
+                    <a href="/datenschutz" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                      Datenschutzerklärung
+                    </a>{" "}
+                    gelesen und akzeptiert. *
+                  </Label>
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-semibold"
+                  disabled={!formData.privacyAccepted}
+                >
+                  Kaufanfrage absenden
+                </Button>
+              </form>
             </div>
           </div>
         </div>

@@ -2,8 +2,15 @@ import * as cheerio from "cheerio";
 import NodeCache from "node-cache";
 import type { Vehicle } from "../types/vehicle.js";
 
-// Cache configuration: 45 minutes TTL
-const cache = new NodeCache({ stdTTL: 45 * 60, checkperiod: 60 });
+// Cache configuration: 24 hours TTL (extended to handle GS Auto website downtime)
+// This ensures we can serve cached data even if the website is down for extended periods
+// useClones: false allows us to access expired entries
+const cache = new NodeCache({ 
+  stdTTL: 24 * 60 * 60, 
+  checkperiod: 60,
+  useClones: false,
+  deleteOnExpire: false // Keep expired entries so we can use them as fallback
+});
 
 // Use high rp (rows per page) value to get all vehicles at once
 // rp=200 should be enough for most cases (current total is ~88 vehicles)
@@ -167,13 +174,20 @@ function extractVehicleDetails(
  */
 async function fetchVehicleDetails(offerUrl: string, vehicleId: string): Promise<Partial<Vehicle>> {
   try {
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for detail pages
+    
     const response = await fetch(offerUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
       },
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.warn(`⚠️ Failed to fetch detail page for vehicle ${vehicleId}: ${response.status}`);
@@ -357,152 +371,89 @@ async function fetchVehicleDetails(offerUrl: string, vehicleId: string): Promise
       details.internalNumber = internalNumber;
     }
 
-    // Extract arrival date (Eintreffdatum / Standtage) from cargate
-    // Based on cargate UI: "Angelegt am: DD.MM.YYYY" and "Anzahl Standtage: XX"
-    // Try multiple approaches: HTML patterns, structured data, and cheerio queries
-    let arrivalDateFound = false;
+    // Extract VAT (MwSt.) information
+    // Look for specific patterns with context to avoid false positives
+    const htmlLower = html.toLowerCase();
     
-    // Approach 1: Try to find "Angelegt am" (Created on) - this is the arrival date in cargate
-    const angelegtPattern = /Angelegt am[^<]*(\d{1,2})\.(\d{1,2})\.(\d{4})/i;
-    const angelegtMatch = html.match(angelegtPattern);
-    if (angelegtMatch) {
-      try {
-        const [, day, month, year] = angelegtMatch;
-        const dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-        const date = new Date(dateStr);
-        if (!isNaN(date.getTime())) {
-          const now = new Date();
-          const maxDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-          const minDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-          if (date <= maxDate && date >= minDate) {
-            details.arrivalDate = date.toISOString().split('T')[0];
-            console.log(`✅ Extracted arrivalDate (Angelegt am) for vehicle ${vehicleId}: ${details.arrivalDate}`);
-            arrivalDateFound = true;
-          }
-        }
-      } catch (e) {
-        console.warn(`⚠️ Error parsing "Angelegt am" date for vehicle ${vehicleId}:`, e);
+    // Priority 1: Look for explicit "MwSt. nicht ausweisbar" pattern (most specific)
+    // This should be checked FIRST because "nicht ausweisbar" is more specific than just "ausweisbar"
+    const nichtAusweisbarPatterns = [
+      /mwst[.\s]+nicht[.\s]+ausweisbar/i,
+      /mwst[.\s]*nicht/i,
+      /nicht[.\s]+ausweisbar[.\s]*mwst/i,
+      /umsatzsteuer[.\s]+nicht[.\s]+ausweisbar/i,
+      /mwst[.\s]*zzgl/i, // "zzgl. MwSt." typically means not included/not displayable
+    ];
+    
+    const ausweisbarPatterns = [
+      /mwst[.\s]+ausweisbar/i,
+      /mwst[.\s]*inkl/i, // "inkl. MwSt." means included/displayable
+      /inkl[.\s]*mwst/i,
+      /umsatzsteuer[.\s]+ausweisbar/i,
+      /mwst[.\s]+ist[.\s]+ausweisbar/i,
+    ];
+    
+    // Check for "nicht ausweisbar" first (has priority)
+    let foundVatInfo = false;
+    for (const pattern of nichtAusweisbarPatterns) {
+      if (pattern.test(html)) {
+        details.vatDisplayable = false;
+        foundVatInfo = true;
+        console.log(`✅ Extracted VAT info for vehicle ${vehicleId}: nicht ausweisbar (pattern: ${pattern})`);
+        break;
       }
     }
     
-    // Approach 2: Try to find in HTML using cheerio (more reliable for structured HTML)
-    if (!arrivalDateFound) {
-      const arrivalDateSelectors = [
-        'li:contains("Angelegt am")',
-        'li:contains("eingetroffen")',
-        'li:contains("seit")',
-        'li:contains("Standtage")',
-        'td:contains("Angelegt am")',
-        'td:contains("eingetroffen")',
-        'td:contains("Eintreffdatum")',
-        '[data-arrival-date]',
-        '[data-standtage]',
-        '*:contains("Angelegt am")',
-      ];
+    // If "nicht ausweisbar" not found, check for "ausweisbar"
+    if (!foundVatInfo) {
+      for (const pattern of ausweisbarPatterns) {
+        if (pattern.test(html)) {
+          details.vatDisplayable = true;
+          foundVatInfo = true;
+          console.log(`✅ Extracted VAT info for vehicle ${vehicleId}: ausweisbar (pattern: ${pattern})`);
+          break;
+        }
+      }
+    }
+    
+    // Fallback: Try to find in price-related elements with more context
+    if (!foundVatInfo) {
+      // Look for elements that contain both price and MwSt info
+      const priceElements = $('*:contains("MwSt"), *:contains("Preis"), *:contains("€")').filter(function() {
+        const text = $(this).text().toLowerCase();
+        return text.includes('mwst') || text.includes('preis');
+      });
       
-      for (const selector of arrivalDateSelectors) {
-        try {
-          const element = $(selector).first();
-          if (element.length > 0) {
-            const text = element.text();
-            // Try to extract date from text
-            const dateMatch = text.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-            if (dateMatch) {
-              const [, day, month, year] = dateMatch;
-              const dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-              const date = new Date(dateStr);
-              if (!isNaN(date.getTime())) {
-                const now = new Date();
-                const maxDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                const minDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-                if (date <= maxDate && date >= minDate) {
-                  details.arrivalDate = date.toISOString().split('T')[0];
-                  console.log(`✅ Extracted arrivalDate for vehicle ${vehicleId} using selector: ${details.arrivalDate}`);
-                  arrivalDateFound = true;
-                  break;
-                }
-              }
-            }
+      for (let i = 0; i < priceElements.length && !foundVatInfo; i++) {
+        const elementText = $(priceElements[i]).text().toLowerCase();
+        
+        // Check for "nicht ausweisbar" first (priority)
+        for (const pattern of nichtAusweisbarPatterns) {
+          if (pattern.test(elementText)) {
+            details.vatDisplayable = false;
+            foundVatInfo = true;
+            console.log(`✅ Extracted VAT info for vehicle ${vehicleId} from price element: nicht ausweisbar`);
+            break;
           }
-        } catch (e) {
-          // Continue to next selector
         }
-      }
-    }
-    
-    // Approach 3: Try regex patterns in HTML if cheerio didn't work
-    if (!arrivalDateFound) {
-      const arrivalDatePatterns = [
-        // Pattern 1: "Angelegt am DD.MM.YYYY" (highest priority - this is what cargate shows)
-        /Angelegt am[^<]*(\d{1,2})\.(\d{1,2})\.(\d{4})/i,
-        // Pattern 2: "eingetroffen am DD.MM.YYYY" or "seit DD.MM.YYYY"
-        /(?:eingetroffen|seit)[^<]*(\d{1,2})\.(\d{1,2})\.(\d{4})/i,
-        // Pattern 3: "eingetroffen: DD.MM.YYYY"
-        /eingetroffen[:\s]+(\d{1,2})\.(\d{1,2})\.(\d{4})/i,
-        // Pattern 4: Look for "Standtage" or "Tage" with date nearby
-        /(?:standtage|tage)[^<]*(\d{1,2})\.(\d{1,2})\.(\d{4})/i,
-        // Pattern 5: Meta tags
-        /"datePublished"[^>]*content="([^"]+)"/,
-        /"dateCreated"[^>]*content="([^"]+)"/,
-        // Pattern 6: Structured data
-        /"datePublished":\s*"([^"]+)"/,
-        /"dateCreated":\s*"([^"]+)"/,
-        // Pattern 7: Table row with "Eintreffdatum" or similar
-        /(?:eintreffdatum|eingetroffen|angelegt)[^<]*<td[^>]*>([^<]*)<\/td>/i,
-        // Pattern 8: Look in list items
-        /<li[^>]*>(?:eingetroffen|seit|standtage|angelegt)[^<]*(\d{1,2})\.(\d{1,2})\.(\d{4})/i,
-        // Pattern 9: Data attributes
-        /data-arrival-date="([^"]+)"/i,
-        /data-standtage="([^"]+)"/i,
-        /data-angelegt="([^"]+)"/i,
-      ];
-      
-      for (const pattern of arrivalDatePatterns) {
-        const match = html.match(pattern);
-        if (match) {
-          try {
-            let dateStr: string;
-            if (match.length === 4) {
-              // DD.MM.YYYY format
-              const [, day, month, year] = match;
-              dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            } else if (match.length === 2) {
-              // ISO format or other from meta tags
-              dateStr = match[1];
-              // Try to parse and reformat if needed
-              const parsed = new Date(dateStr);
-              if (!isNaN(parsed.getTime())) {
-                dateStr = parsed.toISOString().split('T')[0];
-              }
-            } else {
-              continue; // Skip if format doesn't match
+        
+        // Then check for "ausweisbar"
+        if (!foundVatInfo) {
+          for (const pattern of ausweisbarPatterns) {
+            if (pattern.test(elementText)) {
+              details.vatDisplayable = true;
+              foundVatInfo = true;
+              console.log(`✅ Extracted VAT info for vehicle ${vehicleId} from price element: ausweisbar`);
+              break;
             }
-            
-            const date = new Date(dateStr);
-            if (!isNaN(date.getTime())) {
-              // Validate date is reasonable (not in future, not too old)
-              const now = new Date();
-              const maxDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // Max 7 days in future
-              const minDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // Max 1 year ago
-              
-              if (date <= maxDate && date >= minDate) {
-                details.arrivalDate = date.toISOString().split('T')[0];
-                console.log(`✅ Extracted arrivalDate for vehicle ${vehicleId} using regex: ${details.arrivalDate}`);
-                arrivalDateFound = true;
-                break;
-              }
-            }
-          } catch (e) {
-            // Continue to next pattern
-            console.warn(`⚠️ Error parsing arrival date pattern for vehicle ${vehicleId}:`, e);
           }
         }
       }
     }
     
-    // If no arrivalDate found, log it for debugging (but don't fail - it's optional data)
-    if (!arrivalDateFound) {
-      console.warn(`⚠️ Could not extract arrivalDate for vehicle ${vehicleId} from cargate - this is optional data`);
+    // If still not found, log a warning
+    if (!foundVatInfo) {
+      console.warn(`⚠️ Could not extract VAT (MwSt.) info for vehicle ${vehicleId}`);
     }
 
     return details;
@@ -543,12 +494,19 @@ async function hasOnlyOneImage(vehicleId: string): Promise<boolean> {
  */
 async function checkImageExists(imageUrl: string): Promise<boolean> {
   try {
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for image checks
+    
     const response = await fetch(imageUrl, {
       method: 'HEAD',
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       },
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
     
     // Consider it exists if status is OK and content-type is an image
     return response.ok && response.headers.get('content-type')?.startsWith('image/') === true;
@@ -584,6 +542,65 @@ async function processVehiclesInBatches<T, R>(
 /**
  * Fetches and parses vehicles from the GS Automobile Rheinland website
  */
+/**
+ * Fetches vehicle data directly from Cargate using vehicle IDs
+ * This is a fallback when the GS Auto website is down
+ */
+async function fetchVehiclesFromCargate(vehicleIds: string[]): Promise<Vehicle[]> {
+  console.log(`🔄 Fetching ${vehicleIds.length} vehicles directly from Cargate...`);
+  
+  const vehicles: Vehicle[] = [];
+  
+  // Process vehicles in batches to avoid overwhelming Cargate
+  for (let i = 0; i < vehicleIds.length; i += 5) {
+    const batch = vehicleIds.slice(i, i + 5);
+    const batchPromises = batch.map(async (vehicleId) => {
+      try {
+        // Try to fetch vehicle details from Cargate
+        // We'll use the image URL structure to check if vehicle exists
+        const imageUrl = cargateImage(vehicleId, 1, "xl");
+        const imageExists = await checkImageExists(imageUrl);
+        
+        if (!imageExists) {
+          console.warn(`⚠️ Vehicle ${vehicleId} not found in Cargate`);
+          return null;
+        }
+        
+        // For now, we'll create a basic vehicle object
+        // In a real implementation, you'd fetch full details from Cargate API if available
+        const vehicle: Vehicle = {
+          id: vehicleId,
+          image: imageUrl,
+          brand: "Unbekannt",
+          model: "Unbekannt",
+          price: 0,
+          year: new Date().getFullYear() - 1,
+          mileage: 0,
+          fuel: "Unbekannt",
+          transmission: "Unbekannt",
+          isNew: false,
+          category: "Mittelklasse",
+        };
+        
+        return vehicle;
+      } catch (error) {
+        console.error(`❌ Error fetching vehicle ${vehicleId} from Cargate:`, error);
+        return null;
+      }
+    });
+    
+    const batchResults = await Promise.all(batchPromises);
+    vehicles.push(...batchResults.filter((v): v is Vehicle => v !== null));
+    
+    // Small delay between batches
+    if (i + 5 < vehicleIds.length) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+  
+  return vehicles;
+}
+
 export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
   // Check cache first
   const cacheKey = "vehicles_list";
@@ -593,9 +610,27 @@ export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
     return cached;
   }
   
+  // Check if there's any data in cache (even expired) by checking the internal store
+  // NodeCache keeps expired entries when deleteOnExpire is false
+  const cacheStats = cache.getStats();
+  const keys = cache.keys();
+  if (keys.includes(cacheKey)) {
+    // Entry exists but might be expired - try to get it anyway
+    // Since deleteOnExpire is false, we can still access it
+    const staleCache = (cache as any).data.get(cacheKey);
+    if (staleCache && staleCache.v) {
+      console.log(`⚠️ GS Auto website may be down. Using ${staleCache.v.length} vehicles from expired cache as fallback`);
+      return staleCache.v as Vehicle[];
+    }
+  }
+  
   console.log("🔄 Fetching vehicles from website...");
   
   try {
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
     // Fetch the HTML page
     const response = await fetch(VEHICLE_LIST_URL, {
       headers: {
@@ -603,7 +638,10 @@ export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
       },
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -764,12 +802,6 @@ export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
           );
         }
         
-        // Determine isNew based on arrival date (if available)
-        if (updatedVehicle.arrivalDate) {
-          const arrivalDate = new Date(updatedVehicle.arrivalDate);
-          const daysSinceArrival = Math.floor((new Date().getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24));
-          updatedVehicle.isNew = daysSinceArrival < 10; // Less than 10 days old
-        }
         
         // Check if vehicle has only one image (likely placeholder) - if so, clear the image field
         if (updatedVehicle.image && updatedVehicle.image.includes('cargate360')) {
@@ -791,15 +823,22 @@ export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
     
     return detailedVehicles;
   } catch (error) {
-    console.error("❌ Error fetching vehicles:", error);
+    console.error("❌ Error fetching vehicles from GS Auto website:", error);
     
     // Return cached data even if expired as fallback
-    const staleCache = cache.get<Vehicle[]>(cacheKey);
-    if (staleCache) {
-      console.log("⚠️ Returning stale cache as fallback");
-      return staleCache;
+    // Since deleteOnExpire is false, expired entries remain in cache
+    const keys = cache.keys();
+    if (keys.includes(cacheKey)) {
+      const cacheData = (cache as any).data?.get?.(cacheKey);
+      if (cacheData && cacheData.v && Array.isArray(cacheData.v) && cacheData.v.length > 0) {
+        console.log(`⚠️ GS Auto website is down. Using ${cacheData.v.length} vehicles from expired cache as fallback`);
+        return cacheData.v as Vehicle[];
+      }
     }
     
-    throw error;
+    // If no cache available at all, return empty array to prevent frontend crashes
+    console.log("⚠️ No cached data available. GS Auto website is down and no fallback data.");
+    console.log("💡 Returning empty array. Frontend will show 'no vehicles found' message.");
+    return [];
   }
 }

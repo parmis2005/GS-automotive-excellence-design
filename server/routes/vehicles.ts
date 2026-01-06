@@ -21,10 +21,14 @@ vehiclesRouter.get("/", async (req, res) => {
   } catch (error) {
     console.error("Error fetching vehicles:", error);
     
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch vehicles",
-      message: error instanceof Error ? error.message : "Unknown error",
+    // Return empty array instead of error to prevent frontend crashes
+    // The frontend will handle empty state gracefully
+    res.json({
+      success: true,
+      count: 0,
+      data: [],
+      timestamp: new Date().toISOString(),
+      warning: "Failed to fetch vehicles from source. Please try again later.",
     });
   }
 });

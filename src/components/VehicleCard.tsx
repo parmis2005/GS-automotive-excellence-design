@@ -28,6 +28,7 @@ const VehicleCard = ({
   offerUrl,
   category,
   arrivalDate,
+  vatDisplayable,
   showCategory = false, // Default: don't show category (only on homepage)
 }: VehicleCardProps) => {
   // Get image URL with fallback to placeholder
@@ -195,6 +196,21 @@ const VehicleCard = ({
           <div className="font-display text-3xl font-bold text-primary">
             {price.toLocaleString("de-DE")} €
           </div>
+          {vatDisplayable !== undefined && (
+            <div className="text-sm text-muted-foreground mt-1">
+              {vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
+            </div>
+          )}
+          <Link to={`/fahrzeuge/${id}#kaufanfrage`} className="mt-3 inline-block">
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-white font-semibold"
+            >
+              Kaufanfrage
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
         </div>
 
         {/* Specs - Eckdaten kompakt */}
@@ -229,12 +245,11 @@ const VehicleCard = ({
         <div className="pt-4 border-t border-border space-y-2 mt-auto">
           <Link to={`/fahrzeuge/${id}`} className="block w-full">
             <Button
-              variant="default"
+              variant="outline"
               size="sm"
               className="w-full"
             >
               Fahrzeug ansehen
-              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
           {exposeUrl && (

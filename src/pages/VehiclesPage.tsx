@@ -10,15 +10,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import type { Vehicle } from "@/types/vehicle";
 import { normalizeColorToBasic, BASIC_COLORS } from "@/lib/colorUtils";
+import { getBaseModelName } from "@/lib/vehicleNameUtils";
+import SEO from "@/components/SEO";
+import { getVehiclesPageSEO } from "@/utils/seo";
 
 export interface VehicleFiltersState {
   brands: string[];
+  models: string[];
   priceRange: [number, number];
   yearRange: [number, number];
   fuelTypes: string[];
   transmissionTypes: string[];
   exteriorColors: string[];
   equipment: string[];
+  vatDisplayable?: boolean | null; // null = alle, true = nur ausweisbar, false = nur nicht ausweisbar
   searchQuery: string;
 }
 
@@ -27,12 +32,14 @@ const VehiclesPage = () => {
   
   const [filters, setFilters] = useState<VehicleFiltersState>({
     brands: [],
+    models: [],
     priceRange: [0, 200000],
     yearRange: [2000, new Date().getFullYear() + 1],
     fuelTypes: [],
     transmissionTypes: [],
     exteriorColors: [],
     equipment: [],
+    vatDisplayable: null, // null = alle anzeigen
     searchQuery: "",
   });
 
@@ -44,13 +51,43 @@ const VehiclesPage = () => {
   const filterOptions = useMemo(() => {
     if (!vehicles) return { 
       brands: [], 
+      models: [],
+      brandCounts: new Map<string, number>(),
+      modelCounts: new Map<string, number>(),
       fuelTypes: [], 
       transmissionTypes: [],
       exteriorColors: [],
       equipment: [],
     };
     
+    // Calculate brand counts
+    const brandCounts = new Map<string, number>();
+    vehicles.forEach(v => {
+      brandCounts.set(v.brand, (brandCounts.get(v.brand) || 0) + 1);
+    });
+    
     const brands = Array.from(new Set(vehicles.map(v => v.brand))).sort();
+    
+    // Extract base models only (e.g., "i4" instead of "i4 eDrive40 GC M-SPORT-PRO")
+    // Only show models for selected brands, or all models if no brand is selected
+    let vehiclesToUse = vehicles;
+    if (filters.brands.length > 0) {
+      vehiclesToUse = vehicles.filter(v => filters.brands.includes(v.brand));
+    }
+    
+    // Calculate model counts (for the filtered vehicles)
+    const modelCounts = new Map<string, number>();
+    vehiclesToUse.forEach(v => {
+      const baseModel = getBaseModelName(v.model);
+      modelCounts.set(baseModel, (modelCounts.get(baseModel) || 0) + 1);
+    });
+    
+    const baseModels = Array.from(
+      new Set(
+        vehiclesToUse.map(v => getBaseModelName(v.model))
+      )
+    ).sort();
+    const models = baseModels;
     const fuelTypes = Array.from(new Set(vehicles.map(v => v.fuel))).sort();
     const transmissionTypes = Array.from(new Set(vehicles.map(v => v.transmission).filter(Boolean))).sort();
     
@@ -76,19 +113,48 @@ const VehiclesPage = () => {
     });
     const equipment = Array.from(allEquipment).sort();
     
-    return { brands, fuelTypes, transmissionTypes, exteriorColors, equipment };
-  }, [vehicles]);
+    return { brands, models, brandCounts, modelCounts, fuelTypes, transmissionTypes, exteriorColors, equipment };
+  }, [vehicles, filters.brands]);
+
+  // Remove selected models that are no longer available after brand filter changes
+  useEffect(() => {
+    if (filters.models.length > 0 && filterOptions.models.length > 0) {
+      const availableModels = new Set(filterOptions.models);
+      const validModels = filters.models.filter(model => availableModels.has(model));
+      
+      if (validModels.length !== filters.models.length) {
+        setFilters(prev => ({
+          ...prev,
+          models: validModels,
+        }));
+      }
+    } else if (filters.models.length > 0 && filterOptions.models.length === 0 && filters.brands.length > 0) {
+      // If brands are selected but no models are available, clear model selection
+      setFilters(prev => ({
+        ...prev,
+        models: [],
+      }));
+    }
+  }, [filterOptions.models, filters.brands.length]);
 
   // Filter and sort vehicles
   const filteredAndSortedVehicles = useMemo(() => {
     if (!vehicles) return [];
     
-    // First filter
-    let filtered = vehicles.filter((vehicle) => {
-      // Brand filter
-      if (filters.brands.length > 0 && !filters.brands.includes(vehicle.brand)) {
-        return false;
-      }
+            // First filter
+            let filtered = vehicles.filter((vehicle) => {
+              // Brand filter
+              if (filters.brands.length > 0 && !filters.brands.includes(vehicle.brand)) {
+                return false;
+              }
+              
+              // Model filter (compare base model names)
+              if (filters.models.length > 0) {
+                const vehicleBaseModel = getBaseModelName(vehicle.model);
+                if (!filters.models.includes(vehicleBaseModel)) {
+                  return false;
+                }
+              }
       
       // Price filter
       if (vehicle.price < filters.priceRange[0] || vehicle.price > filters.priceRange[1]) {
@@ -129,10 +195,17 @@ const VehiclesPage = () => {
         }
       }
       
-      // Search query filter
+      // VAT (MwSt.) filter
+      if (filters.vatDisplayable !== null && filters.vatDisplayable !== undefined) {
+        if (vehicle.vatDisplayable !== filters.vatDisplayable) {
+          return false;
+        }
+      }
+      
+      // Search query filter - searches in brand, model, year, and internal number
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
-        const searchText = `${vehicle.brand} ${vehicle.model} ${vehicle.year}`.toLowerCase();
+        const searchText = `${vehicle.brand} ${vehicle.model} ${vehicle.year} ${vehicle.internalNumber || ''}`.toLowerCase();
         if (!searchText.includes(query)) {
           return false;
         }
@@ -156,6 +229,24 @@ const VehiclesPage = () => {
           return a.mileage - b.mileage;
         case "mileage-desc":
           return b.mileage - a.mileage;
+        case "power-desc":
+          // Sort by PS (power), fallback to kW if PS not available
+          // Vehicles without power info go to the end
+          const powerA = a.power || a.powerKw || 0;
+          const powerB = b.power || b.powerKw || 0;
+          if (powerA === 0 && powerB === 0) return 0;
+          if (powerA === 0) return 1; // a goes to end
+          if (powerB === 0) return -1; // b goes to end
+          return powerB - powerA;
+        case "power-asc":
+          // Sort by PS (power), fallback to kW if PS not available
+          // Vehicles without power info go to the end
+          const powerA_asc = a.power || a.powerKw || 0;
+          const powerB_asc = b.power || b.powerKw || 0;
+          if (powerA_asc === 0 && powerB_asc === 0) return 0;
+          if (powerA_asc === 0) return 1; // a goes to end
+          if (powerB_asc === 0) return -1; // b goes to end
+          return powerA_asc - powerB_asc;
         case "brand-asc":
           return a.brand.localeCompare(b.brand);
         default:
@@ -168,17 +259,33 @@ const VehiclesPage = () => {
 
   // Paginate
   const paginatedVehicles = useMemo(() => {
+    if (!filteredAndSortedVehicles || filteredAndSortedVehicles.length === 0) return [];
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return filteredAndSortedVehicles.slice(startIndex, endIndex);
   }, [filteredAndSortedVehicles, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredAndSortedVehicles.length / itemsPerPage);
+  const totalPages = useMemo(() => {
+    if (!filteredAndSortedVehicles || filteredAndSortedVehicles.length === 0) return 1;
+    return Math.ceil(filteredAndSortedVehicles.length / itemsPerPage);
+  }, [filteredAndSortedVehicles, itemsPerPage]);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters or sort order change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters]);
+  }, [
+    filters.brands,
+    filters.models,
+    filters.priceRange,
+    filters.yearRange,
+    filters.fuelTypes,
+    filters.transmissionTypes,
+    filters.exteriorColors,
+    filters.equipment,
+    filters.vatDisplayable,
+    filters.searchQuery,
+    sortBy
+  ]);
 
   // Reset to page 1 if current page is out of bounds
   useEffect(() => {
@@ -187,15 +294,22 @@ const VehiclesPage = () => {
     }
   }, [totalPages, currentPage]);
 
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.brands.length > 0) count++;
+    if (filters.models.length > 0) count++;
     if (filters.priceRange[0] > 0 || filters.priceRange[1] < 200000) count++;
     if (filters.yearRange[0] > 2000 || filters.yearRange[1] < new Date().getFullYear() + 1) count++;
     if (filters.fuelTypes.length > 0) count++;
     if (filters.transmissionTypes.length > 0) count++;
     if (filters.exteriorColors.length > 0) count++;
     if (filters.equipment.length > 0) count++;
+    if (filters.vatDisplayable !== null && filters.vatDisplayable !== undefined) count++;
     if (filters.searchQuery) count++;
     return count;
   }, [filters]);
@@ -203,20 +317,24 @@ const VehiclesPage = () => {
   const clearAllFilters = () => {
     setFilters({
       brands: [],
+      models: [],
       priceRange: [0, 200000],
       yearRange: [2000, new Date().getFullYear() + 1],
       fuelTypes: [],
       transmissionTypes: [],
       exteriorColors: [],
       equipment: [],
+      vatDisplayable: null,
       searchQuery: "",
     });
     setCurrentPage(1);
   };
-
+  
+  const seoData = getVehiclesPageSEO();
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO data={seoData} breadcrumbs={[{ name: "Startseite", url: "/" }, { name: "Fahrzeugsuche", url: "/fahrzeuge" }]} />
       <Navbar />
       <main className="pt-8 pb-20">
         <div className="max-w-[1560px] mx-auto px-6 lg:px-8">
@@ -227,17 +345,19 @@ const VehiclesPage = () => {
                 <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
                   Fahrzeugsuche
                 </h1>
-                <p className="text-muted-foreground">
-                  {filteredAndSortedVehicles.length} {filteredAndSortedVehicles.length === 1 ? "Fahrzeug" : "Fahrzeuge"} gefunden
-                  {activeFilterCount > 0 && (
-                    <button
-                      onClick={clearAllFilters}
-                      className="ml-2 text-primary hover:underline"
-                    >
-                      Filter zurücksetzen
-                    </button>
-                  )}
-                </p>
+                {vehicles && (
+                  <p className="text-muted-foreground">
+                    {filteredAndSortedVehicles.length} {filteredAndSortedVehicles.length === 1 ? "Fahrzeug" : "Fahrzeuge"} gefunden
+                    {activeFilterCount > 0 && (
+                      <button
+                        onClick={clearAllFilters}
+                        className="ml-2 text-primary hover:underline"
+                      >
+                        Filter zurücksetzen
+                      </button>
+                    )}
+                  </p>
+                )}
               </div>
 
               {/* Sort & Items per Page */}
@@ -253,6 +373,8 @@ const VehiclesPage = () => {
                     <SelectItem value="year-asc">Jahr: Älteste zuerst</SelectItem>
                     <SelectItem value="mileage-asc">Kilometerstand: Niedrigste zuerst</SelectItem>
                     <SelectItem value="mileage-desc">Kilometerstand: Höchste zuerst</SelectItem>
+                    <SelectItem value="power-desc">Leistung: Höchste zuerst</SelectItem>
+                    <SelectItem value="power-asc">Leistung: Niedrigste zuerst</SelectItem>
                     <SelectItem value="brand-asc">Marke: A-Z</SelectItem>
                   </SelectContent>
                 </Select>
