@@ -25,8 +25,11 @@ const Index = () => {
         }
       }, 100);
       return () => clearTimeout(timer);
+    } else if (location.pathname === "/") {
+      // If no hash and on home page, scroll to top (Hero section)
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }, [location.hash]);
+  }, [location.hash, location.pathname]);
 
   return (
     <div className="min-h-screen bg-background">

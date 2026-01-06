@@ -31,6 +31,17 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   };
 
+  // Handle click for home link - scroll to top
+  const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (location.pathname === "/") {
+      // Already on home page, scroll to top (Hero section)
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setIsMobileMenuOpen(false);
+    }
+    // If not on home page, Link will navigate to / and scroll to top
+  };
+
   const navLinks = [
     { label: "STARTSEITE", to: "/", isHash: false },
     { label: "FAHRZEUGE", to: "/#vehicles", isHash: true, hash: "#vehicles" },
@@ -43,20 +54,20 @@ const Navbar = () => {
   return (
     <>
       {/* Top Bar */}
-      <div className="hidden lg:block bg-blue-50 border-b border-blue-100">
+      <div className="hidden lg:block bg-gray-900 border-b border-gray-800">
         <div className="container mx-auto px-6 py-2.5">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-6 text-sm text-blue-700/90">
+            <div className="flex items-center gap-6 text-sm text-gray-100">
               <a 
                 href="tel:021519422262" 
-                className="flex items-center gap-2 hover:text-blue-900 transition-colors font-medium"
+                className="flex items-center gap-2 hover:text-white transition-colors font-medium"
               >
                 <Phone className="w-4 h-4" />
                 02151 94 222 62
               </a>
               <a 
                 href="mailto:info@gsauto.de" 
-                className="flex items-center gap-2 hover:text-blue-900 transition-colors font-medium"
+                className="flex items-center gap-2 hover:text-white transition-colors font-medium"
               >
                 <Mail className="w-4 h-4" />
                 info@gsauto.de
@@ -94,7 +105,11 @@ const Navbar = () => {
                 <Link
                   key={link.label}
                   to={link.to}
-                  onClick={link.isHash ? (e) => handleHashNavClick(e, link.hash!) : undefined}
+                  onClick={link.label === "STARTSEITE" 
+                    ? handleHomeClick 
+                    : link.isHash 
+                    ? (e) => handleHashNavClick(e, link.hash!) 
+                    : undefined}
                   className={`px-3 py-2 text-base font-display font-bold tracking-wide transition-colors relative group ${
                     link.label === "STARTSEITE"
                       ? "text-primary hover:text-primary/80"
@@ -145,7 +160,14 @@ const Navbar = () => {
                   <Link
                     key={link.label}
                     to={link.to}
-                    onClick={link.isHash ? (e) => handleHashNavClick(e, link.hash!) : () => setIsMobileMenuOpen(false)}
+                    onClick={link.label === "STARTSEITE"
+                      ? (e) => {
+                          handleHomeClick(e);
+                          setIsMobileMenuOpen(false);
+                        }
+                      : link.isHash 
+                      ? (e) => handleHashNavClick(e, link.hash!) 
+                      : () => setIsMobileMenuOpen(false)}
                     className={`px-4 py-3 text-lg font-display font-bold tracking-wide rounded-lg transition-colors ${
                       link.label === "STARTSEITE"
                         ? "text-primary hover:text-primary/80 hover:bg-primary/10"

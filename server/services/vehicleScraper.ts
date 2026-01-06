@@ -416,6 +416,134 @@ async function fetchVehicleDetails(offerUrl: string, vehicleId: string): Promise
       }
     }
     
+    // Extract vehicle type (Fahrzeugtyp / Karosserie)
+    // Try multiple approaches to extract vehicle type
+    let vehicleType: string | undefined;
+    
+    // Approach 1: Try structured data (JSON-LD)
+    const bodyTypeMatch = html.match(/"bodyType":\s*"([^"]+)"/i) || 
+                          html.match(/"vehicleBodyType":\s*"([^"]+)"/i) ||
+                          html.match(/"karosserie":\s*"([^"]+)"/i);
+    if (bodyTypeMatch && bodyTypeMatch[1]) {
+      vehicleType = bodyTypeMatch[1].trim();
+    } else {
+      // Approach 2: Try HTML table/list items with "Karosserie" or "Fahrzeugtyp"
+      const karosserieRow = $('th:contains("Karosserie"), th:contains("Fahrzeugtyp"), li:contains("Karosserie"), li:contains("Fahrzeugtyp")').first();
+      if (karosserieRow.length > 0) {
+        const karosserieText = karosserieRow.parent().find('td').first().text().trim() || 
+                              karosserieRow.text().replace(/Karosserie[:\s]*/i, '').replace(/Fahrzeugtyp[:\s]*/i, '').trim();
+        if (karosserieText && karosserieText.length > 0) {
+          vehicleType = karosserieText;
+        }
+      }
+      
+      // Approach 3: Try to find in description or title patterns
+      if (!vehicleType) {
+        // Look for common vehicle type keywords in the HTML
+        const vehicleTypePatterns = [
+          { pattern: /(?:Sportwagen|Sport-Coupe|Sport-Coupé)/i, value: "Sportwagen" },
+          { pattern: /(?:Coupe|Coupé)/i, value: "Sportwagen" },
+          { pattern: /(?:Cabrio|Cabriolet|Convertible)/i, value: "Cabrio" },
+          { pattern: /(?:Kombi|Estate|Touring|Avant|Wagon|Break|Variant)/i, value: "Kombi" },
+          { pattern: /(?:Limousine|Sedan)/i, value: "Limousine" },
+          { pattern: /(?:SUV|Sport Utility Vehicle)/i, value: "SUV" },
+          { pattern: /(?:Van|Transporter|Multivan)/i, value: "Van" },
+        ];
+        
+        for (const { pattern, value } of vehicleTypePatterns) {
+          if (pattern.test(html)) {
+            vehicleType = value;
+            break;
+          }
+        }
+      }
+    }
+    
+    // Normalize vehicle type
+    if (vehicleType) {
+      const vehicleTypeLower = vehicleType.toLowerCase();
+      if (vehicleTypeLower.includes('sportwagen') || vehicleTypeLower.includes('coupe') || vehicleTypeLower.includes('coupé')) {
+        details.vehicleType = "Sportwagen";
+      } else if (vehicleTypeLower.includes('cabrio') || vehicleTypeLower.includes('convertible')) {
+        details.vehicleType = "Cabrio";
+      } else if (vehicleTypeLower.includes('kombi') || vehicleTypeLower.includes('estate') || vehicleTypeLower.includes('touring') || vehicleTypeLower.includes('avant') || vehicleTypeLower.includes('wagon') || vehicleTypeLower.includes('break') || vehicleTypeLower.includes('variant')) {
+        details.vehicleType = "Kombi";
+      } else if (vehicleTypeLower.includes('limousine') || vehicleTypeLower.includes('sedan')) {
+        details.vehicleType = "Limousine";
+      } else if (vehicleTypeLower.includes('suv')) {
+        details.vehicleType = "SUV";
+      } else if (vehicleTypeLower.includes('van') || vehicleTypeLower.includes('transporter')) {
+        details.vehicleType = "Van";
+      } else {
+        // Keep original if it doesn't match known patterns
+        details.vehicleType = vehicleType;
+      }
+      
+      if (details.vehicleType) {
+        console.log(`✅ Extracted vehicle type for vehicle ${vehicleId}: ${details.vehicleType}`);
+      }
+    }
+    
+    // Extract previous owners (Vorbesitzer / Anzahl Vorbesitzer)
+    // Try multiple approaches to extract number of previous owners
+    let previousOwners: number | undefined;
+    
+    // Approach 1: Try HTML table/list items with "Vorbesitzer" or "Anzahl Vorbesitzer"
+    const vorbesitzerRow = $('th:contains("Vorbesitzer"), th:contains("Anzahl Vorbesitzer"), li:contains("Vorbesitzer"), li:contains("Anzahl Vorbesitzer")').first();
+    if (vorbesitzerRow.length > 0) {
+      const vorbesitzerText = vorbesitzerRow.parent().find('td').first().text().trim() || 
+                              vorbesitzerRow.text().replace(/Vorbesitzer[:\s]*/i, '').replace(/Anzahl[:\s]*Vorbesitzer[:\s]*/i, '').trim();
+      if (vorbesitzerText && vorbesitzerText.length > 0) {
+        // Extract number from text (e.g., "1", "2", "Vorbesitzer: 1")
+        const numberMatch = vorbesitzerText.match(/(\d+)/);
+        if (numberMatch && numberMatch[1]) {
+          const ownerCount = parseInt(numberMatch[1], 10);
+          if (!isNaN(ownerCount) && ownerCount >= 0) {
+            previousOwners = ownerCount;
+          }
+        }
+      }
+    }
+    
+    // Approach 2: Try structured data (JSON-LD)
+    if (!previousOwners) {
+      const ownerMatch = html.match(/"numberOfPreviousOwners":\s*(\d+)/i) || 
+                         html.match(/"previousOwners":\s*(\d+)/i) ||
+                         html.match(/"vorbesitzer":\s*(\d+)/i);
+      if (ownerMatch && ownerMatch[1]) {
+        const ownerCount = parseInt(ownerMatch[1], 10);
+        if (!isNaN(ownerCount) && ownerCount >= 0) {
+          previousOwners = ownerCount;
+        }
+      }
+    }
+    
+    // Approach 3: Try to find in description or other text patterns
+    if (!previousOwners) {
+      const ownerPatterns = [
+        /(\d+)\s*vorbesitzer/i,
+        /vorbesitzer[:\s]*(\d+)/i,
+        /anzahl[:\s]*vorbesitzer[:\s]*(\d+)/i,
+        /(\d+)\s*vorherige[:\s]*besitzer/i,
+      ];
+      
+      for (const pattern of ownerPatterns) {
+        const match = html.match(pattern);
+        if (match && match[1]) {
+          const ownerCount = parseInt(match[1], 10);
+          if (!isNaN(ownerCount) && ownerCount >= 0) {
+            previousOwners = ownerCount;
+            break;
+          }
+        }
+      }
+    }
+    
+    if (previousOwners !== undefined) {
+      details.previousOwners = previousOwners;
+      console.log(`✅ Extracted previous owners for vehicle ${vehicleId}: ${previousOwners}`);
+    }
+    
     // Fallback: Try to find in price-related elements with more context
     if (!foundVatInfo) {
       // Look for elements that contain both price and MwSt info

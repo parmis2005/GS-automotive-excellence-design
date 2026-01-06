@@ -13,6 +13,7 @@ import { Search, ChevronDown, Check, ChevronsUpDown } from "lucide-react";
 import type { VehicleFiltersState } from "@/pages/VehiclesPage";
 import { getColorHex } from "@/lib/colorUtils";
 import { cn } from "@/lib/utils";
+import { groupModelsBySeries } from "@/lib/vehicleNameUtils";
 
 interface VehicleFiltersProps {
   filters: VehicleFiltersState;
@@ -22,8 +23,10 @@ interface VehicleFiltersProps {
     models: string[];
     brandCounts: Map<string, number>;
     modelCounts: Map<string, number>;
+    modelToBrand: Map<string, string>;
     fuelTypes: string[];
     transmissionTypes: string[];
+    vehicleTypes: string[];
     exteriorColors: string[];
     equipment: string[];
   };
@@ -69,12 +72,39 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
   };
 
   const toggleModel = (model: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      models: prev.models.includes(model)
-        ? prev.models.filter((m) => m !== model)
-        : [...prev.models, model],
-    }));
+    setFilters((prev) => {
+      // Only handle series selection for BMW
+      const isBMW = prev.brands.length > 0 && prev.brands.includes("BMW");
+      
+      // Check if it's a series selection like "1er (alle)" (only for BMW)
+      if (isBMW && model.endsWith(" (alle)")) {
+        const series = model.replace(" (alle)", "");
+        const grouped = groupModelsBySeries(filterOptions.models);
+        const modelsInSeries = grouped.get(series) || [];
+        
+        // If series is already selected, remove all models in that series
+        if (prev.models.some(m => m === model)) {
+          return {
+            ...prev,
+            models: prev.models.filter(m => m !== model && !modelsInSeries.includes(m)),
+          };
+        } else {
+          // Add series selection and all models in that series
+          return {
+            ...prev,
+            models: [...prev.models.filter(m => !m.endsWith(` ${series} (alle)`)), model, ...modelsInSeries],
+          };
+        }
+      } else {
+        // Regular model selection
+        return {
+          ...prev,
+          models: prev.models.includes(model)
+            ? prev.models.filter((m) => m !== model)
+            : [...prev.models, model],
+        };
+      }
+    });
   };
 
   const toggleFuelType = (fuel: string) => {
@@ -92,6 +122,15 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
       transmissionTypes: prev.transmissionTypes.includes(transmission)
         ? prev.transmissionTypes.filter((t) => t !== transmission)
         : [...prev.transmissionTypes, transmission],
+    }));
+  };
+
+  const toggleVehicleType = (vehicleType: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      vehicleTypes: prev.vehicleTypes.includes(vehicleType)
+        ? prev.vehicleTypes.filter((vt) => vt !== vehicleType)
+        : [...prev.vehicleTypes, vehicleType],
     }));
   };
 
@@ -255,26 +294,193 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
               <CommandInput placeholder="Modell suchen..." />
               <CommandList>
                 <CommandEmpty>Kein Modell gefunden.</CommandEmpty>
-                <CommandGroup>
-                  {filterOptions.models && filterOptions.models.map((model) => {
-                    const count = filterOptions.modelCounts.get(model) || 0;
-                    return (
-                      <CommandItem
-                        key={model}
-                        value={model}
-                        onSelect={() => toggleModel(model)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            filters.models.includes(model) ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {model} ({count})
-                      </CommandItem>
-                    );
-                  })}
-                </CommandGroup>
+                {(() => {
+                  const multipleBrands = filters.brands.length > 1;
+                  const isBMW = filters.brands.length > 0 && filters.brands.includes("BMW");
+                  
+                  if (!filterOptions.models || filterOptions.models.length === 0) {
+                    return null;
+                  }
+                  
+                  // If multiple brands selected, group by brand first
+                  if (multipleBrands) {
+                    // Group models by brand
+                    const modelsByBrand = new Map<string, string[]>();
+                    filterOptions.models.forEach(model => {
+                      const brand = filterOptions.modelToBrand.get(model) || "Sonstige";
+                      if (!modelsByBrand.has(brand)) {
+                        modelsByBrand.set(brand, []);
+                      }
+                      modelsByBrand.get(brand)!.push(model);
+                    });
+                    
+                    // Sort brands alphabetically
+                    const sortedBrands = Array.from(modelsByBrand.keys()).sort();
+                    
+                    return sortedBrands.map((brand) => {
+                      const brandModels = modelsByBrand.get(brand) || [];
+                      const isBrandBMW = brand === "BMW";
+                      
+                      // For BMW, group by series; for others, just sort alphabetically
+                      if (isBrandBMW) {
+                        const groupedModels = groupModelsBySeries(brandModels);
+                        const seriesArray = Array.from(groupedModels.entries());
+                        
+                        return (
+                          <CommandGroup key={brand} heading={brand}>
+                            {seriesArray.map(([series, models]) => {
+                              const seriesCount = models.reduce((sum, model) => {
+                                return sum + (filterOptions.modelCounts.get(model) || 0);
+                              }, 0);
+                              
+                              const allModelsSelected = models.every(model => filters.models.includes(model));
+                              const seriesKey = `${series} (alle)`;
+                              const isSeriesSelected = filters.models.includes(seriesKey);
+                              
+                              return (
+                                <div key={series}>
+                                  <CommandItem
+                                    value={seriesKey}
+                                    onSelect={() => toggleModel(seriesKey)}
+                                    className="pl-4"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        isSeriesSelected || allModelsSelected ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span className="font-semibold">{series} (alle)</span> ({seriesCount})
+                                  </CommandItem>
+                                  {models.map((model) => {
+                                    const count = filterOptions.modelCounts.get(model) || 0;
+                                    return (
+                                      <CommandItem
+                                        key={model}
+                                        value={model}
+                                        onSelect={() => toggleModel(model)}
+                                        className="pl-12"
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            filters.models.includes(model) ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {model} ({count})
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })}
+                          </CommandGroup>
+                        );
+                      } else {
+                        // Non-BMW brand: flat list
+                        return (
+                          <CommandGroup key={brand} heading={brand}>
+                            {brandModels.map((model) => {
+                              const count = filterOptions.modelCounts.get(model) || 0;
+                              return (
+                                <CommandItem
+                                  key={model}
+                                  value={model}
+                                  onSelect={() => toggleModel(model)}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      filters.models.includes(model) ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {model} ({count})
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        );
+                      }
+                    });
+                  } else {
+                    // Single brand (or no brand selected)
+                    if (isBMW && filterOptions.models.length > 0) {
+                      // Group models by series for BMW
+                      const groupedModels = groupModelsBySeries(filterOptions.models);
+                      const seriesArray = Array.from(groupedModels.entries());
+                      
+                      return seriesArray.map(([series, models]) => {
+                        const seriesCount = models.reduce((sum, model) => {
+                          return sum + (filterOptions.modelCounts.get(model) || 0);
+                        }, 0);
+                        
+                        const allModelsSelected = models.every(model => filters.models.includes(model));
+                        const seriesKey = `${series} (alle)`;
+                        const isSeriesSelected = filters.models.includes(seriesKey);
+                        
+                        return (
+                          <CommandGroup key={series} heading={series}>
+                            <CommandItem
+                              value={seriesKey}
+                              onSelect={() => toggleModel(seriesKey)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  isSeriesSelected || allModelsSelected ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <span className="font-semibold">{series} (alle)</span> ({seriesCount})
+                            </CommandItem>
+                            {models.map((model) => {
+                              const count = filterOptions.modelCounts.get(model) || 0;
+                              return (
+                                <CommandItem
+                                  key={model}
+                                  value={model}
+                                  onSelect={() => toggleModel(model)}
+                                  className="pl-8"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      filters.models.includes(model) ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {model} ({count})
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        );
+                      });
+                    } else {
+                      // Flat list for non-BMW brands
+                      return (
+                        <CommandGroup>
+                          {filterOptions.models.map((model) => {
+                            const count = filterOptions.modelCounts.get(model) || 0;
+                            return (
+                              <CommandItem
+                                key={model}
+                                value={model}
+                                onSelect={() => toggleModel(model)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    filters.models.includes(model) ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {model} ({count})
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      );
+                    }
+                  }
+                })()}
               </CommandList>
             </Command>
           </PopoverContent>
@@ -376,6 +582,33 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
                             className="text-sm font-normal cursor-pointer flex-1"
                           >
                             {transmission}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Vehicle Type */}
+              {filterOptions.vehicleTypes && filterOptions.vehicleTypes.length > 0 && (
+                <>
+                  <Separator className="mb-6" />
+                  <div className="mb-6">
+                    <Label className="mb-3 block">Fahrzeugtyp</Label>
+                    <div className="space-y-3">
+                      {filterOptions.vehicleTypes.map((vehicleType) => (
+                        <div key={vehicleType} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`vehicleType-${vehicleType}`}
+                            checked={filters.vehicleTypes.includes(vehicleType)}
+                            onCheckedChange={() => toggleVehicleType(vehicleType)}
+                          />
+                          <Label
+                            htmlFor={`vehicleType-${vehicleType}`}
+                            className="text-sm font-normal cursor-pointer flex-1"
+                          >
+                            {vehicleType}
                           </Label>
                         </div>
                       ))}

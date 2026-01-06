@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import type { Vehicle } from "@/types/vehicle";
 import { normalizeColorToBasic, BASIC_COLORS } from "@/lib/colorUtils";
-import { getBaseModelName } from "@/lib/vehicleNameUtils";
+import { getBaseModelName, groupModelsBySeries, getVehicleType } from "@/lib/vehicleNameUtils";
 import SEO from "@/components/SEO";
 import { getVehiclesPageSEO } from "@/utils/seo";
 
@@ -21,6 +21,7 @@ export interface VehicleFiltersState {
   yearRange: [number, number];
   fuelTypes: string[];
   transmissionTypes: string[];
+  vehicleTypes: string[];
   exteriorColors: string[];
   equipment: string[];
   vatDisplayable?: boolean | null; // null = alle, true = nur ausweisbar, false = nur nicht ausweisbar
@@ -37,6 +38,7 @@ const VehiclesPage = () => {
     yearRange: [2000, new Date().getFullYear() + 1],
     fuelTypes: [],
     transmissionTypes: [],
+    vehicleTypes: [],
     exteriorColors: [],
     equipment: [],
     vatDisplayable: null, // null = alle anzeigen
@@ -54,8 +56,10 @@ const VehiclesPage = () => {
       models: [],
       brandCounts: new Map<string, number>(),
       modelCounts: new Map<string, number>(),
+      modelToBrand: new Map<string, string>(),
       fuelTypes: [], 
       transmissionTypes: [],
+      vehicleTypes: [],
       exteriorColors: [],
       equipment: [],
     };
@@ -75,11 +79,16 @@ const VehiclesPage = () => {
       vehiclesToUse = vehicles.filter(v => filters.brands.includes(v.brand));
     }
     
-    // Calculate model counts (for the filtered vehicles)
+    // Calculate model counts (for the filtered vehicles) and map models to brands
     const modelCounts = new Map<string, number>();
+    const modelToBrand = new Map<string, string>(); // Map base model to brand
     vehiclesToUse.forEach(v => {
       const baseModel = getBaseModelName(v.model);
       modelCounts.set(baseModel, (modelCounts.get(baseModel) || 0) + 1);
+      // Store the brand for this model (if multiple brands have same model name, use the first one)
+      if (!modelToBrand.has(baseModel)) {
+        modelToBrand.set(baseModel, v.brand);
+      }
     });
     
     const baseModels = Array.from(
@@ -90,6 +99,16 @@ const VehiclesPage = () => {
     const models = baseModels;
     const fuelTypes = Array.from(new Set(vehicles.map(v => v.fuel))).sort();
     const transmissionTypes = Array.from(new Set(vehicles.map(v => v.transmission).filter(Boolean))).sort();
+    
+    // Extract vehicle types using getVehicleType function
+    const allVehicleTypes = new Set<string>();
+    vehicles.forEach(v => {
+      const vehicleType = getVehicleType(v.model, v.vehicleType);
+      if (vehicleType) {
+        allVehicleTypes.add(vehicleType);
+      }
+    });
+    const vehicleTypes = Array.from(allVehicleTypes).sort();
     
     // Normalize exterior colors to basic colors for filter options
     const allExteriorColors = new Set<string>();
@@ -113,7 +132,7 @@ const VehiclesPage = () => {
     });
     const equipment = Array.from(allEquipment).sort();
     
-    return { brands, models, brandCounts, modelCounts, fuelTypes, transmissionTypes, exteriorColors, equipment };
+    return { brands, models, brandCounts, modelCounts, modelToBrand, fuelTypes, transmissionTypes, vehicleTypes, exteriorColors, equipment };
   }, [vehicles, filters.brands]);
 
   // Remove selected models that are no longer available after brand filter changes
@@ -149,9 +168,31 @@ const VehiclesPage = () => {
               }
               
               // Model filter (compare base model names)
+              // Support for "X (alle)" series selections (only for BMW)
               if (filters.models.length > 0) {
                 const vehicleBaseModel = getBaseModelName(vehicle.model);
-                if (!filters.models.includes(vehicleBaseModel)) {
+                const isBMW = filters.brands.length > 0 && filters.brands.includes("BMW");
+                let matches = false;
+                
+                for (const selectedModel of filters.models) {
+                  // Check if it's a series selection like "1er (alle)" (only for BMW)
+                  if (isBMW && selectedModel.endsWith(" (alle)")) {
+                    const series = selectedModel.replace(" (alle)", "");
+                    // Get all models in this series from filterOptions
+                    const grouped = groupModelsBySeries(filterOptions.models);
+                    const modelsInSeries = grouped.get(series) || [];
+                    // Check if vehicle's base model matches any model in the series
+                    if (modelsInSeries.some(m => getBaseModelName(m) === vehicleBaseModel)) {
+                      matches = true;
+                      break;
+                    }
+                  } else if (selectedModel === vehicleBaseModel) {
+                    matches = true;
+                    break;
+                  }
+                }
+                
+                if (!matches) {
                   return false;
                 }
               }
@@ -174,6 +215,14 @@ const VehiclesPage = () => {
       // Transmission filter
       if (filters.transmissionTypes.length > 0 && vehicle.transmission && !filters.transmissionTypes.includes(vehicle.transmission)) {
         return false;
+      }
+      
+      // Vehicle type filter
+      if (filters.vehicleTypes.length > 0) {
+        const vehicleType = getVehicleType(vehicle.model, vehicle.vehicleType);
+        if (!vehicleType || !filters.vehicleTypes.includes(vehicleType)) {
+          return false;
+        }
       }
       
       // Exterior color filter (normalize to basic colors for comparison)
@@ -280,6 +329,7 @@ const VehiclesPage = () => {
     filters.yearRange,
     filters.fuelTypes,
     filters.transmissionTypes,
+    filters.vehicleTypes,
     filters.exteriorColors,
     filters.equipment,
     filters.vatDisplayable,
@@ -307,6 +357,7 @@ const VehiclesPage = () => {
     if (filters.yearRange[0] > 2000 || filters.yearRange[1] < new Date().getFullYear() + 1) count++;
     if (filters.fuelTypes.length > 0) count++;
     if (filters.transmissionTypes.length > 0) count++;
+    if (filters.vehicleTypes.length > 0) count++;
     if (filters.exteriorColors.length > 0) count++;
     if (filters.equipment.length > 0) count++;
     if (filters.vatDisplayable !== null && filters.vatDisplayable !== undefined) count++;
@@ -322,6 +373,7 @@ const VehiclesPage = () => {
       yearRange: [2000, new Date().getFullYear() + 1],
       fuelTypes: [],
       transmissionTypes: [],
+      vehicleTypes: [],
       exteriorColors: [],
       equipment: [],
       vatDisplayable: null,
@@ -437,7 +489,9 @@ const VehiclesPage = () => {
                   <>
                     <div className="space-y-4 mb-8">
                       {paginatedVehicles.map((vehicle, index) => (
-                        <VehicleListItem key={vehicle.id} {...vehicle} isFirst={index === 0} />
+                        <div key={vehicle.id} className="h-full">
+                          <VehicleListItem {...vehicle} isFirst={index === 0} />
+                        </div>
                       ))}
                     </div>
 

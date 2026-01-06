@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap, Phone, Mail } from "lucide-react";
+import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap, Phone, Mail, Car, Route, Cog, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { Badge } from "@/components/ui/badge";
 import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
-import { splitModelName } from "@/lib/vehicleNameUtils";
+import { splitModelName, getVehicleType } from "@/lib/vehicleNameUtils";
+import { normalizeColorToBasic } from "@/lib/colorUtils";
 
 interface VehicleListItemProps extends Vehicle {
   isFirst?: boolean; // Optional prop to mark first item
@@ -29,6 +30,9 @@ const VehicleListItem = ({
   offerUrl,
   internalNumber,
   vatDisplayable,
+  category,
+  vehicleType: vehicleTypeFromCargate,
+  previousOwners,
   isFirst = false,
 }: VehicleListItemProps) => {
   // Get image URL with fallback to placeholder
@@ -109,8 +113,8 @@ const VehicleListItem = ({
   const isPlaceholderDisplay = imageError || usePlaceholder;
   
   return (
-    <div className="group bg-background border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200">
-      <div className="flex flex-col md:flex-row">
+    <div className="group bg-background border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 h-full flex flex-col min-h-[400px]">
+      <div className="flex flex-col md:flex-row flex-1 min-h-full">
         {/* Image - Left Side */}
         <div className="relative w-full md:w-96 lg:w-[32rem] flex-shrink-0 bg-secondary overflow-hidden">
           <div className="relative w-full aspect-[4/3] p-1 bg-secondary">
@@ -130,7 +134,7 @@ const VehicleListItem = ({
         </div>
 
         {/* Content - Right Side */}
-        <div className="flex-1 p-6 flex flex-col">
+        <div className="flex-1 p-6 flex flex-col min-h-full">
           {/* Header Row */}
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
             <div className="flex-1">
@@ -153,6 +157,11 @@ const VehicleListItem = ({
                         {variant}
                       </p>
                     )}
+                    <div className="mt-1">
+                      <span className="inline-block bg-gray-800 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded">
+                        GEBRAUCHTWAGEN
+                      </span>
+                    </div>
                   </div>
                 );
               })()}
@@ -180,69 +189,94 @@ const VehicleListItem = ({
             </div>
           </div>
 
-          {/* Specifications Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-            {year && (
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Erstzulassung</span>
-                  <span className="font-semibold text-sm">{year}</span>
+          {/* Specifications Grid - Premium Box */}
+          <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {year && (
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Erstzulassung</span>
+                    <span className="font-semibold text-sm">{year}</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {mileage > 0 && (
-              <div className="flex items-center gap-2">
-                <Gauge className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Kilometerstand</span>
-                  <span className="font-semibold text-sm">{mileage.toLocaleString("de-DE")} km</span>
+              {mileage > 0 && (
+                <div className="flex items-center gap-3">
+                  <Route className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Kilometerstand</span>
+                    <span className="font-semibold text-sm">{mileage.toLocaleString("de-DE")} km</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {fuel && (
-              <div className="flex items-center gap-2">
-                <Fuel className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Kraftstoff</span>
-                  <span className="font-semibold text-sm">{fuel}</span>
+              {fuel && (
+                <div className="flex items-center gap-3">
+                  <Fuel className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Kraftstoff</span>
+                    <span className="font-semibold text-sm">{fuel}</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {transmission && (
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Getriebe</span>
-                  <span className="font-semibold text-sm">{transmission}</span>
+              {transmission && (
+                <div className="flex items-center gap-3">
+                  <Cog className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Getriebe</span>
+                    <span className="font-semibold text-sm">{transmission}</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {power && (
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Leistung</span>
-                  <span className="font-semibold text-sm">
-                    {powerKw ? `${powerKw} kW / ` : ''}{power} PS
-                  </span>
-                </div>
-              </div>
-            )}
+              {(() => {
+                const vehicleType = getVehicleType(model, vehicleTypeFromCargate);
+                return vehicleType && (
+                  <div className="flex items-center gap-3">
+                    <Car className="w-5 h-5 text-primary flex-shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">Fahrzeugtyp</span>
+                      <span className="font-semibold text-sm">{vehicleType}</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
-            {exteriorColor && (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full border-2 border-border flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">Außenfarbe</span>
-                  <span className="font-semibold text-sm">{exteriorColor}</span>
+              {power && (
+                <div className="flex items-center gap-3">
+                  <Gauge className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Leistung</span>
+                    <span className="font-semibold text-sm">
+                      {powerKw ? `${powerKw} kW / ` : ''}{power} PS
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {exteriorColor && (
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full border-2 border-primary flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Außenfarbe</span>
+                    <span className="font-semibold text-sm">{normalizeColorToBasic(exteriorColor)}</span>
+                  </div>
+                </div>
+              )}
+
+              {previousOwners !== undefined && (
+                <div className="flex items-center gap-3">
+                  <User className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Vorbesitzer</span>
+                    <span className="font-semibold text-sm">{previousOwners}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Actions */}

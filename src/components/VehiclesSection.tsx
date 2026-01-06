@@ -4,11 +4,13 @@ import { ArrowRight, Loader2, AlertCircle, CheckCircle2, Shield, BadgeCheck } fr
 import { useVehicles } from "@/hooks/useVehicles";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import type { Vehicle } from "@/types/vehicle";
 
 const VehiclesSection = () => {
   const { data: vehicles, isLoading, error } = useVehicles();
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   // Get 6 vehicles in specific order: Sport, Familie, Elektro (top row), SUV, Kleinwagen, Elektro günstigstes (bottom row)
   // Only vehicles with photos, specific selection criteria per category
@@ -194,8 +196,35 @@ const VehiclesSection = () => {
     });
   }, [vehicles]);
 
+  // Intersection Observer for scroll animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            // Disconnect after first trigger to prevent re-animation
+            observer.disconnect();
+          }
+        });
+      },
+      {
+        threshold: 0.3, // Trigger when 30% of the section is visible
+        rootMargin: "0px 0px -200px 0px", // Trigger later - need to scroll deeper
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
-    <section id="vehicles" className="py-20 bg-background">
+    <section ref={sectionRef} id="vehicles" className="py-20 bg-background">
       <div className="container mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-12">
@@ -235,8 +264,15 @@ const VehiclesSection = () => {
               {featuredVehicles.slice(0, 2).map((vehicle, index) => (
                 <div 
                   key={vehicle.id} 
-                  className="animate-fade-up h-full"
-                  style={{ animationDelay: `${index * 0.1}s` }}
+                  className={`h-full transition-all duration-1000 ease-out ${
+                    isVisible 
+                      ? 'opacity-100 translate-y-0' 
+                      : 'opacity-0 translate-y-8'
+                  }`}
+                  style={{ 
+                    transitionDelay: `${index * 200}ms`,
+                    willChange: 'opacity, transform'
+                  }}
                 >
                   <VehicleCard {...vehicle} showCategory={true} />
                 </div>
@@ -248,8 +284,15 @@ const VehiclesSection = () => {
               {featuredVehicles.slice(0, 3).map((vehicle, index) => (
                 <div 
                   key={vehicle.id} 
-                  className="animate-fade-up h-full"
-                  style={{ animationDelay: `${index * 0.1}s` }}
+                  className={`h-full transition-all duration-1000 ease-out ${
+                    isVisible 
+                      ? 'opacity-100 translate-y-0' 
+                      : 'opacity-0 translate-y-8'
+                  }`}
+                  style={{ 
+                    transitionDelay: `${index * 200}ms`,
+                    willChange: 'opacity, transform'
+                  }}
                 >
                   <VehicleCard {...vehicle} showCategory={true} />
                 </div>
@@ -262,8 +305,15 @@ const VehiclesSection = () => {
                 {featuredVehicles.slice(3, 6).map((vehicle, index) => (
                   <div 
                     key={vehicle.id} 
-                    className="animate-fade-up h-full"
-                    style={{ animationDelay: `${(index + 3) * 0.1}s` }}
+                    className={`h-full transition-all duration-700 ease-out ${
+                      isVisible 
+                        ? 'opacity-100 translate-y-0' 
+                        : 'opacity-0 translate-y-8'
+                    }`}
+                    style={{ 
+                      transitionDelay: `${(index + 3) * 150}ms`,
+                      willChange: 'opacity, transform'
+                    }}
                   >
                     <VehicleCard {...vehicle} showCategory={true} />
                   </div>
@@ -272,7 +322,17 @@ const VehiclesSection = () => {
             )}
 
             {/* Trust Anchor - direkt unter dem Grid */}
-            <div className="mt-8 mb-12">
+            <div 
+              className={`mt-8 mb-12 transition-all duration-1000 ease-out ${
+                isVisible 
+                  ? 'opacity-100 translate-y-0' 
+                  : 'opacity-0 translate-y-4'
+              }`}
+              style={{ 
+                transitionDelay: '1200ms',
+                willChange: 'opacity, transform'
+              }}
+            >
               <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
@@ -290,7 +350,17 @@ const VehiclesSection = () => {
             </div>
 
             {/* CTA */}
-            <div className="text-center mt-4">
+            <div 
+              className={`text-center mt-4 transition-all duration-1000 ease-out ${
+                isVisible 
+                  ? 'opacity-100 translate-y-0' 
+                  : 'opacity-0 translate-y-4'
+              }`}
+              style={{ 
+                transitionDelay: '1500ms',
+                willChange: 'opacity, transform'
+              }}
+            >
               <Link to="/fahrzeuge">
                 <Button variant="default" size="lg" className="group bg-primary hover:bg-primary/90 text-white shadow-md">
                   Alle Fahrzeuge ansehen

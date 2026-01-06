@@ -4,6 +4,7 @@ import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
+import { normalizeColorToBasic } from "@/lib/colorUtils";
 
 interface VehicleCardProps extends Vehicle {
   showCategory?: boolean; // Optional prop to show/hide category badge
@@ -235,7 +236,7 @@ const VehicleCard = ({
         {/* Colors - nur wenn vorhanden, kompakter */}
         {(exteriorColor || interiorColor) && (
           <div className="mb-4 text-xs text-muted-foreground">
-            {exteriorColor && <span>Außen: {exteriorColor}</span>}
+            {exteriorColor && <span>Außen: {normalizeColorToBasic(exteriorColor)}</span>}
             {exteriorColor && interiorColor && <span className="mx-2">·</span>}
             {interiorColor && <span>Innen: {interiorColor}</span>}
           </div>

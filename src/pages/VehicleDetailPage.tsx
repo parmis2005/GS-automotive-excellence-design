@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
-import { useVehicle } from "@/hooks/useVehicles";
+import { useVehicle, useVehicles } from "@/hooks/useVehicles";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
@@ -21,7 +21,12 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  ZoomIn,
+  ZoomOut,
+  Calculator,
+  ArrowRight,
+  ArrowLeftRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -30,8 +35,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getPlaceholderImage } from "@/lib/vehicleImage";
-import { splitModelName } from "@/lib/vehicleNameUtils";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { getPlaceholderImage, getVehicleImageWithFallback } from "@/lib/vehicleImage";
+import { splitModelName, getBaseModelName } from "@/lib/vehicleNameUtils";
 
 /**
  * Helper function to build cargate360 image URL
@@ -45,11 +52,13 @@ const VehicleDetailPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: vehicle, isLoading, error } = useVehicle(id || "");
+  const { data: allVehicles } = useVehicles();
 
   // State for available images (only images that actually exist)
   const [availableImages, setAvailableImages] = useState<string[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLoadingImages, setIsLoadingImages] = useState(true);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   // Form state for purchase inquiry
   const [formData, setFormData] = useState({
@@ -159,6 +168,60 @@ const VehicleDetailPage = () => {
     }
   }, [location.hash, isLoading, vehicle]);
 
+  // Find similar vehicles
+  const similarVehicles = useMemo(() => {
+    if (!vehicle || !allVehicles || allVehicles.length === 0) {
+      return [];
+    }
+
+    const currentBaseModel = getBaseModelName(vehicle.model);
+    const priceRange = vehicle.price * 0.3; // ±30% price range
+    const minPrice = vehicle.price - priceRange;
+    const maxPrice = vehicle.price + priceRange;
+    const yearDiff = 3; // ±3 years
+
+    // Score vehicles based on similarity
+    const scoredVehicles = allVehicles
+      .filter(v => v.id !== vehicle.id) // Exclude current vehicle
+      .map(v => {
+        let score = 0;
+        
+        // Same brand: +10 points
+        if (v.brand === vehicle.brand) {
+          score += 10;
+        }
+        
+        // Same base model: +20 points
+        const vBaseModel = getBaseModelName(v.model);
+        if (vBaseModel === currentBaseModel) {
+          score += 20;
+        }
+        
+        // Similar price (±30%): +5 points
+        if (v.price >= minPrice && v.price <= maxPrice) {
+          score += 5;
+        }
+        
+        // Similar year (±3 years): +3 points
+        if (Math.abs(v.year - vehicle.year) <= yearDiff) {
+          score += 3;
+        }
+        
+        // Same fuel type: +2 points
+        if (v.fuel === vehicle.fuel) {
+          score += 2;
+        }
+        
+        return { vehicle: v, score };
+      })
+      .filter(item => item.score > 0) // Only include vehicles with some similarity
+      .sort((a, b) => b.score - a.score) // Sort by score descending
+      .slice(0, 6) // Take top 6
+      .map(item => item.vehicle);
+
+    return scoredVehicles;
+  }, [vehicle, allVehicles]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -187,7 +250,11 @@ const VehicleDetailPage = () => {
             </AlertDescription>
           </Alert>
           <div className="mt-6 text-center">
-            <Button onClick={() => navigate("/fahrzeuge")} variant="outline">
+            <Button 
+              onClick={() => navigate("/fahrzeuge")} 
+              variant="outline"
+              className="bg-white/50 hover:bg-white/80 border-gray-200/60 text-foreground hover:text-foreground shadow-sm hover:shadow-md transition-all"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Zurück zur Fahrzeugsuche
             </Button>
@@ -205,9 +272,9 @@ const VehicleDetailPage = () => {
         {/* Back Button */}
         <div className="mb-6">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={() => navigate("/fahrzeuge")}
-            className="mb-4"
+            className="mb-4 bg-white/50 hover:bg-white/80 border-gray-200/60 text-foreground hover:text-foreground shadow-sm hover:shadow-md transition-all"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Zurück zur Fahrzeugsuche
@@ -217,8 +284,10 @@ const VehicleDetailPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left Column - Images */}
           <div className="space-y-4">
-            {/* Main Image with Navigation */}
-            <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-secondary group">
+            {/* Image Gallery Container - Box with subtle background */}
+            <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-3 space-y-3">
+              {/* Main Image with Navigation */}
+              <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-secondary group">
               {isLoadingImages ? (
                 <div className="w-full h-full flex items-center justify-center">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -286,6 +355,15 @@ const VehicleDetailPage = () => {
                       <div className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded-full text-sm z-10">
                         {selectedImageIndex + 1} / {availableImages.length}
                       </div>
+                      
+                      {/* Zoom Button - Top Right */}
+                      <button
+                        onClick={() => setIsZoomed(true)}
+                        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center z-10 transition-all"
+                        aria-label="Bild vergrößern"
+                      >
+                        <ZoomIn className="w-5 h-5" />
+                      </button>
                     </>
                   )}
                 </>
@@ -298,39 +376,143 @@ const VehicleDetailPage = () => {
                   />
                 </div>
               )}
+              </div>
+
+              {/* Thumbnail Gallery - Show only 7 thumbnails centered around selected image */}
+              {availableImages.length > 1 && (() => {
+              // Calculate which 7 thumbnails to show (centered around selected image)
+              const totalImages = availableImages.length;
+              const thumbnailsToShow = 7;
+              let startIndex = Math.max(0, selectedImageIndex - Math.floor(thumbnailsToShow / 2));
+              let endIndex = Math.min(totalImages, startIndex + thumbnailsToShow);
+              
+              // Adjust if we're near the end
+              if (endIndex - startIndex < thumbnailsToShow) {
+                startIndex = Math.max(0, endIndex - thumbnailsToShow);
+              }
+              
+              const visibleThumbnails = availableImages.slice(startIndex, endIndex);
+              
+              return (
+                <div className="flex gap-2 justify-center">
+                  {visibleThumbnails.map((url, localIndex) => {
+                    const globalIndex = startIndex + localIndex;
+                    return (
+                      <button
+                        key={globalIndex}
+                        onClick={() => setSelectedImageIndex(globalIndex)}
+                        className={`relative aspect-square w-20 h-20 overflow-hidden rounded-md bg-secondary cursor-pointer transition-all flex-shrink-0 ${
+                          selectedImageIndex === globalIndex
+                            ? 'ring-2 ring-primary ring-offset-2'
+                            : 'hover:opacity-80 hover:ring-1 ring-border'
+                        }`}
+                        aria-label={`Bild ${globalIndex + 1} auswählen`}
+                      >
+                        <img
+                          src={url}
+                          alt={`${vehicle.brand} ${vehicle.model} - Bild ${globalIndex + 1}`}
+                          className="w-full h-full object-cover"
+                          loading={globalIndex === 0 ? "eager" : "lazy"}
+                          decoding="async"
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+              })()}
             </div>
 
-            {/* Thumbnail Gallery - Show only available images */}
-            {availableImages.length > 1 && (
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-64 overflow-y-auto">
-                {availableImages.map((url, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImageIndex(index)}
-                    className={`relative aspect-square overflow-hidden rounded-md bg-secondary cursor-pointer transition-all ${
-                      selectedImageIndex === index
-                        ? 'ring-2 ring-primary ring-offset-2'
-                        : 'hover:opacity-80 hover:ring-1 ring-border'
-                    }`}
-                    aria-label={`Bild ${index + 1} auswählen`}
+            {/* Similar Vehicles Section */}
+            {similarVehicles.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-2xl font-bold mb-4">Ähnliche Angebote</h2>
+                <div className="relative px-12">
+                  <Carousel
+                    opts={{
+                      align: "start",
+                      slidesToScroll: 1,
+                      loop: true,
+                    }}
+                    className="w-full"
                   >
-                    <img
-                      src={url}
-                      alt={`${vehicle.brand} ${vehicle.model} - Bild ${index + 1}`}
-                      className="w-full h-full object-cover"
-                      loading={index === 0 ? "eager" : "lazy"}
-                      decoding="async"
-                    />
-                  </button>
-                ))}
+                    <CarouselContent className="-ml-2 md:-ml-4">
+                      {similarVehicles.map((similarVehicle) => {
+                        const { base } = splitModelName(similarVehicle.model);
+                        const placeholderImageUrl = getPlaceholderImage();
+                        
+                        // Determine if we should use placeholder
+                        // If no image or empty, use placeholder
+                        // The backend should clear image field for vehicles with only placeholder images
+                        const shouldUsePlaceholder = !similarVehicle.image || !similarVehicle.image.trim();
+                        const displayImageUrl = shouldUsePlaceholder ? placeholderImageUrl : getVehicleImageWithFallback(similarVehicle.image, similarVehicle.id);
+                        const isPlaceholderDisplay = shouldUsePlaceholder;
+                        
+                        return (
+                          <CarouselItem key={similarVehicle.id} className="pl-2 md:pl-4 basis-1/3">
+                            <Link to={`/fahrzeuge/${similarVehicle.id}`}>
+                              <div className="group relative bg-background rounded-lg overflow-hidden border border-border shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                                {/* Compact Image - Smaller height */}
+                                <div className="relative aspect-[16/9] overflow-hidden bg-secondary">
+                                  <img
+                                    src={displayImageUrl}
+                                    alt={`${similarVehicle.brand} ${similarVehicle.model}`}
+                                    className="w-full h-full transition-transform duration-300 group-hover:scale-105"
+                                    style={{ 
+                                      objectFit: isPlaceholderDisplay ? 'contain' : 'cover',
+                                      imageRendering: 'auto'
+                                    }}
+                                    loading="lazy"
+                                    decoding="async"
+                                    onError={() => {
+                                      // If image fails to load, it will fallback to placeholder via state
+                                    }}
+                                  />
+                                </div>
+                                
+                                {/* Compact Content - Brand, Model, Price, Mileage, Power */}
+                                <div className="p-2 space-y-1">
+                                  <div className="text-[10px] text-primary font-medium uppercase tracking-wide">
+                                    {similarVehicle.brand}
+                                  </div>
+                                  <h3 className="text-xs font-semibold text-foreground line-clamp-1">
+                                    {base}
+                                  </h3>
+                                  <div className="text-sm font-bold text-primary">
+                                    {similarVehicle.price.toLocaleString("de-DE")} €
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                    {similarVehicle.mileage > 0 && (
+                                      <>
+                                        <span>{similarVehicle.mileage.toLocaleString("de-DE")} km</span>
+                                        <span>·</span>
+                                      </>
+                                    )}
+                                    {similarVehicle.power && (
+                                      <span>{similarVehicle.power} PS</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </Link>
+                          </CarouselItem>
+                        );
+                      })}
+                    </CarouselContent>
+                    <CarouselPrevious className="left-0" />
+                    <CarouselNext className="right-0" />
+                  </Carousel>
+                </div>
               </div>
             )}
           </div>
 
           {/* Right Column - Details */}
           <div className="space-y-6">
-            {/* Header */}
-            <div>
+            {/* Premium Box - Header, Price, Quick Specs, CTA Buttons */}
+            <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-6 md:p-8 space-y-6">
+              {/* Header */}
+              <div>
               {(() => {
                 const { base, variant } = splitModelName(vehicle.model);
                 return (
@@ -355,24 +537,48 @@ const VehicleDetailPage = () => {
                 </div>
               )}
               
-              {/* Price */}
+              {/* Price with Action Buttons */}
               <div className="mb-6">
-                <span className="text-sm text-muted-foreground">Preis</span>
-                <div className="text-4xl font-display font-bold text-primary">
-                  {vehicle.price.toLocaleString("de-DE")} €
-                </div>
-                {vehicle.vatDisplayable !== undefined && (
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {vehicle.vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-sm text-muted-foreground">Preis</span>
+                    <div className="text-4xl font-display font-bold text-primary">
+                      {vehicle.price.toLocaleString("de-DE")} €
+                    </div>
+                    {vehicle.vatDisplayable !== undefined && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {vehicle.vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
+                      </div>
+                    )}
                   </div>
-                )}
+                  
+                  {/* Premium Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      size="default"
+                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all group"
+                    >
+                      <Calculator className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                      Finanzierung berechnen
+                    </Button>
+                    <Button
+                      size="default"
+                      variant="outline"
+                      className="flex-1 bg-white/80 hover:bg-white border-gray-300/60 text-foreground hover:text-foreground font-semibold shadow-sm hover:shadow-md transition-all group border-2"
+                    >
+                      <ArrowLeftRight className="w-4 h-4 mr-2 text-primary group-hover:scale-110 transition-transform" />
+                      Inzahlungsnahme
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
 
             <Separator />
 
-            {/* Quick Specs */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Quick Specs - Box with subtle darker background */}
+            <div className="bg-gray-100/60 border border-gray-300/50 rounded-lg p-4">
+              <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Calendar className="w-5 h-5 text-primary" />
@@ -443,41 +649,43 @@ const VehicleDetailPage = () => {
                   </div>
                 </div>
               )}
+              </div>
             </div>
 
             <Separator />
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button
-                size="lg"
+                size="default"
                 variant="outline"
                 className="flex-1"
                 onClick={() => window.location.href = "tel:021519422262"}
               >
-                <Phone className="w-5 h-5 mr-2" />
+                <Phone className="w-4 h-4 mr-2" />
                 Jetzt anrufen
               </Button>
               <Button
-                size="lg"
+                size="default"
                 variant="outline"
                 className="flex-1"
                 onClick={() => window.location.href = "mailto:info@gsauto.de?subject=Anfrage zu " + encodeURIComponent(vehicle.brand + " " + vehicle.model)}
               >
-                <Mail className="w-5 h-5 mr-2" />
+                <Mail className="w-4 h-4 mr-2" />
                 Nachricht senden
               </Button>
               {vehicle.exposeUrl && (
                 <Button
-                  size="lg"
+                  size="default"
                   variant="outline"
                   className="flex-1"
                   onClick={() => window.open(vehicle.exposeUrl, '_blank')}
                 >
-                  <Download className="w-5 h-5 mr-2" />
+                  <Download className="w-4 h-4 mr-2" />
                   Exposé PDF
                 </Button>
               )}
+            </div>
             </div>
 
             <Separator />
@@ -799,6 +1007,57 @@ const VehicleDetailPage = () => {
         )}
       </main>
       <Footer />
+      
+      {/* Zoom Dialog */}
+      <Dialog open={isZoomed} onOpenChange={setIsZoomed}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-auto h-auto p-0 bg-black/95 border-none">
+          <div className="relative w-full h-full flex items-center justify-center">
+            {availableImages.length > 0 && (
+              <>
+                <img
+                  src={availableImages[selectedImageIndex]}
+                  alt={`${vehicle?.brand} ${vehicle?.model} - Bild ${selectedImageIndex + 1}`}
+                  className="max-w-full max-h-[95vh] object-contain"
+                />
+                
+                {/* Close Button with ZoomOut Icon */}
+                <button
+                  onClick={() => setIsZoomed(false)}
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center z-10 transition-all"
+                  aria-label="Bild verkleinern"
+                >
+                  <ZoomOut className="w-5 h-5" />
+                </button>
+                
+                {/* Navigation Arrows in Zoom View */}
+                {availableImages.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : availableImages.length - 1))}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center z-10 transition-all"
+                      aria-label="Vorheriges Bild"
+                    >
+                      <ChevronLeft className="w-6 h-6" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedImageIndex((prev) => (prev < availableImages.length - 1 ? prev + 1 : 0))}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center z-10 transition-all"
+                      aria-label="Nächstes Bild"
+                    >
+                      <ChevronRight className="w-6 h-6" />
+                    </button>
+                    
+                    {/* Image Counter in Zoom View */}
+                    <div className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-full text-sm z-10">
+                      {selectedImageIndex + 1} / {availableImages.length}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
