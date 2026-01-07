@@ -5,8 +5,15 @@ import { vehiclesRouter } from "./routes/vehicles.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// CORS configuration - allow all origins in production (or specific Vercel domains)
+app.use(cors({
+  origin: true, // Allow all origins (you can restrict this to specific domains if needed)
+  credentials: true,
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 
 // API Routes
