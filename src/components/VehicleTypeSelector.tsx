@@ -38,6 +38,11 @@ const vehicleTypes: VehicleType[] = [
     label: "Cabriolet/Roadster",
     icon: <Car className="w-10 h-10 md:w-12 md:h-12" />,
   },
+  {
+    id: "SUV",
+    label: "SUV",
+    icon: <Car className="w-10 h-10 md:w-12 md:h-12" />,
+  },
 ];
 
 const VehicleTypeSelector = () => {
@@ -47,7 +52,7 @@ const VehicleTypeSelector = () => {
         <h2 className="text-2xl md:text-3xl font-bold text-center mb-10 md:mb-12 text-primary">
           Welcher Typ passt zu Deinem Leben?
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 md:gap-6">
           {vehicleTypes.map((type) => (
             <Link
               key={type.id}
