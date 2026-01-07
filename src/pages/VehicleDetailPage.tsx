@@ -60,6 +60,12 @@ const VehicleDetailPage = () => {
   const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
 
+  // Reset image index when vehicle ID changes
+  useEffect(() => {
+    setSelectedImageIndex(0);
+    setIsZoomed(false);
+  }, [id]);
+
   // Form state for purchase inquiry
   const [formData, setFormData] = useState({
     salutation: "",
