@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Car } from "lucide-react";
 
 interface VehicleType {
   id: string;
@@ -7,41 +6,107 @@ interface VehicleType {
   icon: React.ReactNode;
 }
 
+// Custom SVG icons for each vehicle type
+const SportwagenIcon = () => (
+  <svg viewBox="0 0 64 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+    <path d="M8 20 L12 24 L52 24 L56 20 L56 16 L52 12 L48 12 L44 8 L20 8 L16 12 L12 12 L8 16 Z" fill="currentColor" />
+    <circle cx="16" cy="24" r="4" fill="currentColor" />
+    <circle cx="48" cy="24" r="4" fill="currentColor" />
+    <path d="M28 12 L36 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
+const LimousineIcon = () => (
+  <svg viewBox="0 0 64 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+    <path d="M8 20 L10 24 L54 24 L56 20 L56 16 L52 12 L48 12 L44 8 L20 8 L16 12 L12 12 L8 16 Z" fill="currentColor" />
+    <circle cx="18" cy="24" r="4" fill="currentColor" />
+    <circle cx="46" cy="24" r="4" fill="currentColor" />
+    <rect x="20" y="12" width="24" height="8" fill="currentColor" opacity="0.3" />
+  </svg>
+);
+
+const KleinwagenIcon = () => (
+  <svg viewBox="0 0 64 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+    <path d="M12 20 L14 24 L50 24 L52 20 L52 16 L48 12 L44 12 L40 8 L24 8 L20 12 L16 12 L12 16 Z" fill="currentColor" />
+    <circle cx="18" cy="24" r="3.5" fill="currentColor" />
+    <circle cx="46" cy="24" r="3.5" fill="currentColor" />
+    <rect x="22" y="12" width="20" height="6" fill="currentColor" opacity="0.3" />
+  </svg>
+);
+
+const KombiIcon = () => (
+  <svg viewBox="0 0 64 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+    <path d="M8 20 L10 24 L54 24 L56 20 L56 16 L52 12 L48 12 L44 8 L20 8 L16 12 L12 12 L8 16 Z" fill="currentColor" />
+    <path d="M46 12 L50 12 L54 16 L54 20 L50 20 Z" fill="currentColor" />
+    <circle cx="18" cy="24" r="4" fill="currentColor" />
+    <circle cx="46" cy="24" r="4" fill="currentColor" />
+    <rect x="20" y="12" width="24" height="8" fill="currentColor" opacity="0.3" />
+  </svg>
+);
+
+const VanIcon = () => (
+  <svg viewBox="0 0 64 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+    <path d="M8 18 L10 24 L54 24 L56 18 L56 14 L52 10 L48 10 L44 8 L20 8 L16 10 L12 10 L8 14 Z" fill="currentColor" />
+    <circle cx="18" cy="24" r="4" fill="currentColor" />
+    <circle cx="46" cy="24" r="4" fill="currentColor" />
+    <rect x="20" y="10" width="28" height="10" fill="currentColor" opacity="0.3" />
+  </svg>
+);
+
+const CabrioIcon = () => (
+  <svg viewBox="0 0 64 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+    <path d="M8 20 L12 24 L52 24 L56 20 L56 16 L52 12 L48 12 L44 8 L20 8 L16 12 L12 12 L8 16 Z" fill="currentColor" />
+    <path d="M24 12 L40 12 L40 10 L36 8 L28 8 L24 10 Z" fill="currentColor" opacity="0.4" />
+    <circle cx="16" cy="24" r="4" fill="currentColor" />
+    <circle cx="48" cy="24" r="4" fill="currentColor" />
+  </svg>
+);
+
+const SUVIcon = () => (
+  <svg viewBox="0 0 64 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+    <path d="M8 18 L10 26 L54 26 L56 18 L56 14 L52 10 L48 10 L44 8 L20 8 L16 10 L12 10 L8 14 Z" fill="currentColor" />
+    <circle cx="18" cy="26" r="4" fill="currentColor" />
+    <circle cx="46" cy="26" r="4" fill="currentColor" />
+    <rect x="22" y="12" width="20" height="8" fill="currentColor" opacity="0.3" />
+    <rect x="48" y="12" width="6" height="6" fill="currentColor" opacity="0.5" />
+  </svg>
+);
+
 const vehicleTypes: VehicleType[] = [
   {
     id: "Sportwagen",
     label: "Sportwagen",
-    icon: <Car className="w-10 h-10 md:w-12 md:h-12" />,
+    icon: <div className="w-10 h-10 md:w-12 md:h-12"><SportwagenIcon /></div>,
   },
   {
     id: "Limousine",
     label: "Limousine",
-    icon: <Car className="w-10 h-10 md:w-12 md:h-12" />,
+    icon: <div className="w-10 h-10 md:w-12 md:h-12"><LimousineIcon /></div>,
   },
   {
     id: "Kleinwagen",
     label: "Kleinwagen",
-    icon: <Car className="w-10 h-10 md:w-12 md:h-12" />,
+    icon: <div className="w-10 h-10 md:w-12 md:h-12"><KleinwagenIcon /></div>,
   },
   {
     id: "Kombi",
     label: "Kombi",
-    icon: <Car className="w-10 h-10 md:w-12 md:h-12" />,
+    icon: <div className="w-10 h-10 md:w-12 md:h-12"><KombiIcon /></div>,
   },
   {
     id: "Van",
     label: "Van/Minibus",
-    icon: <Car className="w-10 h-10 md:w-12 md:h-12" />,
+    icon: <div className="w-10 h-10 md:w-12 md:h-12"><VanIcon /></div>,
   },
   {
     id: "Cabrio",
     label: "Cabriolet/Roadster",
-    icon: <Car className="w-10 h-10 md:w-12 md:h-12" />,
+    icon: <div className="w-10 h-10 md:w-12 md:h-12"><CabrioIcon /></div>,
   },
   {
     id: "SUV",
     label: "SUV",
-    icon: <Car className="w-10 h-10 md:w-12 md:h-12" />,
+    icon: <div className="w-10 h-10 md:w-12 md:h-12"><SUVIcon /></div>,
   },
 ];
 
