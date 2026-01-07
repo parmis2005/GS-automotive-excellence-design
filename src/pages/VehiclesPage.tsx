@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useVehicles } from "@/hooks/useVehicles";
 import VehicleListItem from "@/components/VehicleListItem";
 import VehicleFilters from "@/components/VehicleFilters";
@@ -30,6 +31,10 @@ export interface VehicleFiltersState {
 
 const VehiclesPage = () => {
   const { data: vehicles, isLoading, error } = useVehicles();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Initialize filters from URL parameters
+  const initialVehicleType = searchParams.get("vehicleType");
   
   const [filters, setFilters] = useState<VehicleFiltersState>({
     brands: [],
@@ -38,12 +43,28 @@ const VehiclesPage = () => {
     yearRange: [2000, new Date().getFullYear() + 1],
     fuelTypes: [],
     transmissionTypes: [],
-    vehicleTypes: [],
+    vehicleTypes: initialVehicleType ? [initialVehicleType] : [],
     exteriorColors: [],
     equipment: [],
     vatDisplayable: null, // null = alle anzeigen
     searchQuery: "",
   });
+
+  // Apply vehicleType from URL on mount
+  useEffect(() => {
+    const vehicleTypeParam = searchParams.get("vehicleType");
+    if (vehicleTypeParam) {
+      setFilters((prev) => ({
+        ...prev,
+        vehicleTypes: [vehicleTypeParam],
+      }));
+      // Clean up URL parameter after applying filter
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete("vehicleType");
+      setSearchParams(newSearchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -220,7 +241,25 @@ const VehiclesPage = () => {
       // Vehicle type filter
       if (filters.vehicleTypes.length > 0) {
         const vehicleType = getVehicleType(vehicle.model, vehicle.vehicleType);
-        if (!vehicleType || !filters.vehicleTypes.includes(vehicleType)) {
+        let matchesFilter = false;
+        
+        for (const filterType of filters.vehicleTypes) {
+          // Special handling for "Kleinwagen" - check category instead of vehicleType
+          if (filterType === "Kleinwagen") {
+            if (vehicle.category === "Kleinwagen") {
+              matchesFilter = true;
+              break;
+            }
+          } else {
+            // For other types, check vehicleType
+            if (vehicleType === filterType) {
+              matchesFilter = true;
+              break;
+            }
+          }
+        }
+        
+        if (!matchesFilter) {
           return false;
         }
       }
