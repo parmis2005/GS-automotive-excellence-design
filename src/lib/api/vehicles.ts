@@ -1,12 +1,30 @@
 import type { Vehicle } from "@/types/vehicle";
 
 // API base URL - uses environment variable if set, otherwise falls back to /api (for proxy)
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const getApiBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  
+  // If no env variable, use /api (for local proxy)
+  if (!envUrl) {
+    return "/api";
+  }
+  
+  // Remove trailing slash if present
+  const baseUrl = envUrl.endsWith("/") ? envUrl.slice(0, -1) : envUrl;
+  
+  // If URL doesn't end with /api, add it
+  if (!baseUrl.endsWith("/api")) {
+    return `${baseUrl}/api`;
+  }
+  
+  return baseUrl;
+};
 
-// Debug logging (only in development)
-if (import.meta.env.DEV) {
-  console.log("🔗 API Base URL:", API_BASE_URL);
-}
+const API_BASE_URL = getApiBaseUrl();
+
+// Debug logging - always log in production for troubleshooting
+console.log("🔗 API Base URL:", API_BASE_URL);
+console.log("🔗 VITE_API_URL env:", import.meta.env.VITE_API_URL);
 
 export interface VehiclesResponse {
   success: boolean;

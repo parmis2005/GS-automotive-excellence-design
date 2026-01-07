@@ -11,6 +11,9 @@ export function useVehicles() {
     queryFn: fetchVehicles,
     staleTime: 30 * 60 * 1000, // 30 minutes
     gcTime: 60 * 60 * 1000, // 1 hour (formerly cacheTime)
+    retry: 2, // Retry 2 times on failure
+    retryDelay: 1000, // Wait 1 second between retries
+    throwOnError: false, // Don't throw errors, return them instead
   });
 }
 
