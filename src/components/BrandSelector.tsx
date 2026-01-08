@@ -1,9 +1,8 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useVehicles } from "@/hooks/useVehicles";
 import { Button } from "@/components/ui/button";
-import { useState, useRef } from "react";
 import { brandLogos } from "@/lib/brandLogos";
 
 const BrandSelector = () => {
@@ -11,6 +10,7 @@ const BrandSelector = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
 
   // Extract unique brands from vehicles with count, only if logo is available
   const brandsWithLogo = useMemo(() => {
@@ -70,9 +70,15 @@ const BrandSelector = () => {
       });
   }, [vehicles]);
 
-  // Calculate scroll amount: one logo width + gap, with circular scrolling
+  // Create duplicated array for infinite scrolling (3 sets: original + 2 duplicates)
+  const duplicatedBrands = useMemo(() => {
+    if (brandsWithLogo.length === 0) return [];
+    return [...brandsWithLogo, ...brandsWithLogo, ...brandsWithLogo];
+  }, [brandsWithLogo]);
+
+  // Calculate scroll amount: one logo width + gap
   const scroll = (direction: "left" | "right") => {
-    if (!scrollContainerRef.current) return;
+    if (!scrollContainerRef.current || isScrolling) return;
 
     const container = scrollContainerRef.current;
     const firstChild = container.firstElementChild as HTMLElement;
@@ -83,48 +89,74 @@ const BrandSelector = () => {
     const gap = 40; // gap-10 in pixels
     const scrollAmount = logoWidth + gap;
 
-    const { scrollLeft, scrollWidth, clientWidth } = container;
-    const maxScroll = scrollWidth - clientWidth;
-
-    let newScrollLeft: number;
+    const { scrollLeft } = container;
+    
+    setIsScrolling(true);
 
     if (direction === "left") {
-      newScrollLeft = scrollLeft - scrollAmount;
-      // If we're at the beginning, scroll to the end
-      if (newScrollLeft < 0) {
-        newScrollLeft = maxScroll;
-      }
+      container.scrollBy({
+        left: -scrollAmount,
+        behavior: "smooth",
+      });
     } else {
-      newScrollLeft = scrollLeft + scrollAmount;
-      // If we're at the end, scroll to the beginning
-      if (newScrollLeft >= maxScroll - 1) {
-        newScrollLeft = 0;
-      }
+      container.scrollBy({
+        left: scrollAmount,
+        behavior: "smooth",
+      });
     }
 
-    container.scrollTo({
-      left: newScrollLeft,
-      behavior: "smooth",
-    });
+    // Reset scrolling state after animation
+    setTimeout(() => {
+      setIsScrolling(false);
+      checkAndResetScroll();
+    }, 500);
   };
 
-  const handleScroll = () => {
+  // Check if we need to reset scroll position for infinite scroll
+  const checkAndResetScroll = () => {
     if (!scrollContainerRef.current) return;
 
     const container = scrollContainerRef.current;
     const { scrollLeft, scrollWidth, clientWidth } = container;
+    const singleSetWidth = scrollWidth / 3;
 
-    setShowLeftArrow(scrollLeft > 10);
-    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+    // If we've scrolled past the second set, reset to the first set
+    if (scrollLeft >= singleSetWidth * 2) {
+      container.scrollLeft = scrollLeft - singleSetWidth;
+    }
+    // If we've scrolled before the first set, reset to the second set
+    else if (scrollLeft < singleSetWidth) {
+      container.scrollLeft = scrollLeft + singleSetWidth;
+    }
   };
 
-  // Check scroll position on mount and when brands change
+  const handleScroll = () => {
+    if (!scrollContainerRef.current || isScrolling) return;
+
+    checkAndResetScroll();
+
+    const container = scrollContainerRef.current;
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+
+    // Always show arrows since we have infinite scroll
+    setShowLeftArrow(true);
+    setShowRightArrow(true);
+  };
+
+  // Initialize scroll position to middle set
   useEffect(() => {
     if (scrollContainerRef.current && brandsWithLogo.length > 0) {
-      const timer = setTimeout(() => {
-        handleScroll();
+      const container = scrollContainerRef.current;
+      const singleSetWidth = container.scrollWidth / 3;
+      
+      // Start in the middle set
+      container.scrollLeft = singleSetWidth;
+      
+      // Set arrows after initialization
+      setTimeout(() => {
+        setShowLeftArrow(true);
+        setShowRightArrow(true);
       }, 100);
-      return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandsWithLogo.length]);
@@ -133,36 +165,35 @@ const BrandSelector = () => {
     return null;
   }
 
-  // Calculate if we need arrows (more than 5 logos)
-  const hasMoreThan5 = brandsWithLogo.length > 5;
-
   return (
     <section className="relative w-full bg-gradient-to-b from-gray-50 to-white border-y border-gray-200/50 overflow-hidden">
-      {/* Navigation Arrows - only show if more than 5 logos */}
-      {hasMoreThan5 && showLeftArrow && (
+      {/* Navigation Arrows - always visible for infinite scroll */}
+      {showLeftArrow && (
         <Button
           variant="ghost"
           size="icon"
           onClick={() => scroll("left")}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 h-12 w-12 bg-white/95 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-xl border border-gray-200/50 rounded-full"
+          disabled={isScrolling}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 h-12 w-12 bg-white/95 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-xl border border-gray-200/50 rounded-full disabled:opacity-50"
           aria-label="Nach links scrollen"
         >
           <ChevronLeft className="h-6 w-6" />
         </Button>
       )}
-      {hasMoreThan5 && showRightArrow && (
+      {showRightArrow && (
         <Button
           variant="ghost"
           size="icon"
           onClick={() => scroll("right")}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 h-12 w-12 bg-white/95 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-xl border border-gray-200/50 rounded-full"
+          disabled={isScrolling}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 h-12 w-12 bg-white/95 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-xl border border-gray-200/50 rounded-full disabled:opacity-50"
           aria-label="Nach rechts scrollen"
         >
           <ChevronRight className="h-6 w-6" />
         </Button>
       )}
 
-      {/* Viewport Container - shows exactly 5 logos */}
+      {/* Viewport Container */}
       <div className="w-full overflow-hidden relative">
         {/* Brands Container - scrollable with padding equal to gap */}
         <div
@@ -176,20 +207,18 @@ const BrandSelector = () => {
             paddingRight: "2.5rem", // gap-10 = 40px (same as gap between logos)
           }}
         >
-          {brandsWithLogo.map(({ brand, logoKey }) => {
+          {duplicatedBrands.map(({ brand, logoKey }, index) => {
             const LogoComponent = brandLogos[logoKey] || brandLogos[brand];
             if (!LogoComponent) return null;
 
             return (
               <Link
-                key={brand}
+                key={`${brand}-${index}`}
                 to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
                 className="group flex-shrink-0 transition-all duration-300 hover:scale-110"
                 style={{
-                  // Calculate width: (viewport width - 2*padding - 4*gaps) / 5
-                  // Viewport is 100vw, padding is 2.5rem each side (40px), gap is 2.5rem (40px)
-                  width: "calc((100vw - 5rem - 10rem) / 5)", // 5rem (2*2.5rem padding) + 10rem (4*2.5rem gaps) = 15rem total spacing, divided by 5
-                  minWidth: "80px", // Minimum width for mobile (smaller)
+                  width: "80px", // Fixed width for consistency
+                  minWidth: "80px",
                 }}
               >
                 <div className="flex flex-col items-center justify-center w-full aspect-square">
