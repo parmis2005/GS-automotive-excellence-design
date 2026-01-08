@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useVehicles } from "@/hooks/useVehicles";
 import { Button } from "@/components/ui/button";
 import { useState, useRef } from "react";
+import { brandLogos } from "@/lib/brandLogos";
 
 const BrandSelector = () => {
   const { data: vehicles, isLoading } = useVehicles();
@@ -11,8 +12,8 @@ const BrandSelector = () => {
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
-  // Extract unique brands from vehicles with count
-  const brandsWithCount = useMemo(() => {
+  // Extract unique brands from vehicles with count, only if logo is available
+  const brandsWithLogo = useMemo(() => {
     if (!vehicles || vehicles.length === 0) return [];
 
     const brandCounts = new Map<string, number>();
@@ -22,10 +23,51 @@ const BrandSelector = () => {
       }
     });
 
-    // Sort brands alphabetically
+    // Filter to only include brands with available logos
     return Array.from(brandCounts.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([brand, count]) => ({ brand, count }));
+      .map(([brand]) => {
+        const normalizedBrand = brand.trim();
+        // Try different variations to find matching logo
+        let logoKey: string | null = null;
+        
+        if (brandLogos[normalizedBrand]) {
+          logoKey = normalizedBrand;
+        } else if (brandLogos[normalizedBrand.replace(/-/g, " ")]) {
+          logoKey = normalizedBrand.replace(/-/g, " ");
+        } else if (brandLogos[normalizedBrand.replace(/\s+/g, "-")]) {
+          logoKey = normalizedBrand.replace(/\s+/g, "-");
+        } else {
+          // Try case-insensitive match
+          const lowerBrand = normalizedBrand.toLowerCase();
+          for (const key in brandLogos) {
+            if (key.toLowerCase() === lowerBrand) {
+              logoKey = key;
+              break;
+            }
+          }
+        }
+        
+        // Only include if logo was found
+        if (!logoKey) return null;
+        
+        return {
+          brand: normalizedBrand,
+          logoKey,
+          count: brandCounts.get(brand) || 0,
+        };
+      })
+      .filter((item): item is { brand: string; logoKey: string; count: number } => item !== null)
+      .sort((a, b) => {
+        // Sort by brand name, but prioritize common brands
+        const commonBrands = ["BMW", "Mercedes-Benz", "Audi", "Volkswagen", "Ford"];
+        const aIndex = commonBrands.indexOf(a.brand);
+        const bIndex = commonBrands.indexOf(b.brand);
+        
+        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        return a.brand.localeCompare(b.brand);
+      });
   }, [vehicles]);
 
   const scroll = (direction: "left" | "right") => {
@@ -56,91 +98,75 @@ const BrandSelector = () => {
 
   // Check scroll position on mount and when brands change
   useEffect(() => {
-    if (scrollContainerRef.current && brandsWithCount.length > 0) {
-      // Use setTimeout to ensure DOM is ready
+    if (scrollContainerRef.current && brandsWithLogo.length > 0) {
       const timer = setTimeout(() => {
         handleScroll();
       }, 100);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandsWithCount.length]);
+  }, [brandsWithLogo.length]);
 
-  if (isLoading) {
-    return (
-      <section className="py-8 md:py-12 bg-gray-50">
-        <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-          <div className="flex items-center justify-center py-8">
-            <p className="text-gray-600">Marken werden geladen...</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (!brandsWithCount || brandsWithCount.length === 0) {
+  if (isLoading || !brandsWithLogo || brandsWithLogo.length === 0) {
     return null;
   }
 
   return (
-    <section className="py-8 md:py-12 bg-gray-50">
-      <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-            Du suchst eine bestimmte Marke?
-          </h2>
-          <div className="flex items-center gap-2">
-            {showLeftArrow && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => scroll("left")}
-                className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
-                aria-label="Nach links scrollen"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-            )}
-            {showRightArrow && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => scroll("right")}
-                className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
-                aria-label="Nach rechts scrollen"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
-          className="flex gap-4 overflow-x-auto scrollbar-hide pb-2"
-          style={{
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
-          }}
+    <section className="relative w-full bg-gradient-to-b from-gray-50 to-white border-y border-gray-200/50">
+      {/* Navigation Arrows */}
+      {showLeftArrow && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => scroll("left")}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-lg border border-gray-200/50 rounded-full"
+          aria-label="Nach links scrollen"
         >
-          {brandsWithCount.map(({ brand, count }) => (
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+      )}
+      {showRightArrow && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => scroll("right")}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-lg border border-gray-200/50 rounded-full"
+          aria-label="Nach rechts scrollen"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+      )}
+
+      {/* Brands Container */}
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex gap-8 md:gap-12 lg:gap-16 items-center justify-center overflow-x-auto scrollbar-hide px-16 py-8 md:py-10"
+        style={{
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+      >
+        {brandsWithLogo.map(({ brand, logoKey, count }) => {
+          const LogoComponent = brandLogos[logoKey] || brandLogos[brand];
+          if (!LogoComponent) return null;
+
+          return (
             <Link
               key={brand}
               to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
-              className="flex-shrink-0 group"
+              className="group flex-shrink-0 transition-all duration-300 hover:scale-110"
             >
-              <div className="flex flex-col items-center justify-center p-4 md:p-6 w-24 md:w-28 h-24 md:h-28 border-2 border-gray-200 rounded-lg bg-white hover:border-primary hover:shadow-lg transition-all duration-300 cursor-pointer">
-                <div className="text-2xl md:text-3xl font-bold text-gray-700 group-hover:text-primary transition-colors mb-1">
-                  {brand}
-                </div>
-                <div className="text-xs text-gray-500 group-hover:text-primary/80 transition-colors">
-                  {count} {count === 1 ? "Fahrzeug" : "Fahrzeuge"}
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 p-3 md:p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-primary/30 transition-all duration-300 flex items-center justify-center">
+                  <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full">
+                    <LogoComponent />
+                  </div>
                 </div>
               </div>
             </Link>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       <style>{`
