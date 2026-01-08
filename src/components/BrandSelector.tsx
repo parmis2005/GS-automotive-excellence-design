@@ -141,7 +141,7 @@ const BrandSelector = () => {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex gap-8 md:gap-12 lg:gap-16 items-center justify-center overflow-x-auto scrollbar-hide px-16 py-8 md:py-10"
+        className="flex gap-10 md:gap-14 lg:gap-20 items-center justify-center overflow-x-auto scrollbar-hide px-16 py-10 md:py-12"
         style={{
           scrollbarWidth: "none",
           msOverflowStyle: "none",
@@ -158,7 +158,7 @@ const BrandSelector = () => {
               className="group flex-shrink-0 transition-all duration-300 hover:scale-110"
             >
               <div className="flex flex-col items-center justify-center">
-                <div className="w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 p-3 md:p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-primary/30 transition-all duration-300 flex items-center justify-center">
+                <div className="w-28 h-28 md:w-36 md:h-36 lg:w-44 lg:h-44 p-4 md:p-5 lg:p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-primary/30 transition-all duration-300 flex items-center justify-center">
                   <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full">
                     <LogoComponent />
                   </div>
