@@ -525,6 +525,7 @@ const VehiclesPage = () => {
                   filters={filters}
                   setFilters={setFilters}
                   filterOptions={filterOptions}
+                  vehicles={vehicles}
                 />
               </aside>
 

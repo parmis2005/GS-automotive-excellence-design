@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { groupModelsBySeries } from "@/lib/vehicleNameUtils";
 import { getVehicleTypeIcon } from "@/lib/vehicleTypeIcons";
 
+import type { Vehicle } from "@/types/vehicle";
+
 interface VehicleFiltersProps {
   filters: VehicleFiltersState;
   setFilters: React.Dispatch<React.SetStateAction<VehicleFiltersState>>;
@@ -31,17 +33,41 @@ interface VehicleFiltersProps {
     exteriorColors: string[];
     equipment: string[];
   };
+  vehicles?: Vehicle[];
 }
 
-const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersProps) => {
+const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: VehicleFiltersProps) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [showFuelTypes, setShowFuelTypes] = useState(false);
   const [showVehicleTypes, setShowVehicleTypes] = useState(false);
   const currentYear = new Date().getFullYear();
-  const maxPrice = 200000;
-  const minPrice = 0;
-  const minYear = 2000;
-  const maxYear = currentYear + 1;
+  
+  // Calculate min/max price and year from vehicles
+  const { minPrice, maxPrice, minYear, maxYear } = useMemo(() => {
+    if (!vehicles || vehicles.length === 0) {
+      return {
+        minPrice: 0,
+        maxPrice: 200000,
+        minYear: 2000,
+        maxYear: currentYear + 1,
+      };
+    }
+
+    const prices = vehicles.map(v => v.price).filter(p => p > 0);
+    const years = vehicles.map(v => v.year).filter(y => y > 0);
+
+    const calculatedMinPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const calculatedMaxPrice = prices.length > 0 ? Math.max(...prices) : 200000;
+    const calculatedMinYear = years.length > 0 ? Math.min(...years) : 2000;
+    const calculatedMaxYear = years.length > 0 ? Math.max(...years) : currentYear + 1;
+
+    return {
+      minPrice: calculatedMinPrice,
+      maxPrice: calculatedMaxPrice,
+      minYear: calculatedMinYear,
+      maxYear: calculatedMaxYear,
+    };
+  }, [vehicles, currentYear]);
 
   const updateFilters = (updates: Partial<VehicleFiltersState>) => {
     setFilters((prev) => ({ ...prev, ...updates }));
