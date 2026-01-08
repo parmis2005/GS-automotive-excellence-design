@@ -70,7 +70,7 @@ const BrandSelector = () => {
       });
   }, [vehicles]);
 
-  // Calculate scroll amount: one logo width + gap
+  // Calculate scroll amount: one logo width + gap, with circular scrolling
   const scroll = (direction: "left" | "right") => {
     if (!scrollContainerRef.current) return;
 
@@ -83,10 +83,24 @@ const BrandSelector = () => {
     const gap = 40; // gap-10 in pixels
     const scrollAmount = logoWidth + gap;
 
-    const newScrollLeft =
-      direction === "left"
-        ? container.scrollLeft - scrollAmount
-        : container.scrollLeft + scrollAmount;
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    const maxScroll = scrollWidth - clientWidth;
+
+    let newScrollLeft: number;
+
+    if (direction === "left") {
+      newScrollLeft = scrollLeft - scrollAmount;
+      // If we're at the beginning, scroll to the end
+      if (newScrollLeft < 0) {
+        newScrollLeft = maxScroll;
+      }
+    } else {
+      newScrollLeft = scrollLeft + scrollAmount;
+      // If we're at the end, scroll to the beginning
+      if (newScrollLeft >= maxScroll - 1) {
+        newScrollLeft = 0;
+      }
+    }
 
     container.scrollTo({
       left: newScrollLeft,
@@ -175,7 +189,7 @@ const BrandSelector = () => {
                   // Calculate width: (viewport width - 2*padding - 4*gaps) / 5
                   // Viewport is 100vw, padding is 2.5rem each side (40px), gap is 2.5rem (40px)
                   width: "calc((100vw - 5rem - 10rem) / 5)", // 5rem (2*2.5rem padding) + 10rem (4*2.5rem gaps) = 15rem total spacing, divided by 5
-                  minWidth: "88px", // Minimum width for mobile (slightly smaller)
+                  minWidth: "80px", // Minimum width for mobile (smaller)
                 }}
               >
                 <div className="flex flex-col items-center justify-center w-full aspect-square">
