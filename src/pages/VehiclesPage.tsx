@@ -35,9 +35,10 @@ const VehiclesPage = () => {
   
   // Initialize filters from URL parameters
   const initialVehicleType = searchParams.get("vehicleType");
+  const initialBrand = searchParams.get("brand");
   
   const [filters, setFilters] = useState<VehicleFiltersState>({
-    brands: [],
+    brands: initialBrand ? [initialBrand] : [],
     models: [],
     priceRange: [0, 200000],
     yearRange: [2000, new Date().getFullYear() + 1],
@@ -50,17 +51,22 @@ const VehiclesPage = () => {
     searchQuery: "",
   });
 
-  // Apply vehicleType from URL on mount
+  // Apply vehicleType and brand from URL on mount
   useEffect(() => {
     const vehicleTypeParam = searchParams.get("vehicleType");
-    if (vehicleTypeParam) {
+    const brandParam = searchParams.get("brand");
+    
+    if (vehicleTypeParam || brandParam) {
       setFilters((prev) => ({
         ...prev,
-        vehicleTypes: [vehicleTypeParam],
+        ...(vehicleTypeParam && { vehicleTypes: [vehicleTypeParam] }),
+        ...(brandParam && { brands: [brandParam] }),
       }));
-      // Clean up URL parameter after applying filter
+      
+      // Clean up URL parameters after applying filters
       const newSearchParams = new URLSearchParams(searchParams);
-      newSearchParams.delete("vehicleType");
+      if (vehicleTypeParam) newSearchParams.delete("vehicleType");
+      if (brandParam) newSearchParams.delete("brand");
       setSearchParams(newSearchParams, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
