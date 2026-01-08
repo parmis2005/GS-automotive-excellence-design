@@ -85,17 +85,17 @@ const Navbar = () => {
             : "bg-white py-4"
         }`}
       >
-        <div className="container mx-auto px-4 max-w-7xl ml-8">
-          <div className="flex items-center">
-            {/* Logo */}
+        <div className="container mx-auto px-4 max-w-7xl lg:ml-8">
+          <div className="flex items-center justify-between lg:justify-start">
+            {/* Logo - Mobile: links, Desktop: normal */}
             <Link 
               to="/"
-              className="flex items-center transition-transform hover:scale-105 duration-200 flex-shrink-0"
+              className="flex items-center transition-transform hover:scale-105 duration-200 flex-shrink-0 lg:mr-0"
             >
               <img 
                 src="/logo.png" 
                 alt="GS Automobile Rheinland" 
-                className="h-14 md:h-16 w-auto"
+                className="h-12 lg:h-14 md:h-16 w-auto"
               />
             </Link>
 
@@ -122,7 +122,21 @@ const Navbar = () => {
               ))}
             </div>
 
-            {/* CTA Button */}
+            {/* Mobile: Fahrzeug suchen Button in der Mitte */}
+            <div className="flex-1 flex justify-center lg:hidden mx-4">
+              <Link to="/fahrzeuge">
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  className="font-display font-semibold tracking-wide text-sm bg-primary hover:bg-primary/90 text-white shadow-md transition-all px-4 py-2 h-auto"
+                >
+                  Fahrzeug suchen
+                  <ArrowRight className="w-4 h-4 ml-1.5" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* CTA Button - Desktop */}
             <div className="hidden lg:flex items-center gap-3 flex-shrink-0 ml-auto">
               <Link to="/fahrzeuge">
                 <Button 
@@ -136,9 +150,9 @@ const Navbar = () => {
               </Link>
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - ganz rechts */}
             <button
-              className="lg:hidden p-2 text-foreground hover:bg-secondary rounded-lg transition-colors"
+              className="lg:hidden p-2 text-foreground hover:bg-secondary rounded-lg transition-colors ml-auto flex-shrink-0"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Menu"
             >

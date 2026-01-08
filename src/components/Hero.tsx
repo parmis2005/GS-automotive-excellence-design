@@ -83,9 +83,9 @@ const Hero = () => {
 
       {/* CTA Button (center-bottom) */}
       <div 
-        className="absolute z-10 left-1/2 transform -translate-x-1/2"
+        className="absolute z-10 left-1/2 transform -translate-x-1/2 md:bottom-auto bottom-4"
         style={{
-          bottom: 'clamp(28px, 7vh, 60px)',
+          bottom: 'clamp(16px, 4vh, 60px)',
           width: '100%',
           maxWidth: '420px',
           padding: '0 24px'
@@ -93,12 +93,12 @@ const Hero = () => {
       >
         <Link to="/fahrzeuge" className="block w-full">
           <button
-            className="w-full bg-primary text-primary-foreground font-bold rounded-xl shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center gap-3"
+            className="w-full bg-primary text-primary-foreground font-bold rounded-xl shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center gap-2 md:gap-3"
             style={{
-              padding: '18px 32px',
+              padding: 'clamp(12px, 3vh, 18px) clamp(20px, 5vw, 32px)',
               borderRadius: '12px',
               fontWeight: 700,
-              fontSize: '18px',
+              fontSize: 'clamp(14px, 3.5vw, 18px)',
               boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
               letterSpacing: '0.5px'
             }}
@@ -112,8 +112,9 @@ const Hero = () => {
             }}
             aria-label="Fahrzeuge ansehen"
           >
-            Fahrzeuge ansehen
-            <ArrowRight className="w-6 h-6" />
+            <span className="md:inline">Fahrzeuge ansehen</span>
+            <span className="md:hidden">Ansehen</span>
+            <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
           </button>
         </Link>
       </div>
