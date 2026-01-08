@@ -119,7 +119,7 @@ const BrandSelector = () => {
           variant="ghost"
           size="icon"
           onClick={() => scroll("left")}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-lg border border-gray-200/50 rounded-full"
+          className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-lg border border-gray-200/50 rounded-full"
           aria-label="Nach links scrollen"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -130,7 +130,7 @@ const BrandSelector = () => {
           variant="ghost"
           size="icon"
           onClick={() => scroll("right")}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-lg border border-gray-200/50 rounded-full"
+          className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-lg border border-gray-200/50 rounded-full"
           aria-label="Nach rechts scrollen"
         >
           <ChevronRight className="h-5 w-5" />
@@ -141,7 +141,7 @@ const BrandSelector = () => {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex gap-10 md:gap-14 lg:gap-20 items-center justify-center overflow-x-auto scrollbar-hide px-16 py-10 md:py-12"
+        className="flex gap-10 md:gap-14 lg:gap-20 items-center justify-center overflow-x-auto scrollbar-hide px-8 md:px-12 lg:px-16 py-10 md:py-12"
         style={{
           scrollbarWidth: "none",
           msOverflowStyle: "none",
