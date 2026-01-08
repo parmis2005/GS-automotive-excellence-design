@@ -70,11 +70,19 @@ const BrandSelector = () => {
       });
   }, [vehicles]);
 
+  // Calculate scroll amount: one logo width + gap
   const scroll = (direction: "left" | "right") => {
     if (!scrollContainerRef.current) return;
 
     const container = scrollContainerRef.current;
-    const scrollAmount = 300;
+    const firstChild = container.firstElementChild as HTMLElement;
+    if (!firstChild) return;
+
+    // Get logo width + gap (40px = 2.5rem = gap-10)
+    const logoWidth = firstChild.offsetWidth;
+    const gap = 40; // gap-10 in pixels
+    const scrollAmount = logoWidth + gap;
+
     const newScrollLeft =
       direction === "left"
         ? container.scrollLeft - scrollAmount
@@ -111,62 +119,76 @@ const BrandSelector = () => {
     return null;
   }
 
+  // Calculate if we need arrows (more than 5 logos)
+  const hasMoreThan5 = brandsWithLogo.length > 5;
+
   return (
-    <section className="relative w-full bg-gradient-to-b from-gray-50 to-white border-y border-gray-200/50">
-      {/* Navigation Arrows */}
-      {showLeftArrow && (
+    <section className="relative w-full bg-gradient-to-b from-gray-50 to-white border-y border-gray-200/50 overflow-hidden">
+      {/* Navigation Arrows - only show if more than 5 logos */}
+      {hasMoreThan5 && showLeftArrow && (
         <Button
           variant="ghost"
           size="icon"
           onClick={() => scroll("left")}
-          className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-lg border border-gray-200/50 rounded-full"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 h-12 w-12 bg-white/95 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-xl border border-gray-200/50 rounded-full"
           aria-label="Nach links scrollen"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft className="h-6 w-6" />
         </Button>
       )}
-      {showRightArrow && (
+      {hasMoreThan5 && showRightArrow && (
         <Button
           variant="ghost"
           size="icon"
           onClick={() => scroll("right")}
-          className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-lg border border-gray-200/50 rounded-full"
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 h-12 w-12 bg-white/95 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-xl border border-gray-200/50 rounded-full"
           aria-label="Nach rechts scrollen"
         >
-          <ChevronRight className="h-5 w-5" />
+          <ChevronRight className="h-6 w-6" />
         </Button>
       )}
 
-      {/* Brands Container */}
-      <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="flex gap-10 md:gap-14 lg:gap-20 items-center justify-center overflow-x-auto scrollbar-hide px-8 md:px-12 lg:px-16 py-10 md:py-12"
-        style={{
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
-      >
-        {brandsWithLogo.map(({ brand, logoKey, count }) => {
-          const LogoComponent = brandLogos[logoKey] || brandLogos[brand];
-          if (!LogoComponent) return null;
+      {/* Viewport Container - shows exactly 5 logos */}
+      <div className="w-full overflow-hidden relative">
+        {/* Brands Container - scrollable with padding equal to gap */}
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="flex gap-10 items-center overflow-x-auto scrollbar-hide py-10 md:py-12"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            paddingLeft: "2.5rem", // gap-10 = 40px (same as gap between logos)
+            paddingRight: "2.5rem", // gap-10 = 40px (same as gap between logos)
+          }}
+        >
+          {brandsWithLogo.map(({ brand, logoKey }) => {
+            const LogoComponent = brandLogos[logoKey] || brandLogos[brand];
+            if (!LogoComponent) return null;
 
-          return (
-            <Link
-              key={brand}
-              to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
-              className="group flex-shrink-0 transition-all duration-300 hover:scale-110"
-            >
-              <div className="flex flex-col items-center justify-center">
-                <div className="w-28 h-28 md:w-36 md:h-36 lg:w-44 lg:h-44 p-4 md:p-5 lg:p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-primary/30 transition-all duration-300 flex items-center justify-center">
-                  <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full">
-                    <LogoComponent />
+            return (
+              <Link
+                key={brand}
+                to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
+                className="group flex-shrink-0 transition-all duration-300 hover:scale-110"
+                style={{
+                  // Calculate width: (viewport width - 2*padding - 4*gaps) / 5
+                  // Viewport is 100vw, padding is 2.5rem each side (40px), gap is 2.5rem (40px)
+                  width: "calc((100vw - 5rem - 10rem) / 5)", // 5rem (2*2.5rem padding) + 10rem (4*2.5rem gaps) = 15rem total spacing, divided by 5
+                  minWidth: "112px", // Minimum width for mobile
+                }}
+              >
+                <div className="flex flex-col items-center justify-center w-full aspect-square">
+                  <div className="w-full h-full p-4 md:p-5 lg:p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-primary/30 transition-all duration-300 flex items-center justify-center">
+                    <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full">
+                      <LogoComponent />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          );
-        })}
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       <style>{`
