@@ -14,6 +14,7 @@ import type { VehicleFiltersState } from "@/pages/VehiclesPage";
 import { getColorHex } from "@/lib/colorUtils";
 import { cn } from "@/lib/utils";
 import { groupModelsBySeries } from "@/lib/vehicleNameUtils";
+import { getVehicleTypeIcon } from "@/lib/vehicleTypeIcons";
 
 interface VehicleFiltersProps {
   filters: VehicleFiltersState;
@@ -606,9 +607,12 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
                           />
                           <Label
                             htmlFor={`vehicleType-${vehicleType}`}
-                            className="text-sm font-normal cursor-pointer flex-1"
+                            className="text-sm font-normal cursor-pointer flex-1 flex items-center space-x-2"
                           >
-                            {vehicleType}
+                            <span className="text-primary flex-shrink-0">
+                              {getVehicleTypeIcon(vehicleType)}
+                            </span>
+                            <span>{vehicleType}</span>
                           </Label>
                         </div>
                       ))}
