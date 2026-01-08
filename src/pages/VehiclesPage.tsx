@@ -37,11 +37,38 @@ const VehiclesPage = () => {
   const initialVehicleType = searchParams.get("vehicleType");
   const initialBrand = searchParams.get("brand");
   
+  // Calculate min/max price and year from vehicles
+  const { minPrice, maxPrice, minYear, maxYear } = useMemo(() => {
+    if (!vehicles || vehicles.length === 0) {
+      return {
+        minPrice: 0,
+        maxPrice: 200000,
+        minYear: 2000,
+        maxYear: new Date().getFullYear() + 1,
+      };
+    }
+
+    const prices = vehicles.map(v => v.price).filter(p => p > 0);
+    const years = vehicles.map(v => v.year).filter(y => y > 0);
+
+    const calculatedMinPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const calculatedMaxPrice = prices.length > 0 ? Math.max(...prices) : 200000;
+    const calculatedMinYear = years.length > 0 ? Math.min(...years) : 2000;
+    const calculatedMaxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear() + 1;
+
+    return {
+      minPrice: calculatedMinPrice,
+      maxPrice: calculatedMaxPrice,
+      minYear: calculatedMinYear,
+      maxYear: calculatedMaxYear,
+    };
+  }, [vehicles]);
+
   const [filters, setFilters] = useState<VehicleFiltersState>({
     brands: initialBrand ? [initialBrand] : [],
     models: [],
-    priceRange: [0, 200000],
-    yearRange: [2000, new Date().getFullYear() + 1],
+    priceRange: [minPrice, maxPrice],
+    yearRange: [minYear, maxYear],
     fuelTypes: [],
     transmissionTypes: [],
     vehicleTypes: initialVehicleType ? [initialVehicleType] : [],
@@ -50,6 +77,15 @@ const VehiclesPage = () => {
     vatDisplayable: null, // null = alle anzeigen
     searchQuery: "",
   });
+  
+  // Update filter ranges when vehicles data changes
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      priceRange: [minPrice, maxPrice],
+      yearRange: [minYear, maxYear],
+    }));
+  }, [minPrice, maxPrice, minYear, maxYear]);
 
   // Apply vehicleType and brand from URL on mount
   useEffect(() => {
@@ -398,8 +434,16 @@ const VehiclesPage = () => {
     let count = 0;
     if (filters.brands.length > 0) count++;
     if (filters.models.length > 0) count++;
-    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 200000) count++;
-    if (filters.yearRange[0] > 2000 || filters.yearRange[1] < new Date().getFullYear() + 1) count++;
+    // Calculate dynamic min/max for comparison
+    const prices = vehicles?.map(v => v.price).filter(p => p > 0) || [];
+    const years = vehicles?.map(v => v.year).filter(y => y > 0) || [];
+    const currentMinPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const currentMaxPrice = prices.length > 0 ? Math.max(...prices) : 200000;
+    const currentMinYear = years.length > 0 ? Math.min(...years) : 2000;
+    const currentMaxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear() + 1;
+    
+    if (filters.priceRange[0] > currentMinPrice || filters.priceRange[1] < currentMaxPrice) count++;
+    if (filters.yearRange[0] > currentMinYear || filters.yearRange[1] < currentMaxYear) count++;
     if (filters.fuelTypes.length > 0) count++;
     if (filters.transmissionTypes.length > 0) count++;
     if (filters.vehicleTypes.length > 0) count++;
@@ -414,8 +458,8 @@ const VehiclesPage = () => {
     setFilters({
       brands: [],
       models: [],
-      priceRange: [0, 200000],
-      yearRange: [2000, new Date().getFullYear() + 1],
+      priceRange: [minPrice, maxPrice],
+      yearRange: [minYear, maxYear],
       fuelTypes: [],
       transmissionTypes: [],
       vehicleTypes: [],
