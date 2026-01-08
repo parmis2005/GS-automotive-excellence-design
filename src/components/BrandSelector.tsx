@@ -217,10 +217,10 @@ const BrandSelector = () => {
                 to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
                 className="group flex-shrink-0 transition-all duration-300 hover:scale-110"
                 style={{
-                  // Calculate width: (viewport width - 2*padding - 5*gaps) / 6
-                  // Viewport is 100vw, padding is 2.5rem each side (40px), gap is 2.5rem (40px) between 6 logos = 5 gaps
-                  width: "calc((100vw - 5rem - 12.5rem) / 6)", // 5rem (2*2.5rem padding) + 12.5rem (5*2.5rem gaps) = 17.5rem total spacing, divided by 6
-                  minWidth: "100px", // Minimum width for mobile (larger)
+                  // Calculate width: (viewport width - 2*padding - 7*gaps) / 8
+                  // Viewport is 100vw, padding is 2.5rem each side (40px), gap is 2.5rem (40px) between 8 logos = 7 gaps
+                  width: "calc((100vw - 5rem - 17.5rem) / 8)", // 5rem (2*2.5rem padding) + 17.5rem (7*2.5rem gaps) = 22.5rem total spacing, divided by 8
+                  minWidth: "100px", // Minimum width for mobile
                 }}
               >
                 <div className="flex flex-col items-center justify-center w-full aspect-square">
