@@ -5,10 +5,11 @@ import VehicleListItem from "@/components/VehicleListItem";
 import VehicleFilters from "@/components/VehicleFilters";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Loader2, AlertCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, AlertCircle, X, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { Vehicle } from "@/types/vehicle";
 import { normalizeColorToBasic, BASIC_COLORS } from "@/lib/colorUtils";
 import { getBaseModelName, groupModelsBySeries, getVehicleType } from "@/lib/vehicleNameUtils";
@@ -32,6 +33,7 @@ export interface VehicleFiltersState {
 const VehiclesPage = () => {
   const { data: vehicles, isLoading, error } = useVehicles();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   
   // Initialize filters from URL parameters
   const initialVehicleType = searchParams.get("vehicleType");
@@ -501,8 +503,48 @@ const VehiclesPage = () => {
                 )}
               </div>
 
-              {/* Sort & Items per Page */}
+              {/* Sort & Items per Page + Mobile Filter Button */}
               <div className="flex flex-col sm:flex-row gap-3">
+                {/* Mobile Filter Button */}
+                <Sheet open={isMobileFiltersOpen} onOpenChange={setIsMobileFiltersOpen}>
+                  <SheetTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="lg:hidden w-full sm:w-auto flex items-center justify-center gap-2"
+                    >
+                      <Filter className="w-4 h-4" />
+                      Filtern
+                      {activeFilterCount > 0 && (
+                        <span className="ml-1 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-bold rounded-full">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-full sm:w-[400px] overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle>Filter</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6">
+                      <VehicleFilters
+                        filters={filters}
+                        setFilters={setFilters}
+                        filterOptions={filterOptions}
+                        vehicles={vehicles}
+                      />
+                    </div>
+                    <div className="mt-6 pt-6 border-t sticky bottom-0 bg-background">
+                      <Button 
+                        onClick={() => setIsMobileFiltersOpen(false)}
+                        className="w-full"
+                        size="lg"
+                      >
+                        Speichern
+                      </Button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-full sm:w-[200px]">
                     <SelectValue placeholder="Sortieren nach" />
@@ -563,8 +605,8 @@ const VehiclesPage = () => {
           {/* Content */}
           {vehicles && !isLoading && (
             <div className="flex flex-col lg:flex-row gap-8">
-              {/* Filters Sidebar */}
-              <aside className="lg:w-72 flex-shrink-0">
+              {/* Filters Sidebar - Desktop only */}
+              <aside className="hidden lg:block lg:w-72 flex-shrink-0">
                 <VehicleFilters
                   filters={filters}
                   setFilters={setFilters}

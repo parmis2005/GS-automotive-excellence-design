@@ -83,9 +83,9 @@ const Hero = () => {
 
       {/* CTA Button (center-bottom) */}
       <div 
-        className="absolute z-10 left-1/2 transform -translate-x-1/2 md:bottom-auto bottom-4"
+        className="absolute z-10 left-1/2 transform -translate-x-1/2"
         style={{
-          bottom: 'clamp(16px, 4vh, 60px)',
+          bottom: 'clamp(8px, 2vh, 60px)',
           width: '100%',
           maxWidth: '420px',
           padding: '0 24px'
@@ -112,7 +112,7 @@ const Hero = () => {
             }}
             aria-label="Fahrzeuge ansehen"
           >
-            <span className="md:inline">Fahrzeuge ansehen</span>
+            <span className="hidden md:inline">Fahrzeuge ansehen</span>
             <span className="md:hidden">Ansehen</span>
             <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
           </button>
