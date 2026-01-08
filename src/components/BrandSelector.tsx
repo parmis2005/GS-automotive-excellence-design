@@ -175,14 +175,12 @@ const BrandSelector = () => {
                   // Calculate width: (viewport width - 2*padding - 4*gaps) / 5
                   // Viewport is 100vw, padding is 2.5rem each side (40px), gap is 2.5rem (40px)
                   width: "calc((100vw - 5rem - 10rem) / 5)", // 5rem (2*2.5rem padding) + 10rem (4*2.5rem gaps) = 15rem total spacing, divided by 5
-                  minWidth: "96px", // Minimum width for mobile (slightly smaller)
+                  minWidth: "88px", // Minimum width for mobile (slightly smaller)
                 }}
               >
                 <div className="flex flex-col items-center justify-center w-full aspect-square">
-                  <div className="w-full h-full p-3 md:p-4 lg:p-5 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-primary/30 transition-all duration-300 flex items-center justify-center">
-                    <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full">
-                      <LogoComponent />
-                    </div>
+                  <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full flex items-center justify-center">
+                    <LogoComponent />
                   </div>
                 </div>
               </Link>
