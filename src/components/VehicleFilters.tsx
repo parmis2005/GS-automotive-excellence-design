@@ -35,6 +35,8 @@ interface VehicleFiltersProps {
 
 const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersProps) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showFuelTypes, setShowFuelTypes] = useState(false);
+  const [showVehicleTypes, setShowVehicleTypes] = useState(false);
   const currentYear = new Date().getFullYear();
   const maxPrice = 200000;
   const minPrice = 0;
@@ -506,27 +508,87 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
 
       <Separator className="mb-6" />
 
-      {/* Fuel Types - PRIMARY FILTER */}
-      <div className="mb-6">
-        <Label className="mb-3 block font-medium">Kraftstoff</Label>
-        <div className="space-y-3">
-          {filterOptions.fuelTypes && filterOptions.fuelTypes.map((fuel) => (
-            <div key={fuel} className="flex items-center space-x-2">
-              <Checkbox
-                id={`fuel-${fuel}`}
-                checked={filters.fuelTypes.includes(fuel)}
-                onCheckedChange={() => toggleFuelType(fuel)}
+      {/* Fuel Types - Collapsible */}
+      {filterOptions.fuelTypes && filterOptions.fuelTypes.length > 0 && (
+        <Collapsible open={showFuelTypes} onOpenChange={setShowFuelTypes} className="mb-6">
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full justify-between p-0 h-auto font-medium text-sm hover:text-foreground mb-3"
+            >
+              <span>Kraftstoff</span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  showFuelTypes ? "transform rotate-180" : ""
+                }`}
               />
-              <Label
-                htmlFor={`fuel-${fuel}`}
-                className="text-sm font-normal cursor-pointer flex-1"
-              >
-                {fuel}
-              </Label>
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="space-y-3">
+              {filterOptions.fuelTypes.map((fuel) => (
+                <div key={fuel} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`fuel-${fuel}`}
+                    checked={filters.fuelTypes.includes(fuel)}
+                    onCheckedChange={() => toggleFuelType(fuel)}
+                  />
+                  <Label
+                    htmlFor={`fuel-${fuel}`}
+                    className="text-sm font-normal cursor-pointer flex-1"
+                  >
+                    {fuel}
+                  </Label>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Vehicle Type - Collapsible */}
+      {filterOptions.vehicleTypes && filterOptions.vehicleTypes.length > 0 && (
+        <>
+          <Separator className="mb-6" />
+          <Collapsible open={showVehicleTypes} onOpenChange={setShowVehicleTypes} className="mb-6">
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-between p-0 h-auto font-medium text-sm hover:text-foreground mb-3"
+              >
+                <span>Fahrzeugtyp</span>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    showVehicleTypes ? "transform rotate-180" : ""
+                  }`}
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-3">
+                {filterOptions.vehicleTypes.map((vehicleType) => (
+                  <div key={vehicleType} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`vehicleType-${vehicleType}`}
+                      checked={filters.vehicleTypes.includes(vehicleType)}
+                      onCheckedChange={() => toggleVehicleType(vehicleType)}
+                    />
+                    <Label
+                      htmlFor={`vehicleType-${vehicleType}`}
+                      className="text-sm font-normal cursor-pointer flex-1 flex items-center space-x-2"
+                    >
+                      <span className="text-primary flex-shrink-0">
+                        {getVehicleTypeIcon(vehicleType)}
+                      </span>
+                      <span>{vehicleType}</span>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </>
+      )}
 
       {/* Advanced Filters - Collapsible */}
       <Separator className="mb-4" />
@@ -591,35 +653,6 @@ const VehicleFilters = ({ filters, setFilters, filterOptions }: VehicleFiltersPr
                 </>
               )}
 
-              {/* Vehicle Type */}
-              {filterOptions.vehicleTypes && filterOptions.vehicleTypes.length > 0 && (
-                <>
-                  <Separator className="mb-6" />
-                  <div className="mb-6">
-                    <Label className="mb-3 block">Fahrzeugtyp</Label>
-                    <div className="space-y-3">
-                      {filterOptions.vehicleTypes.map((vehicleType) => (
-                        <div key={vehicleType} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`vehicleType-${vehicleType}`}
-                            checked={filters.vehicleTypes.includes(vehicleType)}
-                            onCheckedChange={() => toggleVehicleType(vehicleType)}
-                          />
-                          <Label
-                            htmlFor={`vehicleType-${vehicleType}`}
-                            className="text-sm font-normal cursor-pointer flex-1 flex items-center space-x-2"
-                          >
-                            <span className="text-primary flex-shrink-0">
-                              {getVehicleTypeIcon(vehicleType)}
-                            </span>
-                            <span>{vehicleType}</span>
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
 
               {/* MwSt. (VAT) Filter */}
               <div>
