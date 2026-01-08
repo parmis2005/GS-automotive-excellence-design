@@ -65,6 +65,23 @@ const BrandSelector = () => {
       });
   }, [vehicles]);
 
+  // Duplicate brands if necessary to fill the carousel (8 logos visible at once)
+  const duplicatedBrands = useMemo(() => {
+    if (!brandsWithLogo || brandsWithLogo.length === 0) return [];
+    
+    // If we have less than 8 logos, duplicate them to fill the space
+    // If we have 8 or more, we still duplicate once for smooth looping
+    const targetCount = Math.max(8, brandsWithLogo.length);
+    const duplicationFactor = Math.ceil(targetCount / brandsWithLogo.length);
+    
+    const duplicated = [];
+    for (let i = 0; i < duplicationFactor; i++) {
+      duplicated.push(...brandsWithLogo);
+    }
+    
+    return duplicated;
+  }, [brandsWithLogo]);
+
   if (isLoading || !brandsWithLogo || brandsWithLogo.length === 0) {
     return null;
   }
@@ -80,15 +97,19 @@ const BrandSelector = () => {
           }}
           className="w-full"
         >
-          <CarouselContent className="-ml-2 md:-ml-4">
-            {brandsWithLogo.map(({ brand, logoKey }) => {
+          <CarouselContent className="-ml-2 md:-ml-4" style={{ paddingLeft: "2.5rem", paddingRight: "2.5rem" }}>
+            {duplicatedBrands.map(({ brand, logoKey }, index) => {
               const LogoComponent = brandLogos[logoKey] || brandLogos[brand];
               if (!LogoComponent) return null;
 
               return (
                 <CarouselItem 
-                  key={brand} 
+                  key={`${brand}-${index}`} 
                   className="pl-2 md:pl-4 basis-[calc((100vw-5rem-17.5rem)/8)] min-w-[100px]"
+                  style={{
+                    width: "calc((100vw - 5rem - 17.5rem) / 8)",
+                    minWidth: "100px",
+                  }}
                 >
                   <Link
                     to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
