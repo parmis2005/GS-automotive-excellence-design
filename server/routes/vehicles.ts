@@ -1,16 +1,16 @@
 import { Router } from "express";
-import { fetchVehiclesFromWebsite } from "../services/vehicleScraper.js";
+import { getAllVehicles, getVehicleById } from "../db/database.js";
 
 export const vehiclesRouter = Router();
 
 /**
  * GET /api/vehicles
- * Fetches all vehicles from GS Automobile Rheinland website
- * Returns cached data if available (30-60 min cache)
+ * Fetches all vehicles from database
+ * Data is updated by background job every 30 minutes
  */
 vehiclesRouter.get("/", async (req, res) => {
   try {
-    const vehicles = await fetchVehiclesFromWebsite();
+    const vehicles = await getAllVehicles();
     
     res.json({
       success: true,
@@ -19,7 +19,7 @@ vehiclesRouter.get("/", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error fetching vehicles:", error);
+    console.error("Error fetching vehicles from database:", error);
     
     // Return empty array instead of error to prevent frontend crashes
     // The frontend will handle empty state gracefully
@@ -28,19 +28,18 @@ vehiclesRouter.get("/", async (req, res) => {
       count: 0,
       data: [],
       timestamp: new Date().toISOString(),
-      warning: "Failed to fetch vehicles from source. Please try again later.",
+      warning: "Failed to fetch vehicles from database. Please try again later.",
     });
   }
 });
 
 /**
  * GET /api/vehicles/:id
- * Fetches a single vehicle by ID
+ * Fetches a single vehicle by ID from database
  */
 vehiclesRouter.get("/:id", async (req, res) => {
   try {
-    const vehicles = await fetchVehiclesFromWebsite();
-    const vehicle = vehicles.find((v) => v.id === req.params.id);
+    const vehicle = await getVehicleById(req.params.id);
     
     if (!vehicle) {
       return res.status(404).json({
@@ -54,7 +53,7 @@ vehiclesRouter.get("/:id", async (req, res) => {
       data: vehicle,
     });
   } catch (error) {
-    console.error("Error fetching vehicle:", error);
+    console.error("Error fetching vehicle from database:", error);
     
     res.status(500).json({
       success: false,
