@@ -3,6 +3,14 @@
  */
 
 /**
+ * Formats fuel type for display, removing "-Benzin" from "Plugin Hybrid-Benzin"
+ */
+export function formatFuelType(fuel: string): string {
+  if (!fuel) return fuel;
+  return fuel.replace(/^Plugin Hybrid-Benzin$/i, "Plugin Hybrid");
+}
+
+/**
  * Extracts the base model name from a full model string for filtering
  * This returns only the basic model name (e.g., "1er", "2er", "i4", "X1") without variants
  * Example: "i4 eDrive40 GC M-SPORT-PRO" -> "i4"

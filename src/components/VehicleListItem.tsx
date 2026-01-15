@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { Badge } from "@/components/ui/badge";
 import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
-import { splitModelName, getVehicleType } from "@/lib/vehicleNameUtils";
+import { splitModelName, getVehicleType, formatFuelType } from "@/lib/vehicleNameUtils";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
 
 interface VehicleListItemProps extends Vehicle {
@@ -217,7 +217,7 @@ const VehicleListItem = ({
                   <Fuel className="w-5 h-5 text-primary flex-shrink-0" />
                   <div className="flex flex-col">
                     <span className="text-xs text-muted-foreground">Kraftstoff</span>
-                    <span className="font-semibold text-sm">{fuel}</span>
+                    <span className="font-semibold text-sm">{formatFuelType(fuel)}</span>
                   </div>
                 </div>
               )}

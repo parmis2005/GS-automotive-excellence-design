@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
+import { formatFuelType } from "@/lib/vehicleNameUtils";
 
 interface VehicleCardProps extends Vehicle {
   showCategory?: boolean; // Optional prop to show/hide category badge
@@ -224,7 +225,7 @@ const VehicleCard = ({
           )}
           <span>{year}</span>
           <span>·</span>
-          <span>{fuel}</span>
+          <span>{formatFuelType(fuel)}</span>
           {transmission && (
             <>
               <span>·</span>

@@ -17,8 +17,8 @@ const Hero = () => {
             width: '100%', 
             height: 'auto',
             display: 'block',
-            clipPath: 'inset(10px 0 10px 0)',
-            marginTop: '-10px',
+            clipPath: 'inset(60px 0 10px 0)',
+            marginTop: '-60px',
             marginBottom: '-10px'
           }}
           loading="eager"
@@ -30,7 +30,7 @@ const Hero = () => {
       <div 
         className="absolute z-10 left-1/2 transform -translate-x-1/2 text-center"
         style={{
-          top: 'clamp(15px, calc(12vh - 75px), 75px)',
+          top: 'clamp(245px, calc(12vh + 155px), 305px)',
           maxWidth: '900px',
           padding: '0 24px',
           width: '100%'

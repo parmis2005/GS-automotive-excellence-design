@@ -563,7 +563,7 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
                     htmlFor={`fuel-${fuel}`}
                     className="text-sm font-normal cursor-pointer flex-1"
                   >
-                    {fuel}
+                    {fuel.replace(/^Plugin Hybrid-Benzin$/i, "Plugin Hybrid")}
                   </Label>
                 </div>
               ))}

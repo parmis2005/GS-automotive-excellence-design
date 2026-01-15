@@ -122,7 +122,8 @@ function parseVehicleTitle(title: string): { brand: string; model: string } {
     "BMW", "Mercedes-Benz", "Audi", "Volkswagen", "Porsche", "Opel",
     "Ford", "Seat", "Skoda", "Toyota", "Hyundai", "Kia", "Peugeot",
     "Renault", "Citroen", "Fiat", "Alfa Romeo", "Volvo", "Mazda",
-    "Nissan", "Honda", "Suzuki", "Mini", "Smart", "Dacia", "Tesla"
+    "Nissan", "Honda", "Suzuki", "Mini", "Smart", "Dacia", "Tesla",
+    "Lynk & Co"
   ];
   
   for (const brand of brands) {
