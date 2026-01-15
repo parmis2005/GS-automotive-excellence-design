@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useVehicles } from "@/hooks/useVehicles";
 import { brandLogos } from "@/lib/brandLogos";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 const BrandSelector = () => {
   const { data: vehicles, isLoading } = useVehicles();
@@ -65,17 +64,14 @@ const BrandSelector = () => {
       });
   }, [vehicles]);
 
-  // Duplicate brands if necessary to fill the carousel (8 logos visible at once)
+  // Duplicate brands for seamless infinite scrolling animation
+  // We duplicate 3 times to ensure smooth continuous loop
   const duplicatedBrands = useMemo(() => {
     if (!brandsWithLogo || brandsWithLogo.length === 0) return [];
     
-    // If we have less than 8 logos, duplicate them to fill the space
-    // If we have 8 or more, we still duplicate once for smooth looping
-    const targetCount = Math.max(8, brandsWithLogo.length);
-    const duplicationFactor = Math.ceil(targetCount / brandsWithLogo.length);
-    
+    // Duplicate 3 times for seamless infinite scroll
     const duplicated = [];
-    for (let i = 0; i < duplicationFactor; i++) {
+    for (let i = 0; i < 3; i++) {
       duplicated.push(...brandsWithLogo);
     }
     
@@ -88,44 +84,81 @@ const BrandSelector = () => {
 
   return (
     <section className="relative w-full bg-gradient-to-b from-gray-50 to-white border-y border-gray-200/50 overflow-hidden py-10 md:py-12">
-      <div className="relative px-12">
-        <Carousel
-          opts={{
-            align: "start",
-            slidesToScroll: 1,
-            loop: true,
-          }}
-          className="w-full"
-        >
-          <CarouselContent className="-ml-2 md:-ml-4" style={{ paddingLeft: "2.5rem", paddingRight: "2.5rem" }}>
-            {duplicatedBrands.map(({ brand, logoKey }, index) => {
-              const LogoComponent = brandLogos[logoKey] || brandLogos[brand];
-              if (!LogoComponent) return null;
+      {/* Section Title */}
+      <div className="text-center mb-8 px-4">
+        <h2 className="font-display text-xl md:text-2xl font-semibold text-foreground/90">
+          Markenauswahl in unserem Bestand
+        </h2>
+      </div>
 
-              return (
-                <CarouselItem 
-                  key={`${brand}-${index}`} 
-                  className="pl-2 md:pl-4 basis-[calc((100vw-5rem-17.5rem)/8)] min-w-[100px]"
-                  style={{
-                    width: "calc((100vw - 5rem - 17.5rem) / 8)",
-                    minWidth: "100px",
-                  }}
+      {/* Infinite scrolling logo bar - full width */}
+      <div className="relative w-full overflow-hidden">
+        <div 
+          className="flex w-max"
+          style={{
+            animation: "scroll-logos 180s linear infinite",
+            willChange: "transform",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.animationPlayState = "paused";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.animationPlayState = "running";
+          }}
+        >
+          {/* First set of logos */}
+          {duplicatedBrands.map(({ brand, logoKey }, index) => {
+            const LogoComponent = brandLogos[logoKey] || brandLogos[brand];
+            if (!LogoComponent) return null;
+
+            return (
+              <div
+                key={`first-${brand}-${index}`}
+                className="flex-shrink-0 md:mr-[28px] mr-[15px]"
+              >
+                <Link
+                  to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
+                  className="group flex flex-col items-center justify-center transition-all duration-300 hover:scale-110 md:h-[150px] md:min-h-[150px] md:w-[150px] md:pt-5 md:pb-5 h-[80px] min-h-[80px] w-[80px] pt-3 pb-3"
                 >
-                  <Link
-                    to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
-                    className="group flex flex-col items-center justify-center aspect-square transition-all duration-300 hover:scale-110"
-                  >
-                    <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full flex items-center justify-center">
-                      <LogoComponent />
-                    </div>
-                  </Link>
-                </CarouselItem>
-              );
-            })}
-          </CarouselContent>
-          <CarouselPrevious className="left-0 h-12 w-12 bg-white/95 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-xl border border-gray-200/50 rounded-full" />
-          <CarouselNext className="right-0 h-12 w-12 bg-white/95 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-primary shadow-xl border border-gray-200/50 rounded-full" />
-        </Carousel>
+                  <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full flex items-center justify-center md:scale-[1.3] scale-[1.2]" style={{ overflow: "visible" }}>
+                    <LogoComponent />
+                  </div>
+                </Link>
+              </div>
+            );
+          })}
+          {/* Duplicate for seamless loop */}
+          {duplicatedBrands.map(({ brand, logoKey }, index) => {
+            const LogoComponent = brandLogos[logoKey] || brandLogos[brand];
+            if (!LogoComponent) return null;
+
+            return (
+              <div
+                key={`second-${brand}-${index}`}
+                className="flex-shrink-0 md:mr-[28px] mr-[15px]"
+              >
+                <Link
+                  to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
+                  className="group flex flex-col items-center justify-center transition-all duration-300 hover:scale-110 md:h-[150px] md:min-h-[150px] md:w-[150px] md:pt-5 md:pb-5 h-[80px] min-h-[80px] w-[80px] pt-3 pb-3"
+                >
+                  <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full flex items-center justify-center md:scale-[1.3] scale-[1.2]" style={{ overflow: "visible" }}>
+                    <LogoComponent />
+                  </div>
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Legal Disclaimer */}
+      <div className="text-center mt-6 px-4">
+        <p className="text-xs text-muted-foreground max-w-4xl mx-auto leading-relaxed">
+          <span className="font-medium">Rechtlicher Hinweis:</span>
+          Alle genannten Marken und Logos sind Eigentum der jeweiligen Hersteller.
+          Wir sind kein Vertragshändler und stehen in keiner wirtschaftlichen Verbindung zu den genannten Marken.
+          Die Logos dienen ausschließlich zur Filterung und Markenidentifikation.
+        </p>
       </div>
     </section>
   );
