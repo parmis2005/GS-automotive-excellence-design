@@ -55,7 +55,7 @@ export default function SEO({ data, structuredData, breadcrumbs }: SEOProps) {
       {keywords && <meta name="keywords" content={keywords} />}
       <link rel="canonical" href={fullUrl} />
       
-      {/* Open Graph / Facebook */}
+      {/* Open Graph / Social Media */}
       <meta property="og:type" content={type} />
       <meta property="og:url" content={fullUrl} />
       <meta property="og:title" content={title} />

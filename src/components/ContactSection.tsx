@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, MapPin, Clock, ArrowRight, Facebook } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, ArrowRight } from "lucide-react";
 
 const ContactSection = () => {
   return (
@@ -86,17 +86,6 @@ const ContactSection = () => {
               </div>
             </div>
 
-            {/* Social Links */}
-            <div className="flex gap-3">
-              <a
-                href="https://www.facebook.com/GSAutomobileRheinland/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-lg bg-background border border-border flex items-center justify-center hover:bg-primary hover:border-primary hover:text-primary-foreground transition-colors"
-              >
-                <Facebook className="w-5 h-5" />
-              </a>
-            </div>
           </div>
 
           {/* Contact Form */}
