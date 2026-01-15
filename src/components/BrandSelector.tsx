@@ -118,9 +118,9 @@ const BrandSelector = () => {
               >
                 <Link
                   to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
-                  className="group flex flex-col items-center justify-center transition-all duration-300 hover:scale-110 md:h-[150px] md:min-h-[150px] md:w-[150px] md:pt-5 md:pb-5 h-[80px] min-h-[80px] w-[80px] pt-3 pb-3"
+                  className="group flex flex-col items-center justify-center transition-all duration-300 hover:scale-110 md:h-[120px] md:min-h-[120px] md:w-[120px] md:pt-5 md:pb-5 h-[70px] min-h-[70px] w-[70px] pt-3 pb-3"
                 >
-                  <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full flex items-center justify-center md:scale-[1.3] scale-[1.2]" style={{ overflow: "visible" }}>
+                  <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full flex items-center justify-center md:scale-[1.1] scale-[1.0]" style={{ overflow: "visible" }}>
                     <LogoComponent />
                   </div>
                 </Link>
@@ -139,9 +139,9 @@ const BrandSelector = () => {
               >
                 <Link
                   to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
-                  className="group flex flex-col items-center justify-center transition-all duration-300 hover:scale-110 md:h-[150px] md:min-h-[150px] md:w-[150px] md:pt-5 md:pb-5 h-[80px] min-h-[80px] w-[80px] pt-3 pb-3"
+                  className="group flex flex-col items-center justify-center transition-all duration-300 hover:scale-110 md:h-[120px] md:min-h-[120px] md:w-[120px] md:pt-5 md:pb-5 h-[70px] min-h-[70px] w-[70px] pt-3 pb-3"
                 >
-                  <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full flex items-center justify-center md:scale-[1.3] scale-[1.2]" style={{ overflow: "visible" }}>
+                  <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full flex items-center justify-center md:scale-[1.1] scale-[1.0]" style={{ overflow: "visible" }}>
                     <LogoComponent />
                   </div>
                 </Link>

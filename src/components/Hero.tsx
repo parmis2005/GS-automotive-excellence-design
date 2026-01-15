@@ -1,9 +1,5 @@
-import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
-import heroImage from "@/assets/hero-image-new.png";
-
 const Hero = () => {
-  const backgroundImage = heroImage;
+  const backgroundImage = "https://cagteuhomtoqniqpirly.supabase.co/storage/v1/object/public/Gs-Auto/IMG_7536.jpg";
 
   return (
     <section
@@ -12,7 +8,7 @@ const Hero = () => {
       aria-label="Hero Section"
     >
       {/* Background Image */}
-      <div className="relative z-0 w-full">
+      <div className="relative z-0 w-full overflow-hidden">
         <img
           src={backgroundImage}
           alt="GS Automobile Rheinland Autohaus mit Fahrzeugen"
@@ -20,30 +16,13 @@ const Hero = () => {
           style={{ 
             width: '100%', 
             height: 'auto',
-            display: 'block'
+            display: 'block',
+            clipPath: 'inset(10px 0 10px 0)',
+            marginTop: '-10px',
+            marginBottom: '-10px'
           }}
           loading="eager"
           fetchPriority="high"
-        />
-        
-        {/* Overlay - nur Himmelbereich oben abdunkeln */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: `
-              radial-gradient(circle at 50% 18%, rgba(0,0,0,0.45), rgba(0,0,0,0) 55%),
-              radial-gradient(circle at 50% 92%, rgba(0,0,0,0.25), rgba(0,0,0,0) 55%),
-              linear-gradient(to bottom, rgba(0,0,0,0.25), rgba(0,0,0,0) 55%)
-            `
-          }}
-        />
-        
-        {/* Subtile Vignette an den Rändern */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            boxShadow: 'inset 0 0 150px rgba(0, 0, 0, 0.12), inset 0 0 80px rgba(0, 0, 0, 0.08)'
-          }}
         />
       </div>
 
@@ -79,71 +58,6 @@ const Hero = () => {
         >
           Premium Neu- & Gebrauchtwagen
         </p>
-      </div>
-
-      {/* CTA Button - Mobile */}
-      <div 
-        className="md:hidden absolute z-10 left-1/2 transform -translate-x-1/2"
-        style={{
-          bottom: 'clamp(8px, 2vh, 60px)',
-          width: '100%',
-          maxWidth: '420px',
-          padding: '0 24px'
-        }}
-      >
-        <Link to="/fahrzeuge" className="block w-full">
-          <button
-            className="w-full bg-primary text-primary-foreground font-bold rounded-xl shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center gap-2"
-            style={{
-              padding: 'clamp(12px, 3vh, 18px) clamp(20px, 5vw, 32px)',
-              borderRadius: '12px',
-              fontWeight: 700,
-              fontSize: 'clamp(14px, 3.5vw, 18px)',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
-              letterSpacing: '0.5px'
-            }}
-            aria-label="Fahrzeuge ansehen"
-          >
-            Ansehen
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        </Link>
-      </div>
-      {/* CTA Button - Desktop/Laptop */}
-      <div 
-        className="hidden md:block absolute z-10 left-1/2 transform -translate-x-1/2"
-        style={{
-          bottom: 'clamp(28px, 7vh, 60px)',
-          width: '100%',
-          maxWidth: '420px',
-          padding: '0 24px'
-        }}
-      >
-        <Link to="/fahrzeuge" className="block w-full">
-          <button
-            className="w-full bg-primary text-primary-foreground font-bold rounded-xl shadow-lg hover:bg-primary/90 transition-all duration-300 flex items-center justify-center gap-3"
-            style={{
-              padding: '18px 32px',
-              borderRadius: '12px',
-              fontWeight: 700,
-              fontSize: '18px',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
-              letterSpacing: '0.5px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-              e.currentTarget.style.boxShadow = '0 16px 50px rgba(0,0,0,0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0) scale(1)';
-              e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.35)';
-            }}
-            aria-label="Fahrzeuge ansehen"
-          >
-            Fahrzeuge ansehen
-            <ArrowRight className="w-6 h-6" />
-          </button>
-        </Link>
       </div>
     </section>
   );
