@@ -89,32 +89,12 @@ const VehiclesPage = () => {
     }));
   }, [minPrice, maxPrice, minYear, maxYear]);
 
-  // Apply vehicleType and brand from URL on mount
-  useEffect(() => {
-    const vehicleTypeParam = searchParams.get("vehicleType");
-    const brandParam = searchParams.get("brand");
-    
-    if (vehicleTypeParam || brandParam) {
-      setFilters((prev) => ({
-        ...prev,
-        ...(vehicleTypeParam && { vehicleTypes: [vehicleTypeParam] }),
-        ...(brandParam && { brands: [brandParam] }),
-      }));
-      
-      // Clean up URL parameters after applying filters
-      const newSearchParams = new URLSearchParams(searchParams);
-      if (vehicleTypeParam) newSearchParams.delete("vehicleType");
-      if (brandParam) newSearchParams.delete("brand");
-      setSearchParams(newSearchParams, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
-
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortBy, setSortBy] = useState<string>("price-desc");
 
   // Get available filter options from vehicles
+  // This MUST be defined before the useEffect that uses it
   const filterOptions = useMemo(() => {
     if (!vehicles) return { 
       brands: [], 
@@ -200,11 +180,95 @@ const VehiclesPage = () => {
     return { brands, models, brandCounts, modelCounts, modelToBrand, fuelTypes, transmissionTypes, vehicleTypes, exteriorColors, equipment };
   }, [vehicles, filters.brands]);
 
+  // Apply vehicleType, brand, and model from URL on mount
+  // This needs to run after filterOptions is available for BMW series validation
+  useEffect(() => {
+    try {
+      const vehicleTypeParam = searchParams.get("vehicleType");
+      const brandParam = searchParams.get("brand");
+      const modelParam = searchParams.get("model");
+      const maxPriceParam = searchParams.get("maxPrice");
+      
+      if (vehicleTypeParam || brandParam || modelParam || maxPriceParam) {
+        // Only apply if we have vehicles loaded (so filterOptions is ready)
+        if (vehicles && vehicles.length > 0 && filterOptions) {
+          // filterOptions is a value from useMemo, not a function
+          const opts = filterOptions;
+          setFilters((prev) => {
+            try {
+              const updates: Partial<VehicleFiltersState> = {};
+              
+              if (vehicleTypeParam) updates.vehicleTypes = [vehicleTypeParam];
+              if (brandParam) updates.brands = [brandParam];
+              
+              // For model, we need to validate it exists in filterOptions
+              if (modelParam) {
+                const isBMW = brandParam === "BMW";
+                
+                // Check if it's a BMW series selection like "1er (alle)"
+                if (isBMW && modelParam.endsWith(" (alle)")) {
+                  const series = modelParam.replace(" (alle)", "");
+                  const grouped = groupModelsBySeries(opts.models);
+                  if (grouped.has(series)) {
+                    updates.models = [modelParam];
+                  }
+                } else if (opts.models && Array.isArray(opts.models) && opts.models.includes(modelParam)) {
+                  updates.models = [modelParam];
+                }
+              }
+              
+              // Apply maxPrice to priceRange only if maxPriceParam exists and is valid
+              if (maxPriceParam && maxPriceParam.trim() !== "" && maxPriceParam !== "all") {
+                const maxPriceNum = parseInt(maxPriceParam);
+                if (!isNaN(maxPriceNum) && maxPriceNum > 0) {
+                  // Ensure we don't exceed the maximum possible price
+                  const maxAllowedPrice = Math.max(prev.priceRange[1], maxPriceNum);
+                  updates.priceRange = [prev.priceRange[0], maxPriceNum];
+                }
+              }
+              
+              return { ...prev, ...updates };
+            } catch (err) {
+              console.error('Error updating filters:', err);
+              // Return previous state if there's an error
+              return prev;
+            }
+          });
+          
+          // Clean up URL parameters after applying filters
+          const newSearchParams = new URLSearchParams(searchParams);
+          if (vehicleTypeParam) newSearchParams.delete("vehicleType");
+          if (brandParam) newSearchParams.delete("brand");
+          if (modelParam) newSearchParams.delete("model");
+          if (maxPriceParam) newSearchParams.delete("maxPrice");
+          setSearchParams(newSearchParams, { replace: true });
+        }
+      }
+    } catch (err) {
+      console.error('Error applying URL parameters:', err);
+      // Continue normally - page should still load without filters
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicles, filterOptions, searchParams]); // Re-run when vehicles and filterOptions are loaded
+
   // Remove selected models that are no longer available after brand filter changes
   useEffect(() => {
     if (filters.models.length > 0 && filterOptions.models.length > 0) {
       const availableModels = new Set(filterOptions.models);
-      const validModels = filters.models.filter(model => availableModels.has(model));
+      const isBMW = filters.brands.length > 0 && filters.brands.includes("BMW");
+      
+      // For BMW, check if series selections (like "1er (alle)") are valid
+      const validModels = filters.models.filter(model => {
+        // Check if it's a series selection like "1er (alle)" (only for BMW)
+        if (isBMW && model.endsWith(" (alle)")) {
+          const series = model.replace(" (alle)", "");
+          // Group available models by series and check if this series exists
+          const grouped = groupModelsBySeries(filterOptions.models);
+          return grouped.has(series);
+        }
+        // For regular models, check if they exist in availableModels
+        return availableModels.has(model);
+      });
       
       if (validModels.length !== filters.models.length) {
         setFilters(prev => ({
@@ -219,7 +283,7 @@ const VehiclesPage = () => {
         models: [],
       }));
     }
-  }, [filterOptions.models, filters.brands.length]);
+  }, [filterOptions.models, filters.brands.length, filters.brands]);
 
   // Filter and sort vehicles
   const filteredAndSortedVehicles = useMemo(() => {
