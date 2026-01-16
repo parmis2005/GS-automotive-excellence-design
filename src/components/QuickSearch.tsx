@@ -215,7 +215,10 @@ const QuickSearch = () => {
                 <Label htmlFor="quick-search-brand-select" className="text-sm font-medium text-foreground">
                   Hersteller
                 </Label>
-                <Select value={selectedBrand || undefined} onValueChange={(value) => setSelectedBrand(value === "all" ? "" : value)}>
+                <Select
+                  value={selectedBrand ? selectedBrand : "all"}
+                  onValueChange={(value) => setSelectedBrand(value === "all" ? "" : value)}
+                >
                   <SelectTrigger id="quick-search-brand-select" className="w-full">
                     <SelectValue placeholder="Alle Hersteller" />
                   </SelectTrigger>
