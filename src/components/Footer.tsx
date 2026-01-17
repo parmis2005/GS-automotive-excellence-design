@@ -1,7 +1,17 @@
+import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+
+  const services = [
+    { label: "Finanzierung", href: "#services" },
+    { label: "DEKRA & TÜV", href: "#services" },
+    { label: "Garantie", href: "#services" },
+    { label: "Fahrzeugankauf", to: "/fahrzeugankauf" },
+    { label: "Ölwechsel", href: "#services" },
+    { label: "Zulassungsdienst", href: "#services" },
+  ];
 
   return (
     <footer className="bg-gray-900 text-gray-100">
@@ -43,14 +53,23 @@ const Footer = () => {
           <div>
             <h4 className="font-display text-lg mb-4">Services</h4>
             <ul className="space-y-2 text-sm">
-              {["Finanzierung", "DEKRA & TÜV", "Garantie", "Fahrzeugankauf", "Ölwechsel", "Zulassungsdienst"].map((service) => (
-                <li key={service}>
-                  <a
-                    href="#services"
-                    className="text-gray-400 hover:text-gray-100 transition-colors"
-                  >
-                    {service}
-                  </a>
+              {services.map((service) => (
+                <li key={service.label}>
+                  {service.to ? (
+                    <Link
+                      to={service.to}
+                      className="text-gray-400 hover:text-gray-100 transition-colors"
+                    >
+                      {service.label}
+                    </Link>
+                  ) : (
+                    <a
+                      href={service.href}
+                      className="text-gray-400 hover:text-gray-100 transition-colors"
+                    >
+                      {service.label}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>

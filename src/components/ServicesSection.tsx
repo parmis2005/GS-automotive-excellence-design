@@ -9,6 +9,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const services = [
   {
@@ -41,6 +42,7 @@ const services = [
     description: "Schnelle Bewertung und sofortige Auszahlung. Verkaufen Sie unkompliziert und ohne Stress.",
     cta: "Fahrzeug bewerten",
     trustMarkers: ["Sofortbewertung", "Faire Preise"],
+    href: "/fahrzeugankauf",
     isPrimary: true, // Primärer Umsatztreiber
   },
   {
@@ -118,19 +120,25 @@ const ServicesSection = () => {
 
                 {/* CTA Button */}
                 <Button
+                  asChild={Boolean(service.href)}
                   variant={service.isPrimary ? "default" : "outline"}
                   className={`w-full justify-between group/btn transition-all duration-300 ${
                     service.isPrimary 
                       ? "bg-primary hover:bg-primary/90 text-white border-0 shadow-md hover:shadow-lg" 
                       : "border-2 hover:border-primary hover:bg-primary/5"
                   }`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // Handle navigation based on service
-                  }}
                 >
-                  <span className="font-medium">{service.cta}</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 group-hover/btn:translate-x-1 transition-transform duration-300" />
+                  {service.href ? (
+                    <Link to={service.href}>
+                      <span className="font-medium">{service.cta}</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 group-hover/btn:translate-x-1 transition-transform duration-300" />
+                    </Link>
+                  ) : (
+                    <>
+                      <span className="font-medium">{service.cta}</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 group-hover/btn:translate-x-1 transition-transform duration-300" />
+                    </>
+                  )}
                 </Button>
               </div>
             );
