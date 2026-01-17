@@ -42,11 +42,20 @@ const Navbar = () => {
     // If not on home page, Link will navigate to / and scroll to top
   };
 
+  // Handle click for fahrzeugankauf link - scroll to top on same page
+  const handleAnkaufClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (location.pathname === "/fahrzeugankauf") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setIsMobileMenuOpen(false);
+    }
+  };
+
   const navLinks = [
     { label: "STARTSEITE", to: "/", isHash: false },
     { label: "FAHRZEUGE", to: "/#vehicles", isHash: true, hash: "#vehicles" },
     { label: "SERVICE", to: "/#services", isHash: true, hash: "#services" },
-    { label: "FAHRZEUGANKAUF", to: "/#services", isHash: true, hash: "#services" },
+    { label: "FAHRZEUGANKAUF", to: "/fahrzeugankauf", isHash: false },
     { label: "UNTERNEHMEN", to: "/#about", isHash: true, hash: "#about" },
     { label: "KONTAKT", to: "/#contact", isHash: true, hash: "#contact" },
   ];
@@ -107,6 +116,8 @@ const Navbar = () => {
                   to={link.to}
                   onClick={link.label === "STARTSEITE" 
                     ? handleHomeClick 
+                    : link.label === "FAHRZEUGANKAUF"
+                    ? handleAnkaufClick
                     : link.isHash 
                     ? (e) => handleHashNavClick(e, link.hash!) 
                     : undefined}
@@ -177,6 +188,11 @@ const Navbar = () => {
                     onClick={link.label === "STARTSEITE"
                       ? (e) => {
                           handleHomeClick(e);
+                          setIsMobileMenuOpen(false);
+                        }
+                      : link.label === "FAHRZEUGANKAUF"
+                      ? (e) => {
+                          handleAnkaufClick(e);
                           setIsMobileMenuOpen(false);
                         }
                       : link.isHash 
