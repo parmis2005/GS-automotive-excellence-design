@@ -1,139 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Search, X } from "lucide-react";
-
-// CarQuery endpoints used:
-// - https://www.carqueryapi.com/api/0.3/?cmd=getMakes
-// - https://www.carqueryapi.com/api/0.3/?cmd=getModels&make=MAKE
-// - https://www.carqueryapi.com/api/0.3/?cmd=getTrims&make=MAKE&model=MODEL
-
-const CARQUERY_BASE = "https://www.carqueryapi.com/api/0.3/?";
-
-type FormData = {
-  make: string;
-  model: string;
-  trim: string;
-  firstRegistrationMonth: string;
-  firstRegistrationYear: string;
-  fuel: string;
-  powerType: "unknown" | "kw" | "ps";
-  powerValue: string;
-  bodyType: string;
-  transmission: string;
-  mileageRange: string;
-  mileageExact: string;
-  condition: string;
-  color: string;
-  equipment: string[];
-  email: string;
-  privacyAccepted: boolean;
-};
-
-type Labels = {
-  title: string;
-  subtitle: string;
-  next: string;
-  back: string;
-  submit: string;
-};
-
-type VehiclePurchaseFormProps = {
-  containerId?: string;
-  formId?: string;
-  topBrands?: string[];
-  labels?: Partial<Labels>;
-  requiredFields?: Array<keyof FormData>;
-  onSubmit?: (data: FormData) => void;
-};
-
-const defaultLabels: Labels = {
-  title: "Fahrzeugankauf Schritt für Schritt",
-  subtitle: "Nur die aktuellen Fragen werden angezeigt – schnell und klar.",
-  next: "Weiter",
-  back: "Zurück",
-  submit: "Anfrage absenden",
-};
-
-const defaultTopBrands = [
-  "BMW",
-  "VW",
-  "Mercedes",
-  "Audi",
-  "Ford",
-  "Opel",
-  "Seat",
-  "Hyundai",
-  "Mini",
-  "Kia",
-  "Skoda",
-  "Mazda",
-];
-
-const fuelOptions = [
-  "Benzin",
-  "Diesel",
-  "Hybrid",
-  "Elektro",
-  "LPG/CNG",
-  "Andere",
-];
-
-const bodyTypes = [
-  "Kleinwagen",
-  "Limousine",
-  "Kombi",
-  "SUV",
-  "Van",
-  "Coupe",
-  "Cabrio",
-  "Andere",
-];
-
-const transmissions = ["Manuell", "Automatik"];
-
-const mileageChips = [
-  "<50.000 km",
-  "50.000-100.000 km",
-  "100.000-150.000 km",
-  "150.000-200.000 km",
-  ">200.000 km",
-  "Genau eingeben",
-];
-
-const conditions = [
-  "Sehr gut",
-  "Gut",
-  "In Ordnung",
-  "Reparaturbedarf",
-  "Unfallwagen",
-];
-
-const colorOptions = [
-  "Schwarz",
-  "Weiss",
-  "Silber",
-  "Grau",
-  "Blau",
-  "Rot",
-  "Grun",
-  "Braun",
-  "Beige",
-  "Andere",
-];
-
-const equipmentOptions = [
-  "Klima",
-  "Navi",
-  "Leder",
-  "Sitzheizung",
-  "Tempomat",
-  "PDC",
-  "Kamera",
-  "LED",
-  "Panorama",
-  "Head-Up",
-  "Keyless",
-  "Anhangerkupplung",
-];
+import {
+  AlertTriangle,
+  Check,
+  ChevronRight,
+  Info,
+  Loader2,
+  Minus,
+  Plus,
+  Search,
+  ImagePlus,
+} from "lucide-react";
+import { useVehicles } from "@/hooks/useVehicles";
+import { useBrands } from "@/hooks/useBrands";
+import { getVehicleImageWithFallback } from "@/lib/vehicleImage";
+import { useModels } from "@/hooks/useModels";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 
 const months = [
   "01",
@@ -150,62 +33,300 @@ const months = [
   "12",
 ];
 
-const currentYear = new Date().getFullYear();
-const years = Array.from({ length: 40 }, (_, index) => String(currentYear - index));
+const currentDate = new Date();
+const currentYear = currentDate.getFullYear();
+const currentMonth = currentDate.getMonth() + 1;
+const minYear = 1950;
+const years = Array.from({ length: currentYear - minYear + 1 }, (_, index) =>
+  String(currentYear - index),
+);
+const serviceYears = Array.from({ length: 4 }, (_, index) =>
+  String(currentYear - index),
+);
+const huYears = Array.from({ length: 2 }, (_, index) =>
+  String(currentYear - index),
+);
 
-const defaultRequiredFields: Array<keyof FormData> = [
-  "make",
-  "model",
-  "firstRegistrationMonth",
-  "firstRegistrationYear",
-  "fuel",
-  "bodyType",
-  "transmission",
-  "mileageRange",
-  "condition",
-  "color",
-  "email",
-  "privacyAccepted",
+const maxMileage = 500_000;
+const minMileage = 0;
+const maxOwners = 20;
+const minModelLength = 2;
+const minAccidentDescriptionLength = 10;
+const maxPhotoFiles = 10;
+const maxPhotoSizeMb = 10;
+const allowedUploadTypes = ["image/*", "application/pdf"];
+
+const defaultTopBrands = [
+  "Volkswagen",
+  "Mercedes-Benz",
+  "BMW",
+  "Audi",
+  "Opel",
+  "Ford",
+  "Skoda",
+  "Toyota",
+  "Hyundai",
+  "Renault",
 ];
 
-const jsonpRequest = (url: string, timeoutMs = 8000) =>
-  new Promise<Record<string, unknown>>((resolve, reject) => {
-    const callbackName = `carquery_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const script = document.createElement("script");
+const allowedBrands = [
+  "Abarth",
+  "Alfa Romeo",
+  "Alpine",
+  "Aston Martin",
+  "Audi",
+  "Bentley",
+  "BMW",
+  "BYD",
+  "Chevrolet",
+  "Chrysler",
+  "Citroen",
+  "Cupra",
+  "Dacia",
+  "Dodge",
+  "DS",
+  "Ferrari",
+  "Fiat",
+  "Ford",
+  "Genesis",
+  "Honda",
+  "Hyundai",
+  "Infiniti",
+  "Jaguar",
+  "Jeep",
+  "Kia",
+  "Lamborghini",
+  "Lancia",
+  "Land Rover",
+  "Lexus",
+  "Lotus",
+  "Maserati",
+  "Mazda",
+  "McLaren",
+  "Mercedes-Benz",
+  "Mini",
+  "Mitsubishi",
+  "Nissan",
+  "Opel",
+  "Peugeot",
+  "Polestar",
+  "Porsche",
+  "Renault",
+  "Rolls-Royce",
+  "Saab",
+  "Seat",
+  "Skoda",
+  "Smart",
+  "Subaru",
+  "Suzuki",
+  "Tesla",
+  "Toyota",
+  "Volkswagen",
+  "Volvo",
+  "VW",
+];
 
-    const cleanup = () => {
-      delete (window as typeof window & Record<string, unknown>)[callbackName];
-      script.remove();
-    };
+const popularModelsByMake: Record<string, string[]> = {
+  "Abarth": ["595", "500", "124 Spider"],
+  "Alfa Romeo": ["Giulia", "Stelvio", "Giulietta", "Tonale", "MiTo"],
+  "Alpine": ["A110"],
+  "Aston Martin": ["Vantage", "DB11", "DBX", "DBS"],
+  "Audi": ["A3", "A4", "A6", "Q3", "Q5", "Q7"],
+  "Bentley": ["Continental", "Bentayga", "Flying Spur"],
+  "BMW": ["1er", "2er", "3er", "4er", "5er", "6er", "7er", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "Z4", "i3", "i4", "i5", "i7", "iX", "iX3", "M2", "M3", "M4", "M5", "M8"],
+  "BYD": ["Atto 3", "Han", "Tang", "Dolphin", "Seal"],
+  "Chevrolet": ["Camaro", "Corvette", "Cruze", "Spark", "Tahoe"],
+  "Chrysler": ["300", "Pacifica", "Voyager"],
+  "Citroen": ["C3", "C4", "C5 Aircross", "Berlingo", "C1"],
+  "Cupra": ["Formentor", "Leon", "Born", "Ateca"],
+  "Dacia": ["Duster", "Sandero", "Logan", "Jogger"],
+  "Dodge": ["Charger", "Challenger", "Durango"],
+  "DS": ["DS 3", "DS 4", "DS 7"],
+  "Ferrari": ["Roma", "F8", "488", "SF90", "Portofino"],
+  "Fiat": ["500", "Panda", "Tipo", "500X", "Doblo"],
+  "Ford": ["Focus", "Fiesta", "Kuga", "Puma", "Mondeo", "S-Max"],
+  "Genesis": ["G70", "G80", "GV70", "GV80"],
+  "Honda": ["Civic", "Accord", "CR-V", "HR-V", "Jazz"],
+  "Hyundai": ["i10", "i20", "i30", "Tucson", "Kona", "Santa Fe"],
+  "Infiniti": ["Q30", "Q50", "Q60", "QX30", "QX50"],
+  "Jaguar": ["XE", "XF", "F-Pace", "E-Pace", "I-Pace"],
+  "Jeep": ["Wrangler", "Compass", "Renegade", "Grand Cherokee", "Cherokee"],
+  "Kia": ["Ceed", "Sportage", "Picanto", "Rio", "Sorento"],
+  "Lamborghini": ["Huracan", "Aventador", "Urus"],
+  "Lancia": ["Ypsilon", "Delta", "Thema"],
+  "Land Rover": ["Range Rover", "Discovery", "Defender", "Range Rover Evoque"],
+  "Lexus": ["IS", "ES", "RX", "NX", "UX"],
+  "Lotus": ["Emira", "Elise", "Evora", "Exige"],
+  "Maserati": ["Ghibli", "Levante", "Quattroporte", "Grecale"],
+  "Mazda": ["Mazda3", "Mazda6", "CX-3", "CX-5", "MX-5"],
+  "McLaren": ["570S", "720S", "GT", "Artura"],
+  "Mercedes-Benz": ["C-Klasse", "E-Klasse", "A-Klasse", "GLC", "GLA", "S-Klasse"],
+  "Mini": ["Cooper", "Countryman", "Clubman"],
+  "Mitsubishi": ["Outlander", "ASX", "Eclipse Cross", "Space Star"],
+  "Nissan": ["Qashqai", "Juke", "X-Trail", "Micra", "Leaf"],
+  "Opel": ["Corsa", "Astra", "Insignia", "Mokka", "Crossland", "Grandland"],
+  "Peugeot": ["208", "308", "3008", "2008", "5008"],
+  "Polestar": ["Polestar 2", "Polestar 3"],
+  "Porsche": ["911", "Cayenne", "Macan", "Panamera", "Taycan"],
+  "Renault": ["Clio", "Megane", "Captur", "Kadjar", "Austral", "Zoe"],
+  "Rolls-Royce": ["Ghost", "Phantom", "Cullinan", "Wraith"],
+  "Saab": ["9-3", "9-5"],
+  "Seat": ["Leon", "Ibiza", "Ateca", "Arona", "Tarraco"],
+  "Skoda": ["Octavia", "Fabia", "Superb", "Kodiaq", "Karoq", "Scala"],
+  "Smart": ["Fortwo", "Forfour", "#1"],
+  "Subaru": ["Impreza", "Forester", "Outback", "XV"],
+  "Suzuki": ["Swift", "Vitara", "SX4", "Jimny", "Ignis"],
+  "Tesla": ["Model 3", "Model Y", "Model S", "Model X"],
+  "Toyota": ["Corolla", "Yaris", "RAV4", "C-HR", "Camry", "Aygo"],
+  "Volkswagen": ["Golf", "Passat", "Tiguan", "Polo", "Touran", "Touareg"],
+  "Volvo": ["XC40", "XC60", "XC90", "V60", "S60"],
+  "VW": ["Golf", "Passat", "Tiguan", "Polo", "Touran", "Touareg"],
+};
 
-    (window as typeof window & Record<string, unknown>)[callbackName] = (data: Record<string, unknown>) => {
-      cleanup();
-      resolve(data);
-    };
+const buildModelPlaceholder = (make: string) => {
+  const models = popularModelsByMake[make] ?? [];
+  if (models.length >= 3) {
+    return `z.B. ${models[0]}, ${models[1]}, ${models[2]}`;
+  }
+  if (models.length === 2) {
+    return `z.B. ${models[0]}, ${models[1]}`;
+  }
+  if (models.length === 1) {
+    return `z.B. ${models[0]}`;
+  }
+  return "z.B. A4, Golf, 3er";
+};
 
-    script.src = `${url}${url.includes("?") ? "&" : "?"}callback=${callbackName}`;
-    script.onerror = () => {
-      cleanup();
-      reject(new Error("CarQuery request failed"));
-    };
+const stepInstructions: Record<string, { title: string; text: string }> = {
+  make: {
+    title: "Marke auswahlen",
+    text: "Wahlen Sie die Marke Ihres Fahrzeugs. Weitere Marken finden Sie in der erweiterten Liste.",
+  },
+  model: {
+    title: "Modell eingeben",
+    text: "Geben Sie das genaue Modell an oder wahlen Sie einen Vorschlag aus.",
+  },
+  firstRegistration: {
+    title: "Erstzulassung erfassen",
+    text: "Monat und Jahr der Erstzulassung auswahlen. Kein Datum in der Zukunft.",
+  },
+  mileage: {
+    title: "Kilometerstand angeben",
+    text: "Nutzen Sie den Slider oder tragen Sie den exakten Stand ein.",
+  },
+  owners: {
+    title: "Halteranzahl",
+    text: "Wie viele Halter hatte das Fahrzeug bisher?",
+  },
+  service: {
+    title: "Servicehistorie",
+    text: "Scheckheft angeben. Falls vorhanden, bitte den letzten Service erfassen.",
+  },
+  hu: {
+    title: "HU-Status",
+    text: "Geben Sie den nachsten HU-Termin an oder markieren Sie \"abgelaufen\".",
+  },
+  condition: {
+    title: "Fahrzeugzustand",
+    text: "Raucherfahrzeug und Unfallfreiheit angeben. Bei Unfall bitte Details erganzen.",
+  },
+  vin: {
+    title: "VIN erfassen",
+    text: "17-stellige Fahrgestellnummer eingeben, um Ausstattung sicher zuzuordnen.",
+  },
+  photos: {
+    title: "Fotos hochladen (optional)",
+    text: "Bis zu 10 Bilder helfen uns bei der schnellen Bewertung.",
+  },
+  interest: {
+    title: "Interessensnummer",
+    text: "Bitte die Nummer des Fahrzeugs eingeben, an dem Sie interessiert sind (Inzahlungnahme).",
+  },
+  contact: {
+    title: "Kontaktdaten",
+    text: "Damit wir uns schnell melden konnen, bitte Kontaktdaten hinterlegen.",
+  },
+};
 
-    document.body.appendChild(script);
+type FormData = {
+  make: string;
+  model: string;
+  firstRegistrationMonth: string;
+  firstRegistrationYear: string;
+  mileage: number | null;
+  ownersCount: number | null;
+  serviceBook: boolean | null;
+  lastServiceMonth: string;
+  lastServiceYear: string;
+  huMonth: string;
+  huYear: string;
+  huExpired: boolean;
+  smoker: boolean | null;
+  accident: boolean | null;
+  accidentRepaired: boolean | null;
+  accidentDescription: string;
+  accidentAmount: string;
+  vin: string;
+  interestNumber: string;
+  contactFirstName: string;
+  contactLastName: string;
+  contactPhone: string;
+  contactEmail: string;
+};
 
-    window.setTimeout(() => {
-      cleanup();
-      reject(new Error("CarQuery request timed out"));
-    }, timeoutMs);
-  });
+type Labels = {
+  title: string;
+  subtitle: string;
+  next: string;
+  back: string;
+  submit: string;
+};
 
-const useDebouncedValue = (value: string, delayMs = 200) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
+type VehiclePurchaseFormProps = {
+  containerId?: string;
+  formId?: string;
+  topBrands?: string[];
+  labels?: Partial<Labels>;
+  onSubmit?: (data: FormData) => void;
+};
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedValue(value), delayMs);
-    return () => window.clearTimeout(timer);
-  }, [value, delayMs]);
+const defaultLabels: Labels = {
+  title: "Fahrzeugankauf mit Premium-Flow",
+  subtitle: "Gefuhrt, klar und ohne Umwege. Nur relevante Fragen je Schritt.",
+  next: "Weiter",
+  back: "Zuruck",
+  submit: "Anfrage absenden",
+};
 
-  return debouncedValue;
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("de-DE").format(value);
+
+const toNumberInput = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  return digits ? Number(digits) : null;
+};
+
+const isValidMonthYear = (month: string, year: string) =>
+  Boolean(month) && Boolean(year);
+
+const isMonthYearInFuture = (month: string, year: string) => {
+  if (!month || !year) return false;
+  const yearNumber = Number(year);
+  const monthNumber = Number(month);
+  if (Number.isNaN(yearNumber) || Number.isNaN(monthNumber)) return false;
+  if (yearNumber > currentYear) return true;
+  if (yearNumber === currentYear && monthNumber > currentMonth) return true;
+  return false;
+};
+
+const isMonthYearInPast = (month: string, year: string) => {
+  if (!month || !year) return false;
+  const yearNumber = Number(year);
+  const monthNumber = Number(month);
+  if (Number.isNaN(yearNumber) || Number.isNaN(monthNumber)) return false;
+  if (yearNumber < currentYear) return true;
+  if (yearNumber === currentYear && monthNumber < currentMonth) return true;
+  return false;
 };
 
 const VehiclePurchaseForm = ({
@@ -213,356 +334,440 @@ const VehiclePurchaseForm = ({
   formId = "vehicleForm",
   topBrands = defaultTopBrands,
   labels,
-  requiredFields = defaultRequiredFields,
   onSubmit,
 }: VehiclePurchaseFormProps) => {
   const mergedLabels = { ...defaultLabels, ...labels };
   const [currentStep, setCurrentStep] = useState(0);
+  const [brandSearch, setBrandSearch] = useState("");
+  const [mileageInput, setMileageInput] = useState("");
+  const [mileageFocus, setMileageFocus] = useState(false);
+  const [showOtherBrands, setShowOtherBrands] = useState(false);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoError, setPhotoError] = useState("");
+  const [accidentFiles, setAccidentFiles] = useState<File[]>([]);
+  const [accidentError, setAccidentError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
   const [formData, setFormData] = useState<FormData>({
     make: "",
     model: "",
-    trim: "",
     firstRegistrationMonth: "",
     firstRegistrationYear: "",
-    fuel: "",
-    powerType: "unknown",
-    powerValue: "",
-    bodyType: "",
-    transmission: "",
-    mileageRange: "",
-    mileageExact: "",
-    condition: "",
-    color: "",
-    equipment: [],
-    email: "",
-    privacyAccepted: false,
+    mileage: null,
+    ownersCount: null,
+    serviceBook: null,
+    lastServiceMonth: "",
+    lastServiceYear: "",
+    huMonth: "",
+    huYear: "",
+    huExpired: false,
+    smoker: null,
+    accident: null,
+    accidentRepaired: null,
+    accidentDescription: "",
+    accidentAmount: "",
+    vin: "",
+    interestNumber: "",
+    contactFirstName: "",
+    contactLastName: "",
+    contactPhone: "",
+    contactEmail: "",
   });
 
-  const [allBrands, setAllBrands] = useState<string[]>([]);
-  const [brandLoading, setBrandLoading] = useState(true);
-  const [brandError, setBrandError] = useState(false);
+  const { data: vehicles = [] } = useVehicles();
+  const {
+    data: brands = [],
+    isLoading: brandsLoading,
+    isError: brandsError,
+  } = useBrands();
+  const normalizedMake = formData.make === "VW" ? "Volkswagen" : formData.make;
+  const {
+    data: models = [],
+    isLoading: modelsLoading,
+    isError: modelsError,
+  } = useModels(normalizedMake);
 
-  const [models, setModels] = useState<string[]>([]);
-  const [modelLoading, setModelLoading] = useState(false);
-  const [modelError, setModelError] = useState(false);
+  const normalizeBrand = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
 
-  const [trims, setTrims] = useState<string[]>([]);
-  const [trimLoading, setTrimLoading] = useState(false);
-  const [hasTrimStep, setHasTrimStep] = useState(false);
+  const brandOptions = useMemo(() => {
+    const allowedMap = new Map<string, string>();
+    allowedBrands.forEach((brand) => {
+      allowedMap.set(normalizeBrand(brand), brand);
+    });
 
-  const [brandPanelOpen, setBrandPanelOpen] = useState(false);
-  const [modelPanelOpen, setModelPanelOpen] = useState(false);
+    const unique = new Set<string>();
+    brands.forEach((brand) => {
+      const clean = brand?.trim();
+      if (!clean) return;
+      const key = normalizeBrand(clean);
+      if (!allowedMap.has(key)) return;
+      unique.add(allowedMap.get(key) ?? clean);
+    });
 
-  const [brandSearch, setBrandSearch] = useState("");
-  const [modelSearch, setModelSearch] = useState("");
-  const [trimSearch, setTrimSearch] = useState("");
+    allowedBrands.forEach((brand) => {
+      unique.add(brand);
+    });
 
-  const debouncedBrandSearch = useDebouncedValue(brandSearch);
-  const debouncedModelSearch = useDebouncedValue(modelSearch);
-  const debouncedTrimSearch = useDebouncedValue(trimSearch);
-
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setBrandPanelOpen(false);
-        setModelPanelOpen(false);
-      }
-    };
-
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, []);
-
-  useEffect(() => {
-    const fetchBrands = async () => {
-      setBrandLoading(true);
-      setBrandError(false);
-      try {
-        const data = await jsonpRequest(`${CARQUERY_BASE}cmd=getMakes`);
-        const makes = (data?.Makes as Array<{ make_display: string }> | undefined) || [];
-        const makeNames = makes.map((make) => make.make_display).filter(Boolean).sort();
-        setAllBrands(makeNames);
-      } catch (error) {
-        setBrandError(true);
-      } finally {
-        setBrandLoading(false);
-      }
-    };
-
-    fetchBrands();
-  }, []);
-
-  useEffect(() => {
-    if (!formData.make || brandError) {
-      setModels([]);
-      return;
-    }
-
-    const fetchModels = async () => {
-      setModelLoading(true);
-      setModelError(false);
-      try {
-        const data = await jsonpRequest(
-          `${CARQUERY_BASE}cmd=getModels&make=${encodeURIComponent(formData.make)}`,
-        );
-        const modelsData = (data?.Models as Array<{ model_name: string }> | undefined) || [];
-        const modelNames = modelsData.map((model) => model.model_name).filter(Boolean).sort();
-        setModels(modelNames);
-      } catch (error) {
-        setModelError(true);
-      } finally {
-        setModelLoading(false);
-      }
-    };
-
-    fetchModels();
-  }, [formData.make, brandError]);
-
-  useEffect(() => {
-    if (!formData.make || !formData.model || brandError || modelError) {
-      setTrims([]);
-      setHasTrimStep(false);
-      return;
-    }
-
-    const fetchTrims = async () => {
-      setTrimLoading(true);
-      try {
-        const data = await jsonpRequest(
-          `${CARQUERY_BASE}cmd=getTrims&make=${encodeURIComponent(formData.make)}&model=${encodeURIComponent(formData.model)}`,
-        );
-        const trimsData = (data?.Trims as Array<{ model_trim: string }> | undefined) || [];
-        const trimNames = trimsData.map((trim) => trim.model_trim).filter(Boolean).sort();
-        setTrims(trimNames);
-        setHasTrimStep(trimNames.length > 0);
-      } catch (error) {
-        setTrims([]);
-        setHasTrimStep(false);
-      } finally {
-        setTrimLoading(false);
-      }
-    };
-
-    fetchTrims();
-  }, [formData.make, formData.model, brandError, modelError]);
+    const list = Array.from(unique);
+    list.sort((a, b) => a.localeCompare(b));
+    return list;
+  }, [brands]);
 
   const filteredBrands = useMemo(() => {
-    if (!debouncedBrandSearch) return allBrands;
-    return allBrands.filter((brand) =>
-      brand.toLowerCase().includes(debouncedBrandSearch.toLowerCase()),
-    );
-  }, [allBrands, debouncedBrandSearch]);
+    const term = brandSearch.trim().toLowerCase();
+    if (!term) return brandOptions;
+    return brandOptions.filter((brand) => brand.toLowerCase().includes(term));
+  }, [brandOptions, brandSearch]);
 
   const filteredModels = useMemo(() => {
-    if (!debouncedModelSearch) return models;
-    return models.filter((model) =>
-      model.toLowerCase().includes(debouncedModelSearch.toLowerCase()),
-    );
-  }, [models, debouncedModelSearch]);
+    const term = formData.model.trim().toLowerCase();
+    const fallback = popularModelsByMake[normalizedMake] ?? [];
 
-  const filteredTrims = useMemo(() => {
-    if (!debouncedTrimSearch) return trims;
-    return trims.filter((trim) =>
-      trim.toLowerCase().includes(debouncedTrimSearch.toLowerCase()),
+    if (!term) {
+      return fallback.length ? fallback : models.slice(0, 12);
+    }
+
+    const source = models.length ? models : fallback;
+    return source
+      .filter((model) => model.toLowerCase().includes(term))
+      .slice(0, 12);
+  }, [formData.model, models, normalizedMake]);
+
+  const topBrandList = useMemo(() => {
+    const allowedSet = new Set(brandOptions.map((brand) => normalizeBrand(brand)));
+    return topBrands.filter((brand) => allowedSet.has(normalizeBrand(brand)));
+  }, [brandOptions, topBrands]);
+
+  const otherBrandList = useMemo(() => {
+    const topSet = new Set(topBrandList.map((brand) => normalizeBrand(brand)));
+    return filteredBrands.filter((brand) => !topSet.has(normalizeBrand(brand)));
+  }, [filteredBrands, topBrandList]);
+
+  const interestNumber = formData.interestNumber.replace(/\D/g, "").slice(0, 3);
+  const interestVehicle = useMemo(() => {
+    if (interestNumber.length !== 3) return undefined;
+    return vehicles.find(
+      (vehicle) =>
+        vehicle.internalNumber &&
+        vehicle.internalNumber.padStart(3, "0") === interestNumber,
     );
-  }, [trims, debouncedTrimSearch]);
+  }, [vehicles, interestNumber]);
+
+  useEffect(() => {
+    if (mileageFocus) return;
+    setMileageInput(formData.mileage ? formatNumber(formData.mileage) : "");
+  }, [formData.mileage, mileageFocus]);
+
+  const clearPhotos = () => {
+    setPhotoFiles([]);
+    setPhotoError("");
+  };
+
+  const clearAccidentFiles = () => {
+    setAccidentFiles([]);
+    setAccidentError("");
+  };
 
   const updateField = <K extends keyof FormData>(key: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const toggleEquipment = (item: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      equipment: prev.equipment.includes(item)
-        ? prev.equipment.filter((entry) => entry !== item)
-        : [...prev.equipment, item],
-    }));
+  const updateMileage = (value: number | null) => {
+    if (value === null) {
+      updateField("mileage", null);
+      setMileageInput("");
+      return;
+    }
+
+    const bounded = Math.min(Math.max(value, minMileage), maxMileage);
+    updateField("mileage", bounded);
+    setMileageInput(formatNumber(bounded));
   };
 
-  const isStepValid = (requiredKeys: Array<keyof FormData>) =>
-    requiredKeys.every((key) => {
-      const value = formData[key];
-      if (typeof value === "boolean") return value;
-      if (Array.isArray(value)) return value.length > 0;
-      return Boolean(value);
+  const handlePhotoFiles = (files: FileList | File[]) => {
+    const incoming = Array.from(files);
+    const accepted: File[] = [];
+    const rejected: string[] = [];
+
+    incoming.forEach((file) => {
+      if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
+        rejected.push(`${file.name}: ungueltiger Dateityp`);
+        return;
+      }
+      if (file.size > maxPhotoSizeMb * 1024 * 1024) {
+        rejected.push(`${file.name}: groesser als ${maxPhotoSizeMb} MB`);
+        return;
+      }
+      accepted.push(file);
     });
 
-  const baseSteps = useMemo(
+    setPhotoFiles((prev) => {
+      const combined = [...prev, ...accepted];
+      if (combined.length > maxPhotoFiles) {
+        rejected.push(`Maximal ${maxPhotoFiles} Dateien`);
+      }
+      return combined.slice(0, maxPhotoFiles);
+    });
+
+    setPhotoError(rejected.length ? rejected.join(" | ") : "");
+  };
+
+  const handleAccidentFiles = (files: FileList | File[]) => {
+    const incoming = Array.from(files);
+    const accepted: File[] = [];
+    const rejected: string[] = [];
+
+    incoming.forEach((file) => {
+      if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
+        rejected.push(`${file.name}: ungueltiger Dateityp`);
+        return;
+      }
+      if (file.size > maxPhotoSizeMb * 1024 * 1024) {
+        rejected.push(`${file.name}: groesser als ${maxPhotoSizeMb} MB`);
+        return;
+      }
+      accepted.push(file);
+    });
+
+    setAccidentFiles((prev) => {
+      const combined = [...prev, ...accepted];
+      if (combined.length > maxPhotoFiles) {
+        rejected.push(`Maximal ${maxPhotoFiles} Dateien`);
+      }
+      return combined.slice(0, maxPhotoFiles);
+    });
+
+    setAccidentError(rejected.length ? rejected.join(" | ") : "");
+  };
+
+  const updateOwners = (delta: number) => {
+    const current = formData.ownersCount ?? 0;
+    const next = Math.min(Math.max(current + delta, 0), maxOwners);
+    updateField("ownersCount", next);
+  };
+
+  const isFirstRegistrationValid = () => {
+    if (!isValidMonthYear(formData.firstRegistrationMonth, formData.firstRegistrationYear)) {
+      return false;
+    }
+    const yearNumber = Number(formData.firstRegistrationYear);
+    if (Number.isNaN(yearNumber) || yearNumber < minYear) return false;
+    if (isMonthYearInFuture(formData.firstRegistrationMonth, formData.firstRegistrationYear)) {
+      return false;
+    }
+    return true;
+  };
+
+  const isMileageValid = () => {
+    if (formData.mileage === null) return false;
+    return formData.mileage >= minMileage && formData.mileage <= maxMileage;
+  };
+
+  const isOwnersValid = () => {
+    if (formData.ownersCount === null) return false;
+    return formData.ownersCount >= 0 && formData.ownersCount <= maxOwners;
+  };
+
+  const isServiceValid = () => {
+    if (formData.serviceBook === null) return false;
+    if (!formData.serviceBook) return true;
+    if (!isValidMonthYear(formData.lastServiceMonth, formData.lastServiceYear)) return false;
+    return !isMonthYearInFuture(formData.lastServiceMonth, formData.lastServiceYear);
+  };
+
+  const isHuValid = () => {
+    if (formData.huExpired) return true;
+    if (!isValidMonthYear(formData.huMonth, formData.huYear)) return false;
+    return true;
+  };
+
+  const isAccidentValid = () => {
+    if (formData.smoker === null || formData.accident === null) return false;
+    if (!formData.accident) return true;
+    if (formData.accidentRepaired === null) return false;
+    return true;
+  };
+
+  const isVinValid = () => {
+    const normalized = formData.vin.trim().toUpperCase();
+    if (normalized.length !== 17) return false;
+    return /^[A-HJ-NPR-Z0-9]{17}$/.test(normalized);
+  };
+
+  const isInterestValid = () => interestNumber.length === 3 && Boolean(interestVehicle);
+
+  const isContactValid = () => {
+    const email = formData.contactEmail.trim();
+    const phoneDigits = formData.contactPhone.replace(/\D/g, "");
+    if (!formData.contactFirstName.trim()) return false;
+    if (!formData.contactLastName.trim()) return false;
+    if (!email.includes("@")) return false;
+    if (phoneDigits.length < 6) return false;
+    return true;
+  };
+
+  const steps = useMemo(
     () => [
       {
         id: "make",
-        title: "Marke auswählen",
-        required: ["make"],
-        content: (
+        title: "Marke / Hersteller",
+        isValid: () => Boolean(formData.make.trim()),
+        render: () => (
           <div className="space-y-6">
-            {brandError ? (
-              <div className="rounded-lg border border-border bg-background p-4 text-sm text-muted-foreground">
-                <p className="font-semibold text-foreground mb-2">Marke manuell eingeben</p>
-                <input
-                  type="text"
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Ihre Marke auswahlen</p>
+                <p className="text-xs text-muted-foreground">Marke auswahlen.</p>
+              </div>
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={brandSearch}
+                  onChange={(event) => setBrandSearch(event.target.value)}
+                  placeholder="Marke suchen"
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            {brandsError ? (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  Marken konnten nicht geladen werden. Bitte manuell eingeben.
+                </div>
+                <Input
                   value={formData.make}
                   onChange={(event) => updateField("make", event.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="z.B. BMW"
+                  className="mt-3"
+                />
+              </div>
+            ) : brandsLoading ? (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Marken werden geladen ...
+              </div>
+            ) : filteredBrands.length === 0 ? (
+              <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground mb-2">Keine Marken gefunden</p>
+                <Input
+                  value={formData.make}
+                  onChange={(event) => updateField("make", event.target.value)}
+                  placeholder="Marke manuell eingeben"
                 />
               </div>
             ) : (
-              <>
+              <div className="space-y-6">
                 <div>
-                  <p className="text-sm font-semibold text-foreground mb-3">Top Marken</p>
-                  <div className="flex flex-wrap gap-2">
-                    {topBrands.map((brand) => (
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-3">
+                    Beliebte Marken
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {topBrandList.map((brand) => (
                       <button
                         key={brand}
                         type="button"
-                        onClick={() => {
-                          updateField("make", brand);
-                          updateField("model", "");
-                          updateField("trim", "");
-                        }}
-                        className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                        onClick={() => updateField("make", brand)}
+                        className={`group flex items-center justify-between rounded-full border px-4 py-3 text-left text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                           formData.make === brand
-                            ? "bg-primary text-white border-primary"
-                            : "border-border bg-background hover:border-primary"
+                            ? "border-primary bg-primary text-white"
+                            : "border-border bg-background text-foreground hover:border-primary"
                         }`}
                       >
-                        {brand}
+                        <span>{brand}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">Nicht dabei?</p>
+                <div>
                   <button
                     type="button"
-                    onClick={() => setBrandPanelOpen(true)}
+                    onClick={() => setShowOtherBrands((prev) => !prev)}
                     className="text-sm font-semibold text-primary hover:text-primary/80"
-                    aria-haspopup="dialog"
-                    aria-expanded={brandPanelOpen}
                   >
-                    Alle ansehen ▾
+                    {showOtherBrands ? "Weniger Marken anzeigen" : "Weitere Marken anzeigen"}
                   </button>
+                  {showOtherBrands && (
+                    <div className="mt-4">
+                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-3">
+                        Weitere Marken
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {otherBrandList.map((brand) => (
+                          <button
+                            key={brand}
+                            type="button"
+                            onClick={() => updateField("make", brand)}
+                            className={`group flex items-center justify-between rounded-full border px-4 py-3 text-left text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                              formData.make === brand
+                                ? "border-primary bg-primary text-white"
+                                : "border-border bg-background text-foreground hover:border-primary"
+                            }`}
+                          >
+                            <span>{brand}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </>
+              </div>
             )}
           </div>
         ),
       },
       {
         id: "model",
-        title: "Modell auswählen",
-        required: ["model"],
-        content: brandError ? (
-          <div className="rounded-lg border border-border bg-background p-4 text-sm text-muted-foreground">
-            <p className="font-semibold text-foreground mb-2">Modell manuell eingeben</p>
-            <input
-              type="text"
-              value={formData.model}
-              onChange={(event) => updateField("model", event.target.value)}
-              className="w-full rounded-md border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="z.B. 3er"
-            />
-          </div>
-        ) : (
+        title: "Modell",
+        isValid: () => formData.model.trim().length >= minModelLength,
+        render: () => (
           <div className="space-y-4">
-            {modelLoading ? (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Modelle werden geladen ...
-              </div>
-            ) : modelError ? (
-              <div className="rounded-lg border border-border bg-background p-4 text-sm text-muted-foreground">
-                <p className="font-semibold text-foreground mb-2">Modell manuell eingeben</p>
-                <input
-                  type="text"
-                  value={formData.model}
-                  onChange={(event) => updateField("model", event.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="z.B. Golf"
-                />
-              </div>
-            ) : (
-              <>
+            <div>
+              <label className="text-sm font-semibold text-foreground">Modell eingeben</label>
+              <Input
+                value={formData.model}
+                onChange={(event) => updateField("model", event.target.value)}
+                placeholder={buildModelPlaceholder(normalizedMake)}
+                className="mt-2"
+              />
+              {modelsLoading && (
+                <p className="mt-2 text-xs text-muted-foreground">Modelle werden geladen ...</p>
+              )}
+              {modelsError && (
+                <p className="mt-2 text-xs text-destructive">
+                  Modelle konnten nicht geladen werden.
+                </p>
+              )}
+            </div>
+            {!modelsLoading && !modelsError && filteredModels.length > 0 && (
+              <div className="rounded-xl border border-border bg-muted/40 p-4">
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-3">
+                  Vorschlage
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {filteredModels.slice(0, 12).map((model) => (
+                  {filteredModels.map((model) => (
                     <button
                       key={model}
                       type="button"
-                      onClick={() => {
-                        updateField("model", model);
-                        updateField("trim", "");
-                      }}
-                      className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                      onClick={() => updateField("model", model)}
+                      className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
                         formData.model === model
-                          ? "bg-primary text-white border-primary"
-                          : "border-border bg-background hover:border-primary"
+                          ? "border-primary bg-primary text-white"
+                          : "border-border bg-background text-foreground hover:border-primary"
                       }`}
                     >
                       {model}
                     </button>
                   ))}
                 </div>
-                {models.length > 12 && (
-                  <button
-                    type="button"
-                    onClick={() => setModelPanelOpen(true)}
-                    className="text-sm font-semibold text-primary hover:text-primary/80"
-                    aria-haspopup="dialog"
-                    aria-expanded={modelPanelOpen}
-                  >
-                    Alle ansehen ▾
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        ),
-      },
-      {
-        id: "trim",
-        title: "Variante auswählen",
-        required: [],
-        hidden: !hasTrimStep,
-        content: (
-          <div className="space-y-4">
-            {trimLoading ? (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Varianten werden geladen ...
               </div>
-            ) : trims.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine Varianten gefunden. Schritt wird ubersprungen.</p>
-            ) : (
-              <>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={trimSearch}
-                    onChange={(event) => setTrimSearch(event.target.value)}
-                    className="w-full rounded-md border border-border bg-background px-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Variante suchen"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {filteredTrims.slice(0, 16).map((trim) => (
-                    <button
-                      key={trim}
-                      type="button"
-                      onClick={() => updateField("trim", trim)}
-                      className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                        formData.trim === trim
-                          ? "bg-primary text-white border-primary"
-                          : "border-border bg-background hover:border-primary"
-                      }`}
-                    >
-                      {trim}
-                    </button>
-                  ))}
-                </div>
-              </>
             )}
           </div>
         ),
@@ -570,17 +775,17 @@ const VehiclePurchaseForm = ({
       {
         id: "firstRegistration",
         title: "Erstzulassung",
-        required: ["firstRegistrationMonth", "firstRegistrationYear"],
-        content: (
+        isValid: isFirstRegistrationValid,
+        render: () => (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="text-sm font-semibold text-foreground">Monat</label>
               <select
                 value={formData.firstRegistrationMonth}
                 onChange={(event) => updateField("firstRegistrationMonth", event.target.value)}
-                className="mt-2 w-full rounded-md border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">Monat wahlen</option>
+                <option value="">Monat auswahlen</option>
                 {months.map((month) => (
                   <option key={month} value={month}>
                     {month}
@@ -593,330 +798,626 @@ const VehiclePurchaseForm = ({
               <select
                 value={formData.firstRegistrationYear}
                 onChange={(event) => updateField("firstRegistrationYear", event.target.value)}
-                className="mt-2 w-full rounded-md border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">Jahr wahlen</option>
+                <option value="">Jahr auswahlen</option>
                 {years.map((year) => (
                   <option key={year} value={year}>
                     {year}
                   </option>
                 ))}
               </select>
+              <p className="mt-2 text-xs text-muted-foreground">Nicht in der Zukunft.</p>
             </div>
-          </div>
-        ),
-      },
-      {
-        id: "fuel",
-        title: "Kraftstoff",
-        required: ["fuel"],
-        content: (
-          <div className="flex flex-wrap gap-2">
-            {fuelOptions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => updateField("fuel", option)}
-                className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  formData.fuel === option
-                    ? "bg-primary text-white border-primary"
-                    : "border-border bg-background hover:border-primary"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        ),
-      },
-      {
-        id: "power",
-        title: "Motorisierung / Leistung",
-        required: [],
-        content: (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: "Ich weiss es nicht", value: "unknown" },
-                { label: "kW", value: "kw" },
-                { label: "PS", value: "ps" },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => updateField("powerType", option.value as FormData["powerType"])}
-                  className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    formData.powerType === option.value
-                      ? "bg-primary text-white border-primary"
-                      : "border-border bg-background hover:border-primary"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            {formData.powerType !== "unknown" && (
-              <input
-                type="number"
-                inputMode="numeric"
-                value={formData.powerValue}
-                onChange={(event) => updateField("powerValue", event.target.value)}
-                className="w-full rounded-md border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder={`Leistung in ${formData.powerType.toUpperCase()}`}
-              />
-            )}
-          </div>
-        ),
-      },
-      {
-        id: "body",
-        title: "Karosserieform",
-        required: ["bodyType"],
-        content: (
-          <div className="flex flex-wrap gap-2">
-            {bodyTypes.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => updateField("bodyType", option)}
-                className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  formData.bodyType === option
-                    ? "bg-primary text-white border-primary"
-                    : "border-border bg-background hover:border-primary"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        ),
-      },
-      {
-        id: "transmission",
-        title: "Getriebe",
-        required: ["transmission"],
-        content: (
-          <div className="flex flex-wrap gap-2">
-            {transmissions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => updateField("transmission", option)}
-                className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  formData.transmission === option
-                    ? "bg-primary text-white border-primary"
-                    : "border-border bg-background hover:border-primary"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
           </div>
         ),
       },
       {
         id: "mileage",
         title: "Kilometerstand",
-        required: ["mileageRange"],
-        content: (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {mileageChips.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => {
-                    updateField("mileageRange", option);
-                    if (option !== "Genau eingeben") {
-                      updateField("mileageExact", "");
-                    }
-                  }}
-                  className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    formData.mileageRange === option
-                      ? "bg-primary text-white border-primary"
-                      : "border-border bg-background hover:border-primary"
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-            {formData.mileageRange === "Genau eingeben" && (
-              <input
-                type="number"
-                inputMode="numeric"
-                value={formData.mileageExact}
-                onChange={(event) => updateField("mileageExact", event.target.value)}
-                className="w-full rounded-md border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Kilometerstand in km"
+        isValid: isMileageValid,
+        render: () => (
+          <div className="space-y-6">
+            <div className="rounded-xl border border-border bg-muted/40 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">Schieberegler</p>
+                <span className="text-sm text-muted-foreground">
+                  {formData.mileage !== null
+                    ? `${formatNumber(formData.mileage)} km`
+                    : "Bitte auswahlen"}
+                </span>
+              </div>
+              <Slider
+                value={[formData.mileage ?? 0]}
+                onValueChange={(value) => updateMileage(value[0])}
+                min={minMileage}
+                max={maxMileage}
+                step={1000}
+                className="mt-4"
               />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-foreground">Oder genau eingeben</label>
+              <Input
+                value={mileageFocus ? mileageInput : mileageInput ? `${mileageInput} km` : ""}
+                onFocus={() => {
+                  setMileageFocus(true);
+                  setMileageInput(formData.mileage ? String(formData.mileage) : "");
+                }}
+                onBlur={() => {
+                  setMileageFocus(false);
+                  setMileageInput(formData.mileage ? formatNumber(formData.mileage) : "");
+                }}
+                onChange={(event) => {
+                  const next = event.target.value.replace(/\D/g, "");
+                  const rawNumber = next ? Number(next) : null;
+                  const nextNumber =
+                    rawNumber === null ? null : Math.min(rawNumber, maxMileage);
+                  setMileageInput(nextNumber === null ? "" : String(nextNumber));
+                  updateField("mileage", nextNumber);
+                }}
+                inputMode="numeric"
+                min={minMileage}
+                max={maxMileage}
+                placeholder="120000"
+                className="mt-2"
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Bereich {formatNumber(minMileage)} - {formatNumber(maxMileage)} km
+              </p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "owners",
+        title: "Halteranzahl",
+        isValid: isOwnersValid,
+        render: () => (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Bitte Anzahl der Halter angeben.</p>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => updateOwners(-1)}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background text-foreground hover:border-primary"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <div className="min-w-[80px] text-center text-3xl font-semibold text-foreground">
+                {formData.ownersCount ?? "-"}
+              </div>
+              <button
+                type="button"
+                onClick={() => updateOwners(1)}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background text-foreground hover:border-primary"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <span className="text-sm text-muted-foreground">Max. {maxOwners}</span>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "service",
+        title: "Scheckheft & letzter Service",
+        isValid: isServiceValid,
+        render: () => (
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Scheckheft vorhanden?</p>
+                <p className="text-xs text-muted-foreground">
+                  Wenn ja, bitte letztes Service-Datum.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {[
+                  { label: "Ja", value: true },
+                  { label: "Nein", value: false },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => updateField("serviceBook", option.value)}
+                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                      formData.serviceBook === option.value
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-foreground hover:border-primary"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {formData.serviceBook && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm font-semibold text-foreground">Monat</label>
+                  <select
+                    value={formData.lastServiceMonth}
+                    onChange={(event) => updateField("lastServiceMonth", event.target.value)}
+                    className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">Monat auswahlen</option>
+                    {months.map((month) => (
+                      <option key={month} value={month}>
+                        {month}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-foreground">Jahr</label>
+                  <select
+                    value={formData.lastServiceYear}
+                    onChange={(event) => updateField("lastServiceYear", event.target.value)}
+                    className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">Jahr auswahlen</option>
+                    {serviceYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             )}
           </div>
         ),
       },
       {
+        id: "hu",
+        title: "HU fallig",
+        isValid: isHuValid,
+        render: () => (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">HU abgelaufen</p>
+                <p className="text-xs text-muted-foreground">Deaktiviert den Termin.</p>
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={formData.huExpired}
+                  onChange={(event) => updateField("huExpired", event.target.checked)}
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                />
+                Abgelaufen
+              </label>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-semibold text-foreground">Monat</label>
+                <select
+                  value={formData.huMonth}
+                  onChange={(event) => updateField("huMonth", event.target.value)}
+                  disabled={formData.huExpired}
+                  className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">Monat auswahlen</option>
+                  {months.map((month) => (
+                    <option key={month} value={month}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-foreground">Jahr</label>
+                <select
+                  value={formData.huYear}
+                  onChange={(event) => updateField("huYear", event.target.value)}
+                  disabled={formData.huExpired}
+                  className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">Jahr auswahlen</option>
+                  {huYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
         id: "condition",
-        title: "Zustand",
-        required: ["condition"],
-        content: (
-          <div className="flex flex-wrap gap-2">
-            {conditions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => updateField("condition", option)}
-                className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  formData.condition === option
-                    ? "bg-primary text-white border-primary"
-                    : "border-border bg-background hover:border-primary"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
+        title: "Raucherfahrzeug & Unfallfreiheit",
+        isValid: isAccidentValid,
+        render: () => (
+          <div className="space-y-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Raucherfahrzeug?</p>
+                <p className="text-xs text-muted-foreground">Bitte Auswahl treffen.</p>
+              </div>
+              <div className="flex gap-2">
+                {[
+                  { label: "Ja", value: true },
+                  { label: "Nein", value: false },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => updateField("smoker", option.value)}
+                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                      formData.smoker === option.value
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-foreground hover:border-primary"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Unfallfahrzeug?</p>
+                <p className="text-xs text-muted-foreground">Falls ja, bitte Details angeben.</p>
+              </div>
+              <div className="flex gap-2">
+                {[
+                  { label: "Ja", value: true },
+                  { label: "Nein", value: false },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => updateField("accident", option.value)}
+                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                      formData.accident === option.value
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-foreground hover:border-primary"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {formData.accident && (
+              <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-semibold text-foreground">Unfall behoben?</p>
+                  <div className="flex gap-2">
+                    {[
+                      { label: "Ja", value: true },
+                      { label: "Nein", value: false },
+                    ].map((option) => (
+                      <button
+                        key={option.label}
+                        type="button"
+                        onClick={() => updateField("accidentRepaired", option.value)}
+                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                          formData.accidentRepaired === option.value
+                            ? "border-primary bg-primary text-white"
+                            : "border-border bg-background text-foreground hover:border-primary"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-foreground">Art des Schadens</label>
+                  <Textarea
+                    value={formData.accidentDescription}
+                    onChange={(event) => updateField("accidentDescription", event.target.value)}
+                    placeholder="Kurzbeschreibung des Schadens"
+                    className="mt-2 min-h-[120px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-foreground">Schadenshohe (EUR)</label>
+                  <Input
+                    value={formData.accidentAmount}
+                    onChange={(event) => updateField("accidentAmount", event.target.value)}
+                    placeholder="z.B. 2500"
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-foreground">Gutachten / Dokumente</label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Hier konnen Sie Fotos oder Gutachten zum Unfallschaden einfugen.
+                  </p>
+                  <div
+                    className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground"
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      if (event.dataTransfer?.files?.length) {
+                        handleAccidentFiles(event.dataTransfer.files);
+                      }
+                    }}
+                  >
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-border bg-background text-foreground">
+                      <ImagePlus className="h-5 w-5" />
+                    </div>
+                    <p className="mt-3 text-sm font-semibold text-foreground">
+                      Drag & Drop, Dokumente oder Bilder einfügen
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Max. {maxPhotoFiles} Dateien.
+                    </p>
+                    <div className="mt-4 flex justify-center">
+                      <label
+                        htmlFor="accident-upload"
+                        className="inline-flex cursor-pointer items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                      >
+                        Datei auswählen
+                      </label>
+                      <input
+                        id="accident-upload"
+                        type="file"
+                        multiple
+                        accept={allowedUploadTypes.join(",")}
+                        onChange={(event) => {
+                          if (event.target.files) {
+                            handleAccidentFiles(event.target.files);
+                            event.target.value = "";
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                    </div>
+                  </div>
+                  {accidentError && (
+                    <p className="mt-2 text-xs text-destructive">{accidentError}</p>
+                  )}
+                  {accidentFiles.length > 0 && (
+                    <div className="mt-3 rounded-xl border border-border bg-background p-3 text-xs text-muted-foreground">
+                      <div className="space-y-2">
+                        {accidentFiles.map((file) => (
+                          <div
+                            key={file.name}
+                            className="flex items-center justify-between rounded-md border border-border px-3 py-2"
+                          >
+                            <span className="truncate">{file.name}</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAccidentFiles((prev) =>
+                                  prev.filter((item) => item !== file),
+                                )
+                              }
+                              className="ml-3 text-xs font-semibold text-muted-foreground hover:text-primary"
+                              aria-label={`${file.name} entfernen`}
+                            >
+                              X
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ),
       },
       {
-        id: "color",
-        title: "Fahrzeugfarbe",
-        required: ["color"],
-        content: (
-          <div className="flex flex-wrap gap-2">
-            {colorOptions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => updateField("color", option)}
-                className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  formData.color === option
-                    ? "bg-primary text-white border-primary"
-                    : "border-border bg-background hover:border-primary"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
+        id: "vin",
+        title: "Fahrgestellnummer (VIN)",
+        isValid: isVinValid,
+        render: () => (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+              <div className="flex items-start gap-2">
+                <Info className="mt-0.5 h-4 w-4 text-primary" />
+                <p>
+                  Anhand der Fahrgestellnummer konnen wir Ausstattung und Historie besser
+                  einordnen.
+                </p>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-foreground">VIN (17-stellig)</label>
+              <Input
+                value={formData.vin}
+                onChange={(event) =>
+                  updateField("vin", event.target.value.toUpperCase().slice(0, 17))
+                }
+                placeholder="WBA...."
+                className="mt-2 tracking-[0.2em] uppercase"
+              />
+              <p className="mt-2 text-xs text-muted-foreground">Ohne I, O, Q.</p>
+            </div>
           </div>
         ),
       },
       {
-        id: "equipment",
-        title: "Ausstattung",
-        required: [],
-        content: (
-          <div className="flex flex-wrap gap-2">
-            {equipmentOptions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => toggleEquipment(option)}
-                className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  formData.equipment.includes(option)
-                    ? "bg-primary text-white border-primary"
-                    : "border-border bg-background hover:border-primary"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
+        id: "photos",
+        title: "Fotos Upload (optional)",
+        isValid: () => true,
+        render: () => (
+          <div className="space-y-4">
+            <div
+              className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (event.dataTransfer?.files?.length) {
+                  handlePhotoFiles(event.dataTransfer.files);
+                }
+              }}
+            >
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-border bg-background text-foreground">
+                <ImagePlus className="h-5 w-5" />
+              </div>
+              <p className="mt-3 text-sm font-semibold text-foreground">
+                Drag & Drop, Dokumente oder Bilder einfügen
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Max. {maxPhotoFiles} Dateien.
+              </p>
+              <div className="mt-4 flex justify-center">
+                <label
+                  htmlFor="photo-upload"
+                  className="inline-flex cursor-pointer items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                >
+                  Datei auswählen
+                </label>
+                <input
+                  id="photo-upload"
+                  type="file"
+                  multiple
+                  accept={allowedUploadTypes.join(",")}
+                  onChange={(event) => {
+                    if (event.target.files) {
+                      handlePhotoFiles(event.target.files);
+                      event.target.value = "";
+                    }
+                  }}
+                  className="sr-only"
+                />
+              </div>
+            </div>
+            {photoError && (
+              <p className="mt-2 text-xs text-destructive">{photoError}</p>
+            )}
+            {photoFiles.length > 0 && (
+              <div className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
+                <div className="space-y-2">
+                  {photoFiles.map((file) => (
+                    <div
+                      key={file.name}
+                      className="flex items-center justify-between rounded-md border border-border px-3 py-2"
+                    >
+                      <span className="truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPhotoFiles((prev) => prev.filter((item) => item !== file))
+                        }
+                        className="ml-3 text-xs font-semibold text-muted-foreground hover:text-primary"
+                        aria-label={`${file.name} entfernen`}
+                      >
+                        X
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: "interest",
+        title: "Interessens-Fahrzeugnummer",
+        isValid: isInterestValid,
+        render: () => (
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-semibold text-foreground">3-stellige Nummer</label>
+              <Input
+                value={interestNumber}
+                onChange={(event) => updateField("interestNumber", event.target.value)}
+                placeholder="123"
+                inputMode="numeric"
+                className="mt-2"
+                maxLength={3}
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Wir suchen sofort im Bestand.
+              </p>
+            </div>
+            {interestNumber.length === 3 && !interestVehicle && (
+              <p className="text-sm text-destructive">Keine Fahrzeuginfo gefunden.</p>
+            )}
+            {interestVehicle && (
+              <div className="rounded-xl border border-border bg-background p-4 shadow-soft">
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  <img
+                    src={getVehicleImageWithFallback(
+                      interestVehicle.image,
+                      interestVehicle.id,
+                    )}
+                    alt={`${interestVehicle.brand} ${interestVehicle.model}`}
+                    className="h-24 w-full rounded-lg object-cover sm:w-36"
+                    loading="lazy"
+                  />
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Fahrzeug gefunden</p>
+                    <h4 className="text-lg font-semibold text-foreground">
+                      {interestVehicle.brand} {interestVehicle.model}
+                    </h4>
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <span>{interestVehicle.year}</span>
+                      <span>•</span>
+                      <span>{formatNumber(interestVehicle.mileage)} km</span>
+                      <span>•</span>
+                      <span>{interestVehicle.fuel}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ),
       },
       {
         id: "contact",
-        title: "Kontakt",
-        required: ["email", "privacyAccepted"],
-        content: (
+        title: "Kontaktdaten",
+        isValid: isContactValid,
+        render: () => (
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-semibold text-foreground">E-Mail</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(event) => updateField("email", event.target.value)}
-                className="mt-2 w-full rounded-md border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="name@beispiel.de"
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-semibold text-foreground">Vorname</label>
+                <Input
+                  value={formData.contactFirstName}
+                  onChange={(event) => updateField("contactFirstName", event.target.value)}
+                  placeholder="Max"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-foreground">Nachname</label>
+                <Input
+                  value={formData.contactLastName}
+                  onChange={(event) => updateField("contactLastName", event.target.value)}
+                  placeholder="Mustermann"
+                  className="mt-2"
+                />
+              </div>
             </div>
-            <label className="flex items-start gap-3 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={formData.privacyAccepted}
-                onChange={(event) => updateField("privacyAccepted", event.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
-              />
-              <span>
-                Ich stimme der Verarbeitung meiner Daten zur Kontaktaufnahme zu.
-              </span>
-            </label>
-          </div>
-        ),
-      },
-      {
-        id: "summary",
-        title: "Zusammenfassung",
-        required: requiredFields,
-        content: (
-          <div className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Marke</p>
-                <p className="font-semibold text-foreground">{formData.make || "-"}</p>
+                <label className="text-sm font-semibold text-foreground">Mobilnummer</label>
+                <Input
+                  value={formData.contactPhone}
+                  onChange={(event) => updateField("contactPhone", event.target.value)}
+                  placeholder="+49 170 123456"
+                  className="mt-2"
+                />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Modell</p>
-                <p className="font-semibold text-foreground">{formData.model || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Variante</p>
-                <p className="font-semibold text-foreground">{formData.trim || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Erstzulassung</p>
-                <p className="font-semibold text-foreground">
-                  {formData.firstRegistrationMonth && formData.firstRegistrationYear
-                    ? `${formData.firstRegistrationMonth}/${formData.firstRegistrationYear}`
-                    : "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Kraftstoff</p>
-                <p className="font-semibold text-foreground">{formData.fuel || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Karosserie</p>
-                <p className="font-semibold text-foreground">{formData.bodyType || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Getriebe</p>
-                <p className="font-semibold text-foreground">{formData.transmission || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Kilometer</p>
-                <p className="font-semibold text-foreground">
-                  {formData.mileageRange === "Genau eingeben"
-                    ? formData.mileageExact || "-"
-                    : formData.mileageRange || "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Zustand</p>
-                <p className="font-semibold text-foreground">{formData.condition || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Farbe</p>
-                <p className="font-semibold text-foreground">{formData.color || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Ausstattung</p>
-                <p className="font-semibold text-foreground">
-                  {formData.equipment.length ? formData.equipment.join(", ") : "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">E-Mail</p>
-                <p className="font-semibold text-foreground">{formData.email || "-"}</p>
+                <label className="text-sm font-semibold text-foreground">E-Mail</label>
+                <Input
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={(event) => updateField("contactEmail", event.target.value)}
+                  placeholder="name@beispiel.de"
+                  className="mt-2"
+                />
               </div>
             </div>
           </div>
@@ -924,37 +1425,51 @@ const VehiclePurchaseForm = ({
       },
     ],
     [
-      brandError,
+      accidentFiles.length,
+      accidentError,
+      brandSearch,
+      filteredBrands,
       formData,
-      hasTrimStep,
-      modelError,
-      modelLoading,
-      models,
-      requiredFields,
+      interestNumber,
+      interestVehicle,
+      brandsError,
+      brandsLoading,
+      mileageFocus,
+      mileageInput,
+      photoError,
+      photoFiles,
+      otherBrandList,
+      showOtherBrands,
+      topBrandList,
       topBrands,
-      trimLoading,
+      modelsError,
+      modelsLoading,
       filteredModels,
-      filteredTrims,
-      trimSearch,
+      normalizedMake,
+      isSubmitting,
+      submitError,
+      submitSuccess,
     ],
   );
 
-  const steps = baseSteps.filter((step) => !step.hidden);
   const step = steps[currentStep];
+  const canGoNext = step?.isValid() ?? false;
+  const isLastStep = currentStep === steps.length - 1;
+  const stepInstruction = step ? stepInstructions[step.id] : undefined;
 
   useEffect(() => {
-    if (!step && steps.length > 0) {
+    if (currentStep > steps.length - 1) {
       setCurrentStep(steps.length - 1);
     }
-  }, [step, steps.length]);
-
-  const canGoNext = step ? isStepValid(step.required) : false;
+  }, [currentStep, steps.length]);
 
   const goNext = () => {
     if (!canGoNext) return;
-    if (currentStep < steps.length - 1) {
+    if (!isLastStep) {
       setCurrentStep((prev) => prev + 1);
+      return;
     }
+    handleSubmit();
   };
 
   const goBack = () => setCurrentStep((prev) => Math.max(0, prev - 1));
@@ -973,43 +1488,106 @@ const VehiclePurchaseForm = ({
 
     ensureInput("make", data.make);
     ensureInput("model", data.model);
-    ensureInput("trim", data.trim);
     ensureInput("firstRegistrationMonth", data.firstRegistrationMonth);
     ensureInput("firstRegistrationYear", data.firstRegistrationYear);
-    ensureInput("fuel", data.fuel);
-    ensureInput("powerType", data.powerType);
-    ensureInput("powerValue", data.powerValue);
-    ensureInput("bodyType", data.bodyType);
-    ensureInput("transmission", data.transmission);
-    ensureInput("mileageRange", data.mileageRange);
-    ensureInput("mileageExact", data.mileageExact);
-    ensureInput("condition", data.condition);
-    ensureInput("color", data.color);
-    ensureInput("equipment", data.equipment.join(", "));
-    ensureInput("email", data.email);
-    ensureInput("privacyAccepted", data.privacyAccepted ? "true" : "false");
+    ensureInput("mileage", data.mileage !== null ? String(data.mileage) : "");
+    ensureInput("ownersCount", data.ownersCount !== null ? String(data.ownersCount) : "");
+    ensureInput("serviceBook", data.serviceBook === null ? "" : String(data.serviceBook));
+    ensureInput("lastServiceMonth", data.lastServiceMonth);
+    ensureInput("lastServiceYear", data.lastServiceYear);
+    ensureInput("huMonth", data.huMonth);
+    ensureInput("huYear", data.huYear);
+    ensureInput("huExpired", String(data.huExpired));
+    ensureInput("smoker", data.smoker === null ? "" : String(data.smoker));
+    ensureInput("accident", data.accident === null ? "" : String(data.accident));
+    ensureInput("accidentRepaired", data.accidentRepaired === null ? "" : String(data.accidentRepaired));
+    ensureInput("accidentDescription", data.accidentDescription);
+    ensureInput("accidentAmount", data.accidentAmount);
+    ensureInput("vin", data.vin);
+    ensureInput("interestNumber", interestNumber);
+    ensureInput("contactFirstName", data.contactFirstName);
+    ensureInput("contactLastName", data.contactLastName);
+    ensureInput("contactPhone", data.contactPhone);
+    ensureInput("contactEmail", data.contactEmail);
   };
 
   const handleSubmit = () => {
-    if (!isStepValid(requiredFields)) return;
+    if (!isContactValid()) return;
     if (onSubmit) {
       onSubmit(formData);
       return;
     }
 
-    const targetForm = document.getElementById(formId) as HTMLFormElement | null;
-    if (targetForm) {
-      syncHiddenInputs(targetForm, formData);
-      targetForm.requestSubmit();
-    }
+    const payload = {
+      make: formData.make,
+      model: formData.model,
+      firstRegistration: formData.firstRegistrationMonth && formData.firstRegistrationYear
+        ? `${formData.firstRegistrationMonth}/${formData.firstRegistrationYear}`
+        : "",
+      mileage: formData.mileage !== null ? `${formData.mileage} km` : "",
+      ownersCount: formData.ownersCount !== null ? String(formData.ownersCount) : "",
+      serviceBook: formData.serviceBook === null ? "" : formData.serviceBook ? "Ja" : "Nein",
+      lastService: formData.lastServiceMonth && formData.lastServiceYear
+        ? `${formData.lastServiceMonth}/${formData.lastServiceYear}`
+        : "",
+      hu: formData.huExpired
+        ? "Abgelaufen"
+        : formData.huMonth && formData.huYear
+        ? `${formData.huMonth}/${formData.huYear}`
+        : "",
+      smoker: formData.smoker === null ? "" : formData.smoker ? "Ja" : "Nein",
+      accident: formData.accident === null ? "" : formData.accident ? "Ja" : "Nein",
+      accidentRepaired:
+        formData.accidentRepaired === null ? "" : formData.accidentRepaired ? "Ja" : "Nein",
+      accidentDescription: formData.accidentDescription,
+      accidentAmount: formData.accidentAmount,
+      vin: formData.vin,
+      interestNumber,
+      interestVehicle: interestVehicle
+        ? `${interestVehicle.brand} ${interestVehicle.model} (${interestVehicle.internalNumber || "-"})`
+        : "",
+      photoFiles: photoFiles.length ? photoFiles.map((file) => file.name).join(", ") : "",
+      accidentFiles: accidentFiles.length ? accidentFiles.map((file) => file.name).join(", ") : "",
+      contactFirstName: formData.contactFirstName,
+      contactLastName: formData.contactLastName,
+      contactPhone: formData.contactPhone,
+      contactEmail: formData.contactEmail,
+    };
+
+    setIsSubmitting(true);
+    setSubmitError("");
+    setSubmitSuccess(false);
+
+    fetch("/api/purchase-inquiry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Request failed");
+        }
+        return response.json();
+      })
+      .then(() => {
+        setSubmitSuccess(true);
+      })
+      .catch(() => {
+        setSubmitError("Senden fehlgeschlagen. Bitte erneut versuchen.");
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   return (
     <section id={containerId} className="py-20 bg-secondary/40">
       <div className="container mx-auto px-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
-            <p className="text-xs tracking-[0.4em] uppercase text-primary mb-3">Ankauf-Formular</p>
+            <p className="text-xs tracking-[0.4em] uppercase text-primary mb-3">
+              Ankauf-Formular
+            </p>
             <h2 className="font-display text-3xl md:text-4xl text-foreground mb-3">
               {mergedLabels.title}
             </h2>
@@ -1017,11 +1595,13 @@ const VehiclePurchaseForm = ({
           </div>
 
           <div className="rounded-2xl border border-border bg-background p-6 md:p-8 shadow-soft">
-            <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground mb-4">
               <span>
                 Schritt {currentStep + 1} von {steps.length}
               </span>
-              <span className="font-semibold text-foreground">{step?.title}</span>
+              <span className="text-base md:text-lg font-display font-semibold text-foreground tracking-wide">
+                {step?.title}
+              </span>
             </div>
             <div className="h-2 w-full rounded-full bg-muted mb-6">
               <div
@@ -1030,7 +1610,17 @@ const VehiclePurchaseForm = ({
               />
             </div>
 
-            <div className="min-h-[240px]">{step?.content}</div>
+            {stepInstruction && (
+              <div className="mb-6 rounded-xl border border-border bg-muted/40 px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                  {stepInstruction.title}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-foreground">
+                  {stepInstruction.text}
+                </p>
+              </div>
+            )}
+            <div className="min-h-[280px]">{step?.render()}</div>
 
             <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
               <button
@@ -1042,157 +1632,29 @@ const VehiclePurchaseForm = ({
                 {mergedLabels.back}
               </button>
 
-              {step?.id === "summary" ? (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  className={`rounded-md px-6 py-2 text-sm font-semibold text-white transition-colors ${
-                    isStepValid(requiredFields) ? "bg-primary hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"
-                  }`}
-                >
-                  {mergedLabels.submit}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={goNext}
-                  disabled={!canGoNext}
-                  className={`rounded-md px-6 py-2 text-sm font-semibold text-white transition-colors ${
-                    canGoNext ? "bg-primary hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"
-                  }`}
-                >
-                  {mergedLabels.next}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={!canGoNext || isSubmitting}
+                className={`flex items-center justify-center gap-2 rounded-md px-6 py-2 text-sm font-semibold text-white transition-colors ${
+                  canGoNext && !isSubmitting
+                    ? "bg-primary hover:bg-primary/90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                }`}
+              >
+                {isSubmitting ? "Sende..." : isLastStep ? mergedLabels.submit : mergedLabels.next}
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
+            {submitError && (
+              <p className="mt-4 text-sm text-destructive">{submitError}</p>
+            )}
+            {submitSuccess && (
+              <p className="mt-4 text-sm text-green-600">Anfrage wurde gesendet.</p>
+            )}
           </div>
         </div>
       </div>
-
-      {brandPanelOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Alle Marken"
-        >
-          <div className="w-full max-w-2xl rounded-xl bg-background p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">Marke auswahlen</h3>
-              <button
-                type="button"
-                onClick={() => setBrandPanelOpen(false)}
-                className="rounded-full p-2 hover:bg-muted"
-                aria-label="Panel schliessen"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={brandSearch}
-                onChange={(event) => setBrandSearch(event.target.value)}
-                className="w-full rounded-md border border-border bg-background px-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Marke suchen"
-              />
-            </div>
-            {brandLoading ? (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Marken werden geladen ...
-              </div>
-            ) : (
-              <div className="max-h-72 overflow-y-auto pr-2">
-                <div className="flex flex-wrap gap-2">
-                  {filteredBrands.map((brand) => (
-                    <button
-                      key={brand}
-                      type="button"
-                      onClick={() => {
-                        updateField("make", brand);
-                        updateField("model", "");
-                        updateField("trim", "");
-                        setBrandPanelOpen(false);
-                      }}
-                      className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                        formData.make === brand
-                          ? "bg-primary text-white border-primary"
-                          : "border-border bg-background hover:border-primary"
-                      }`}
-                    >
-                      {brand}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {modelPanelOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Alle Modelle"
-        >
-          <div className="w-full max-w-2xl rounded-xl bg-background p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">Modell auswahlen</h3>
-              <button
-                type="button"
-                onClick={() => setModelPanelOpen(false)}
-                className="rounded-full p-2 hover:bg-muted"
-                aria-label="Panel schliessen"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={modelSearch}
-                onChange={(event) => setModelSearch(event.target.value)}
-                className="w-full rounded-md border border-border bg-background px-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Modell suchen"
-              />
-            </div>
-            {modelLoading ? (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Modelle werden geladen ...
-              </div>
-            ) : (
-              <div className="max-h-72 overflow-y-auto pr-2">
-                <div className="flex flex-wrap gap-2">
-                  {filteredModels.map((model) => (
-                    <button
-                      key={model}
-                      type="button"
-                      onClick={() => {
-                        updateField("model", model);
-                        updateField("trim", "");
-                        setModelPanelOpen(false);
-                      }}
-                      className={`rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                        formData.model === model
-                          ? "bg-primary text-white border-primary"
-                          : "border-border bg-background hover:border-primary"
-                      }`}
-                    >
-                      {model}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </section>
   );
 };

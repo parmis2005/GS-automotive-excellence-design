@@ -1,5 +1,6 @@
 const Hero = () => {
-  const backgroundImage = "https://cagteuhomtoqniqpirly.supabase.co/storage/v1/object/public/Gs-Auto/IMG_7536.jpg";
+  const backgroundImage =
+    "https://cagteuhomtoqniqpirly.supabase.co/storage/v1/object/public/Gs-Auto/Screenshot%202026-01-07%20at%2010.39.00.png";
 
   return (
     <section

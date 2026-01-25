@@ -3,7 +3,16 @@ import { fetchVehicles, fetchVehicleById } from "@/lib/api/vehicles";
 import type { Vehicle } from "@/types/vehicle";
 
 /**
- * React Query hook to fetch all vehicles
+ * React Query hook to fetch all vehicles.
+ *
+ * Plain-English explanation:
+ * - This function returns a React Query object that handles the request, caching, and errors.
+ * - `queryKey: ["vehicles"]` is the cache key (same key = shared cache).
+ * - `queryFn: fetchVehicles` is the function that actually calls the API.
+ * - `staleTime` means how long the data is considered "fresh" (no refetch).
+ * - `gcTime` controls how long unused data stays in cache.
+ * - `retry` and `retryDelay` define automatic retries when the request fails.
+ * - `throwOnError: false` means errors are returned in the hook result instead of thrown.
  */
 export function useVehicles() {
   return useQuery<Vehicle[]>({
@@ -18,7 +27,13 @@ export function useVehicles() {
 }
 
 /**
- * React Query hook to fetch a single vehicle by ID
+ * React Query hook to fetch a single vehicle by ID.
+ *
+ * Plain-English explanation:
+ * - `queryKey: ["vehicles", id]` creates a unique cache entry per vehicle.
+ * - `queryFn` calls `fetchVehicleById(id)` to load that vehicle from the API.
+ * - `enabled: !!id` prevents the request when `id` is empty.
+ * - The same caching and timing rules apply as in `useVehicles()`.
  */
 export function useVehicle(id: string) {
   return useQuery<Vehicle>({
