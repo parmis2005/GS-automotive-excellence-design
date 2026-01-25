@@ -31,7 +31,7 @@ const Hero = () => {
       <div 
         className="absolute z-10 left-1/2 transform -translate-x-1/2 text-center"
         style={{
-          top: 'clamp(245px, calc(12vh + 155px), 305px)',
+          top: 'clamp(150px, calc(6vh + 100px), 210px)',
           maxWidth: '900px',
           padding: '0 24px',
           width: '100%'
@@ -57,7 +57,7 @@ const Hero = () => {
             textShadow: '0 1px 4px rgba(0, 0, 0, 0.4)'
           }}
         >
-          Premium Neu- & Gebrauchtwagen
+          Premium Jahres- & Gebrauchtwagen
         </p>
       </div>
     </section>

@@ -205,7 +205,10 @@ const QuickSearch = () => {
   }
 
   return (
-    <div className="relative -mt-12 mb-8 z-50" style={{ overflow: 'visible' }}>
+    <div
+      className="relative mb-8 z-40 md:-mt-48 md:mb-8"
+      style={{ overflow: 'visible' }}
+    >
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-lg shadow-2xl border-2 border-primary/20 p-4 md:p-6" style={{ boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05)' }}>
