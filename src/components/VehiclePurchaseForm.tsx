@@ -257,6 +257,10 @@ const stepInstructions: Record<string, { title: string; text: string }> = {
     title: "Interessensnummer",
     text: "Bitte die Nummer des Fahrzeugs eingeben, an dem Sie interessiert sind (Inzahlungnahme).",
   },
+  priceExpectation: {
+    title: "Preisvorstellung",
+    text: "Bitte nennen Sie Ihre Preisvorstellung für Ihr Fahrzeug.",
+  },
   contact: {
     title: "Kontaktdaten",
     text: "Damit wir uns schnell melden können, bitte Kontaktdaten hinterlegen.",
@@ -285,6 +289,7 @@ type FormData = {
   accidentDescription: string;
   accidentAmount: string;
   vin: string;
+  priceExpectation: string;
   interestNumber: string;
   contactFirstName: string;
   contactLastName: string;
@@ -398,6 +403,7 @@ const VehiclePurchaseForm = ({
     accidentDescription: "",
     accidentAmount: "",
     vin: "",
+    priceExpectation: "",
     interestNumber: "",
     contactFirstName: "",
     contactLastName: "",
@@ -645,7 +651,7 @@ const VehiclePurchaseForm = ({
                   <AlertTriangle className="h-4 w-4" />
                   Marken könnten nicht geladen werden. Bitte manuell eingeben.
                 </div>
-                <p className="mt-3 text-sm font-semibold text-foreground">Marke</p>
+                <p className="mt-3 text-lg font-bold text-foreground">Marke</p>
                 <Input
                   value={formData.make}
                   onChange={(event) => updateField("make", event.target.value)}
@@ -661,7 +667,7 @@ const VehiclePurchaseForm = ({
             ) : brandOptions.length === 0 ? (
               <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
                 <p className="font-semibold text-foreground mb-2">Keine Marken gefunden</p>
-                <p className="text-sm font-semibold text-foreground">Marke</p>
+                <p className="text-lg font-bold text-foreground">Marke</p>
                 <Input
                   value={formData.make}
                   onChange={(event) => updateField("make", event.target.value)}
@@ -670,7 +676,7 @@ const VehiclePurchaseForm = ({
               </div>
             ) : (
               <div>
-                <p className="text-sm font-semibold text-foreground">Marke</p>
+                <p className="text-lg font-bold text-foreground">Marke</p>
                 <select
                   value={formData.make}
                   onChange={(event) => updateField("make", event.target.value)}
@@ -699,7 +705,7 @@ const VehiclePurchaseForm = ({
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-semibold text-foreground">Modell</label>
+                <label className="text-lg font-bold text-foreground">Modell</label>
                 <Input
                   value={formData.model}
                   onChange={(event) => updateField("model", event.target.value)}
@@ -726,7 +732,7 @@ const VehiclePurchaseForm = ({
                         key={model}
                         type="button"
                         onClick={() => updateField("model", model)}
-                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                        className={`rounded-full border px-4 py-2 text-lg font-bold transition-colors ${
                           formData.model === model
                             ? "border-primary bg-primary text-white"
                             : "border-border bg-background text-foreground hover:border-primary"
@@ -765,7 +771,7 @@ const VehiclePurchaseForm = ({
                   key={type.id}
                   type="button"
                   onClick={() => updateField("bodyType", type.label)}
-                  className={`group flex flex-col items-center justify-center gap-3 rounded-xl border px-4 py-5 text-center text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  className={`group flex flex-col items-center justify-center gap-3 rounded-xl border px-4 py-5 text-center text-lg font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     formData.bodyType === type.label
                       ? "border-primary bg-primary text-white"
                       : "border-border bg-background text-foreground hover:border-primary"
@@ -792,14 +798,14 @@ const VehiclePurchaseForm = ({
         render: () => (
           <div className="space-y-6">
             <div>
-              <p className="text-sm font-semibold text-foreground">Kraftstoffart</p>
+              <p className="text-lg font-bold text-foreground">Kraftstoffart</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {["Benzin", "Diesel", "Hybrid", "Elektro"].map((fuel) => (
                   <button
                     key={fuel}
                     type="button"
                     onClick={() => updateField("fuelType", fuel)}
-                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                    className={`rounded-full border px-4 py-2 text-lg font-bold transition-colors ${
                       formData.fuelType === fuel
                         ? "border-primary bg-primary text-white"
                         : "border-border bg-background text-foreground hover:border-primary"
@@ -811,7 +817,7 @@ const VehiclePurchaseForm = ({
               </div>
             </div>
             <div>
-              <label className="text-sm font-semibold text-foreground">PS angeben</label>
+              <label className="text-lg font-bold text-foreground">PS angeben</label>
               <Input
                 value={formData.power ?? ""}
                 onChange={(event) => {
@@ -835,7 +841,7 @@ const VehiclePurchaseForm = ({
         render: () => (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-sm font-semibold text-foreground">Monat</label>
+              <label className="text-lg font-bold text-foreground">Monat</label>
               <select
                 value={formData.firstRegistrationMonth}
                 onChange={(event) => updateField("firstRegistrationMonth", event.target.value)}
@@ -850,7 +856,7 @@ const VehiclePurchaseForm = ({
               </select>
             </div>
             <div>
-              <label className="text-sm font-semibold text-foreground">Jahr</label>
+              <label className="text-lg font-bold text-foreground">Jahr</label>
               <select
                 value={formData.firstRegistrationYear}
                 onChange={(event) => updateField("firstRegistrationYear", event.target.value)}
@@ -876,7 +882,7 @@ const VehiclePurchaseForm = ({
           <div className="space-y-6">
             <div className="rounded-xl border border-border bg-muted/40 p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">Kilometerstand (Slider)</p>
+                <p className="text-lg font-bold text-foreground">Kilometerstand (Slider)</p>
                 <span className="text-sm text-muted-foreground">
                   {formData.mileage !== null
                     ? `${formatNumber(formData.mileage)} km`
@@ -893,7 +899,7 @@ const VehiclePurchaseForm = ({
               />
             </div>
             <div>
-              <label className="text-sm font-semibold text-foreground">Kilometerstand (genau)</label>
+              <label className="text-lg font-bold text-foreground">Kilometerstand (genau)</label>
               <Input
                 value={mileageFocus ? mileageInput : mileageInput ? `${mileageInput} km` : ""}
                 onFocus={() => {
@@ -931,7 +937,7 @@ const VehiclePurchaseForm = ({
         isValid: isOwnersValid,
         render: () => (
           <div className="space-y-4">
-            <p className="text-sm font-semibold text-foreground">Anzahl der Halter</p>
+            <p className="text-lg font-bold text-foreground">Anzahl der Halter</p>
             <div className="flex items-center gap-4">
               <button
                 type="button"
@@ -963,7 +969,7 @@ const VehiclePurchaseForm = ({
           <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-foreground">Scheckheft vorhanden?</p>
+                <p className="text-lg font-bold text-foreground">Scheckheft vorhanden?</p>
                 <p className="text-xs text-muted-foreground">
                   Wenn ja, bitte letztes Service-Datum.
                 </p>
@@ -977,7 +983,7 @@ const VehiclePurchaseForm = ({
                     key={option.label}
                     type="button"
                     onClick={() => updateField("serviceBook", option.value)}
-                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                    className={`rounded-full border px-4 py-2 text-lg font-bold transition-colors ${
                       formData.serviceBook === option.value
                         ? "border-primary bg-primary text-white"
                         : "border-border bg-background text-foreground hover:border-primary"
@@ -992,7 +998,7 @@ const VehiclePurchaseForm = ({
             {formData.serviceBook && (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm font-semibold text-foreground">Monat</label>
+                  <label className="text-lg font-bold text-foreground">Monat</label>
                   <select
                     value={formData.lastServiceMonth}
                     onChange={(event) => updateField("lastServiceMonth", event.target.value)}
@@ -1007,7 +1013,7 @@ const VehiclePurchaseForm = ({
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-foreground">Jahr</label>
+                  <label className="text-lg font-bold text-foreground">Jahr</label>
                   <select
                     value={formData.lastServiceYear}
                     onChange={(event) => updateField("lastServiceYear", event.target.value)}
@@ -1034,7 +1040,7 @@ const VehiclePurchaseForm = ({
           <div className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-4">
               <div>
-                <p className="text-sm font-semibold text-foreground">HU abgelaufen</p>
+                <p className="text-lg font-bold text-foreground">HU abgelaufen</p>
                 <p className="text-xs text-muted-foreground">Deaktiviert den Termin.</p>
               </div>
               <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -1049,7 +1055,7 @@ const VehiclePurchaseForm = ({
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-semibold text-foreground">Monat</label>
+                <label className="text-lg font-bold text-foreground">Monat</label>
                 <select
                   value={formData.huMonth}
                   onChange={(event) => updateField("huMonth", event.target.value)}
@@ -1065,7 +1071,7 @@ const VehiclePurchaseForm = ({
                 </select>
               </div>
               <div>
-                <label className="text-sm font-semibold text-foreground">Jahr</label>
+                <label className="text-lg font-bold text-foreground">Jahr</label>
                 <select
                   value={formData.huYear}
                   onChange={(event) => updateField("huYear", event.target.value)}
@@ -1092,7 +1098,7 @@ const VehiclePurchaseForm = ({
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-foreground">Raucherfahrzeug</p>
+                <p className="text-lg font-bold text-foreground">Raucherfahrzeug</p>
                 <p className="text-xs text-muted-foreground">Bitte Auswahl treffen.</p>
               </div>
               <div className="flex gap-2">
@@ -1104,7 +1110,7 @@ const VehiclePurchaseForm = ({
                     key={option.label}
                     type="button"
                     onClick={() => updateField("smoker", option.value)}
-                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                    className={`rounded-full border px-4 py-2 text-lg font-bold transition-colors ${
                       formData.smoker === option.value
                         ? "border-primary bg-primary text-white"
                         : "border-border bg-background text-foreground hover:border-primary"
@@ -1118,7 +1124,7 @@ const VehiclePurchaseForm = ({
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-foreground">Unfallfahrzeug</p>
+                <p className="text-lg font-bold text-foreground">Unfallfahrzeug</p>
                 <p className="text-xs text-muted-foreground">Falls ja, bitte Details angeben.</p>
               </div>
               <div className="flex gap-2">
@@ -1130,7 +1136,7 @@ const VehiclePurchaseForm = ({
                     key={option.label}
                     type="button"
                     onClick={() => updateField("accident", option.value)}
-                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                    className={`rounded-full border px-4 py-2 text-lg font-bold transition-colors ${
                       formData.accident === option.value
                         ? "border-primary bg-primary text-white"
                         : "border-border bg-background text-foreground hover:border-primary"
@@ -1145,7 +1151,7 @@ const VehiclePurchaseForm = ({
             {formData.accident && (
               <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm font-semibold text-foreground">Unfall behoben?</p>
+                  <p className="text-lg font-bold text-foreground">Unfall behoben?</p>
                   <div className="flex gap-2">
                     {[
                       { label: "Ja", value: true },
@@ -1155,7 +1161,7 @@ const VehiclePurchaseForm = ({
                         key={option.label}
                         type="button"
                         onClick={() => updateField("accidentRepaired", option.value)}
-                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                        className={`rounded-full border px-4 py-2 text-lg font-bold transition-colors ${
                           formData.accidentRepaired === option.value
                             ? "border-primary bg-primary text-white"
                             : "border-border bg-background text-foreground hover:border-primary"
@@ -1168,7 +1174,7 @@ const VehiclePurchaseForm = ({
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-foreground">Art des Schadens</label>
+                  <label className="text-lg font-bold text-foreground">Art des Schadens</label>
                   <Textarea
                     value={formData.accidentDescription}
                     onChange={(event) => updateField("accidentDescription", event.target.value)}
@@ -1178,7 +1184,7 @@ const VehiclePurchaseForm = ({
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-foreground">Schadenshöhe (EUR)</label>
+                  <label className="text-lg font-bold text-foreground">Schadenshöhe (EUR)</label>
                   <Input
                     value={formData.accidentAmount}
                     onChange={(event) => updateField("accidentAmount", event.target.value)}
@@ -1188,7 +1194,7 @@ const VehiclePurchaseForm = ({
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-foreground">Gutachten / Dokumente</label>
+                  <label className="text-lg font-bold text-foreground">Gutachten / Dokumente</label>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Hier können Sie Fotos oder Gutachten zum Unfallschaden einfügen.
                   </p>
@@ -1205,7 +1211,7 @@ const VehiclePurchaseForm = ({
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-border bg-background text-foreground">
                       <ImagePlus className="h-5 w-5" />
                     </div>
-                    <p className="mt-3 text-sm font-semibold text-foreground">
+                    <p className="mt-3 text-lg font-bold text-foreground">
                       Drag & Drop, Dokumente oder Bilder einfügen
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -1214,7 +1220,7 @@ const VehiclePurchaseForm = ({
                     <div className="mt-4 flex justify-center">
                       <label
                         htmlFor="accident-upload"
-                        className="inline-flex cursor-pointer items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                        className="inline-flex cursor-pointer items-center rounded-md bg-primary px-4 py-2 text-lg font-bold text-white hover:bg-primary/90"
                       >
                         Datei auswählen
                       </label>
@@ -1284,7 +1290,7 @@ const VehiclePurchaseForm = ({
               </div>
             </div>
             <div>
-              <label className="text-sm font-semibold text-foreground">VIN (17-stellig)</label>
+              <label className="text-lg font-bold text-foreground">VIN (17-stellig)</label>
               <Input
                 value={formData.vin}
                 onChange={(event) =>
@@ -1317,7 +1323,7 @@ const VehiclePurchaseForm = ({
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-border bg-background text-foreground">
                 <ImagePlus className="h-5 w-5" />
               </div>
-              <p className="mt-3 text-sm font-semibold text-foreground">
+              <p className="mt-3 text-lg font-bold text-foreground">
                 Drag & Drop, Dokumente oder Bilder einfügen
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -1326,7 +1332,7 @@ const VehiclePurchaseForm = ({
               <div className="mt-4 flex justify-center">
                 <label
                   htmlFor="photo-upload"
-                  className="inline-flex cursor-pointer items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                  className="inline-flex cursor-pointer items-center rounded-md bg-primary px-4 py-2 text-lg font-bold text-white hover:bg-primary/90"
                 >
                   Datei auswählen
                 </label>
@@ -1376,13 +1382,35 @@ const VehiclePurchaseForm = ({
         ),
       },
       {
+        id: "priceExpectation",
+        title: "Preisvorstellung",
+        isValid: () => Boolean(formData.priceExpectation.trim()),
+        render: () => (
+          <div className="space-y-4">
+            <div>
+              <label className="text-lg font-bold text-foreground">Preisvorstellung (€)</label>
+              <Input
+                value={formData.priceExpectation}
+                onChange={(event) => updateField("priceExpectation", event.target.value)}
+                placeholder="z.B. 12.500"
+                inputMode="numeric"
+                className="mt-2"
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Geben Sie einen Wunschpreis in Euro an.
+              </p>
+            </div>
+          </div>
+        ),
+      },
+      {
         id: "interest",
         title: "Interessens-Fahrzeugnummer",
         isValid: isInterestValid,
         render: () => (
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-semibold text-foreground">3-stellige Nummer</label>
+              <label className="text-lg font-bold text-foreground">3-stellige Nummer</label>
               <Input
                 value={interestNumber}
                 onChange={(event) => updateField("interestNumber", event.target.value)}
@@ -1437,7 +1465,7 @@ const VehiclePurchaseForm = ({
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-semibold text-foreground">Vorname</label>
+                <label className="text-lg font-bold text-foreground">Vorname</label>
                 <Input
                   value={formData.contactFirstName}
                   onChange={(event) => updateField("contactFirstName", event.target.value)}
@@ -1446,7 +1474,7 @@ const VehiclePurchaseForm = ({
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-foreground">Nachname</label>
+                <label className="text-lg font-bold text-foreground">Nachname</label>
                 <Input
                   value={formData.contactLastName}
                   onChange={(event) => updateField("contactLastName", event.target.value)}
@@ -1457,7 +1485,7 @@ const VehiclePurchaseForm = ({
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-semibold text-foreground">Mobilnummer</label>
+                <label className="text-lg font-bold text-foreground">Mobilnummer</label>
                 <Input
                   value={formData.contactPhone}
                   onChange={(event) => updateField("contactPhone", event.target.value)}
@@ -1466,7 +1494,7 @@ const VehiclePurchaseForm = ({
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-foreground">E-Mail</label>
+                <label className="text-lg font-bold text-foreground">E-Mail</label>
                 <Input
                   type="email"
                   value={formData.contactEmail}
@@ -1559,6 +1587,7 @@ const VehiclePurchaseForm = ({
     ensureInput("accidentDescription", data.accidentDescription);
     ensureInput("accidentAmount", data.accidentAmount);
     ensureInput("vin", data.vin);
+    ensureInput("priceExpectation", data.priceExpectation);
     ensureInput("interestNumber", interestNumber);
     ensureInput("contactFirstName", data.contactFirstName);
     ensureInput("contactLastName", data.contactLastName);
@@ -1600,6 +1629,7 @@ const VehiclePurchaseForm = ({
       accidentDescription: formData.accidentDescription,
       accidentAmount: formData.accidentAmount,
       vin: formData.vin,
+      priceExpectation: formData.priceExpectation,
       interestNumber,
       interestVehicle: interestVehicle
         ? `${interestVehicle.brand} ${interestVehicle.model} (${interestVehicle.internalNumber || "-"})`
@@ -1654,7 +1684,7 @@ const VehiclePurchaseForm = ({
 
           <div className="rounded-2xl border border-border bg-background p-6 md:p-8 shadow-soft">
             <div className="mb-4 space-y-3">
-              <div className="w-full rounded-lg bg-[#0b1d3a] px-4 py-3 text-sm md:text-base font-display font-semibold text-white tracking-wide shadow-sm">
+              <div className="w-full rounded-lg bg-[#0b1d3a] px-4 py-4 text-lg md:text-xl font-display font-semibold text-white tracking-wide shadow-sm">
                 {step?.title}
               </div>
               <span className="text-sm text-muted-foreground">
@@ -1686,7 +1716,7 @@ const VehiclePurchaseForm = ({
                 type="button"
                 onClick={goBack}
                 disabled={currentStep === 0}
-                className="rounded-md border border-border px-5 py-2 text-sm font-semibold text-foreground transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-md border border-border px-5 py-2 text-lg font-bold text-foreground transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {mergedLabels.back}
               </button>
@@ -1695,7 +1725,7 @@ const VehiclePurchaseForm = ({
                 type="button"
                 onClick={goNext}
                 disabled={!canGoNext || isSubmitting}
-                className={`flex items-center justify-center gap-2 rounded-md px-6 py-2 text-sm font-semibold text-white transition-colors ${
+                className={`flex items-center justify-center gap-2 rounded-md px-6 py-2 text-lg font-bold text-white transition-colors ${
                   canGoNext && !isSubmitting
                     ? "bg-primary hover:bg-primary/90"
                     : "bg-muted text-muted-foreground cursor-not-allowed"
