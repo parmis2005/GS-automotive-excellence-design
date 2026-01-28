@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Check,
   ChevronRight,
   Info,
   Loader2,
   Minus,
   Plus,
-  Search,
   ImagePlus,
 } from "lucide-react";
 import { useVehicles } from "@/hooks/useVehicles";
@@ -17,6 +15,15 @@ import { useModels } from "@/hooks/useModels";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import {
+  SportwagenIcon,
+  LimousineIcon,
+  KleinwagenIcon,
+  KombiIcon,
+  VanIcon,
+  CabrioIcon,
+  SUVIcon,
+} from "@/lib/vehicleTypeIcons";
 
 const months = [
   "01",
@@ -43,8 +50,8 @@ const years = Array.from({ length: currentYear - minYear + 1 }, (_, index) =>
 const serviceYears = Array.from({ length: 4 }, (_, index) =>
   String(currentYear - index),
 );
-const huYears = Array.from({ length: 2 }, (_, index) =>
-  String(currentYear - index),
+const huYears = Array.from({ length: 3 }, (_, index) =>
+  String(currentYear + index),
 );
 
 const maxMileage = 500_000;
@@ -199,16 +206,24 @@ const buildModelPlaceholder = (make: string) => {
 
 const stepInstructions: Record<string, { title: string; text: string }> = {
   make: {
-    title: "Marke auswahlen",
-    text: "Wahlen Sie die Marke Ihres Fahrzeugs. Weitere Marken finden Sie in der erweiterten Liste.",
+    title: "Marke auswählen",
+    text: "Wählen Sie die Marke Ihres Fahrzeugs. Weitere Marken finden Sie in der erweiterten Liste.",
+  },
+  bodyType: {
+    title: "Karosserieform",
+    text: "Wählen Sie den Fahrzeugtyp Ihres Autos an, welches Sie verkaufen wollen.",
+  },
+  powertrain: {
+    title: "Motorisierung",
+    text: "Wählen Sie die passende Motorisierung und geben Sie die PS an.",
   },
   model: {
     title: "Modell eingeben",
-    text: "Geben Sie das genaue Modell an oder wahlen Sie einen Vorschlag aus.",
+    text: "Geben Sie das genaue Modell an oder wählen Sie einen Vorschlag aus.",
   },
   firstRegistration: {
     title: "Erstzulassung erfassen",
-    text: "Monat und Jahr der Erstzulassung auswahlen. Kein Datum in der Zukunft.",
+    text: "Monat und Jahr der Erstzulassung auswählen. Kein Datum in der Zukunft.",
   },
   mileage: {
     title: "Kilometerstand angeben",
@@ -244,13 +259,16 @@ const stepInstructions: Record<string, { title: string; text: string }> = {
   },
   contact: {
     title: "Kontaktdaten",
-    text: "Damit wir uns schnell melden konnen, bitte Kontaktdaten hinterlegen.",
+    text: "Damit wir uns schnell melden können, bitte Kontaktdaten hinterlegen.",
   },
 };
 
 type FormData = {
   make: string;
   model: string;
+  bodyType: string;
+  fuelType: string;
+  power: number | null;
   firstRegistrationMonth: string;
   firstRegistrationYear: string;
   mileage: number | null;
@@ -292,9 +310,9 @@ type VehiclePurchaseFormProps = {
 
 const defaultLabels: Labels = {
   title: "Fahrzeugankauf mit Premium-Flow",
-  subtitle: "Gefuhrt, klar und ohne Umwege. Nur relevante Fragen je Schritt.",
+  subtitle: "Geführt, klar und ohne Umwege. Nur relevante Fragen je Schritt.",
   next: "Weiter",
-  back: "Zuruck",
+  back: "Zurück",
   submit: "Anfrage absenden",
 };
 
@@ -329,6 +347,16 @@ const isMonthYearInPast = (month: string, year: string) => {
   return false;
 };
 
+const isMonthYearBeyondHuLimit = (month: string, year: string) => {
+  if (!month || !year) return false;
+  const yearNumber = Number(year);
+  const monthNumber = Number(month);
+  if (Number.isNaN(yearNumber) || Number.isNaN(monthNumber)) return false;
+  if (yearNumber > currentYear + 2) return true;
+  if (yearNumber === currentYear + 2 && monthNumber > currentMonth) return true;
+  return false;
+};
+
 const VehiclePurchaseForm = ({
   containerId = "vehicle-purchase-form",
   formId = "vehicleForm",
@@ -338,10 +366,8 @@ const VehiclePurchaseForm = ({
 }: VehiclePurchaseFormProps) => {
   const mergedLabels = { ...defaultLabels, ...labels };
   const [currentStep, setCurrentStep] = useState(0);
-  const [brandSearch, setBrandSearch] = useState("");
   const [mileageInput, setMileageInput] = useState("");
   const [mileageFocus, setMileageFocus] = useState(false);
-  const [showOtherBrands, setShowOtherBrands] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoError, setPhotoError] = useState("");
   const [accidentFiles, setAccidentFiles] = useState<File[]>([]);
@@ -353,6 +379,9 @@ const VehiclePurchaseForm = ({
   const [formData, setFormData] = useState<FormData>({
     make: "",
     model: "",
+    bodyType: "",
+    fuelType: "",
+    power: null,
     firstRegistrationMonth: "",
     firstRegistrationYear: "",
     mileage: null,
@@ -418,12 +447,6 @@ const VehiclePurchaseForm = ({
     return list;
   }, [brands]);
 
-  const filteredBrands = useMemo(() => {
-    const term = brandSearch.trim().toLowerCase();
-    if (!term) return brandOptions;
-    return brandOptions.filter((brand) => brand.toLowerCase().includes(term));
-  }, [brandOptions, brandSearch]);
-
   const filteredModels = useMemo(() => {
     const term = formData.model.trim().toLowerCase();
     const fallback = popularModelsByMake[normalizedMake] ?? [];
@@ -442,11 +465,6 @@ const VehiclePurchaseForm = ({
     const allowedSet = new Set(brandOptions.map((brand) => normalizeBrand(brand)));
     return topBrands.filter((brand) => allowedSet.has(normalizeBrand(brand)));
   }, [brandOptions, topBrands]);
-
-  const otherBrandList = useMemo(() => {
-    const topSet = new Set(topBrandList.map((brand) => normalizeBrand(brand)));
-    return filteredBrands.filter((brand) => !topSet.has(normalizeBrand(brand)));
-  }, [filteredBrands, topBrandList]);
 
   const interestNumber = formData.interestNumber.replace(/\D/g, "").slice(0, 3);
   const interestVehicle = useMemo(() => {
@@ -496,11 +514,11 @@ const VehiclePurchaseForm = ({
 
     incoming.forEach((file) => {
       if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
-        rejected.push(`${file.name}: ungueltiger Dateityp`);
+        rejected.push(`${file.name}: ungültiger Dateityp`);
         return;
       }
       if (file.size > maxPhotoSizeMb * 1024 * 1024) {
-        rejected.push(`${file.name}: groesser als ${maxPhotoSizeMb} MB`);
+        rejected.push(`${file.name}: größer als ${maxPhotoSizeMb} MB`);
         return;
       }
       accepted.push(file);
@@ -524,11 +542,11 @@ const VehiclePurchaseForm = ({
 
     incoming.forEach((file) => {
       if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
-        rejected.push(`${file.name}: ungueltiger Dateityp`);
+        rejected.push(`${file.name}: ungültiger Dateityp`);
         return;
       }
       if (file.size > maxPhotoSizeMb * 1024 * 1024) {
-        rejected.push(`${file.name}: groesser als ${maxPhotoSizeMb} MB`);
+        rejected.push(`${file.name}: größer als ${maxPhotoSizeMb} MB`);
         return;
       }
       accepted.push(file);
@@ -583,6 +601,8 @@ const VehiclePurchaseForm = ({
   const isHuValid = () => {
     if (formData.huExpired) return true;
     if (!isValidMonthYear(formData.huMonth, formData.huYear)) return false;
+    if (isMonthYearInPast(formData.huMonth, formData.huYear)) return false;
+    if (isMonthYearBeyondHuLimit(formData.huMonth, formData.huYear)) return false;
     return true;
   };
 
@@ -616,31 +636,16 @@ const VehiclePurchaseForm = ({
       {
         id: "make",
         title: "Marke / Hersteller",
-        isValid: () => Boolean(formData.make.trim()),
+        isValid: () => Boolean(formData.make.trim()) && formData.model.trim().length >= minModelLength,
         render: () => (
           <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-foreground">Ihre Marke auswahlen</p>
-                <p className="text-xs text-muted-foreground">Marke auswahlen.</p>
-              </div>
-              <div className="relative w-full sm:max-w-xs">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={brandSearch}
-                  onChange={(event) => setBrandSearch(event.target.value)}
-                  placeholder="Marke suchen"
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
             {brandsError ? (
               <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2 text-destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  Marken konnten nicht geladen werden. Bitte manuell eingeben.
+                  Marken könnten nicht geladen werden. Bitte manuell eingeben.
                 </div>
+                <p className="mt-3 text-sm font-semibold text-foreground">Marke</p>
                 <Input
                   value={formData.make}
                   onChange={(event) => updateField("make", event.target.value)}
@@ -653,9 +658,10 @@ const VehiclePurchaseForm = ({
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Marken werden geladen ...
               </div>
-            ) : filteredBrands.length === 0 ? (
+            ) : brandOptions.length === 0 ? (
               <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
                 <p className="font-semibold text-foreground mb-2">Keine Marken gefunden</p>
+                <p className="text-sm font-semibold text-foreground">Marke</p>
                 <Input
                   value={formData.make}
                   onChange={(event) => updateField("make", event.target.value)}
@@ -663,112 +669,162 @@ const VehiclePurchaseForm = ({
                 />
               </div>
             ) : (
-              <div className="space-y-6">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-3">
-                    Beliebte Marken
+              <div>
+                <p className="text-sm font-semibold text-foreground">Marke</p>
+                <select
+                  value={formData.make}
+                  onChange={(event) => updateField("make", event.target.value)}
+                  className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Marke auswählen</option>
+                  {topBrandList.length > 0 && (
+                    <optgroup label="Beliebte Marken">
+                      {topBrandList.map((brand) => (
+                        <option key={`top-${brand}`} value={brand}>
+                          {brand}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="Alle Marken (A-Z)">
+                    {brandOptions.map((brand) => (
+                      <option key={`all-${brand}`} value={brand}>
+                        {brand}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold text-foreground">Modell</label>
+                <Input
+                  value={formData.model}
+                  onChange={(event) => updateField("model", event.target.value)}
+                  placeholder={buildModelPlaceholder(normalizedMake)}
+                  className="mt-2"
+                />
+                {modelsLoading && (
+                  <p className="mt-2 text-xs text-muted-foreground">Modelle werden geladen ...</p>
+                )}
+                {modelsError && (
+                  <p className="mt-2 text-xs text-destructive">
+                    Modelle könnten nicht geladen werden.
                   </p>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {topBrandList.map((brand) => (
+                )}
+              </div>
+              {!modelsLoading && !modelsError && filteredModels.length > 0 && (
+                <div className="rounded-xl border border-border bg-muted/40 p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-3">
+                    Vorschläge
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {filteredModels.map((model) => (
                       <button
-                        key={brand}
+                        key={model}
                         type="button"
-                        onClick={() => updateField("make", brand)}
-                        className={`group flex items-center justify-between rounded-full border px-4 py-3 text-left text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                          formData.make === brand
+                        onClick={() => updateField("model", model)}
+                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                          formData.model === model
                             ? "border-primary bg-primary text-white"
                             : "border-border bg-background text-foreground hover:border-primary"
                         }`}
                       >
-                        <span>{brand}</span>
+                        {model}
                       </button>
                     ))}
                   </div>
                 </div>
-
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowOtherBrands((prev) => !prev)}
-                    className="text-sm font-semibold text-primary hover:text-primary/80"
-                  >
-                    {showOtherBrands ? "Weniger Marken anzeigen" : "Weitere Marken anzeigen"}
-                  </button>
-                  {showOtherBrands && (
-                    <div className="mt-4">
-                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-3">
-                        Weitere Marken
-                      </p>
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                        {otherBrandList.map((brand) => (
-                          <button
-                            key={brand}
-                            type="button"
-                            onClick={() => updateField("make", brand)}
-                            className={`group flex items-center justify-between rounded-full border px-4 py-3 text-left text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                              formData.make === brand
-                                ? "border-primary bg-primary text-white"
-                                : "border-border bg-background text-foreground hover:border-primary"
-                            }`}
-                          >
-                            <span>{brand}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         ),
       },
       {
-        id: "model",
-        title: "Modell",
-        isValid: () => formData.model.trim().length >= minModelLength,
+        id: "bodyType",
+        title: "Karosserieform",
+        isValid: () => Boolean(formData.bodyType.trim()),
         render: () => (
           <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Bitte die passende Karosserieform auswählen.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {[
+                { id: "Sportwagen", label: "Sportwagen", icon: <SportwagenIcon /> },
+                { id: "Limousine", label: "Limousine", icon: <LimousineIcon /> },
+                { id: "Kleinwagen", label: "Kleinwagen", icon: <KleinwagenIcon /> },
+                { id: "Kombi", label: "Kombi", icon: <KombiIcon /> },
+                { id: "Van", label: "Van/Minibus", icon: <VanIcon /> },
+                { id: "Cabrio", label: "Cabriolet/Roadster", icon: <CabrioIcon /> },
+                { id: "SUV", label: "SUV", icon: <SUVIcon /> },
+              ].map((type) => (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => updateField("bodyType", type.label)}
+                  className={`group flex flex-col items-center justify-center gap-3 rounded-xl border px-4 py-5 text-center text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    formData.bodyType === type.label
+                      ? "border-primary bg-primary text-white"
+                      : "border-border bg-background text-foreground hover:border-primary"
+                  }`}
+                >
+                  <div
+                    className={`h-10 w-10 md:h-12 md:w-12 ${
+                      formData.bodyType === type.label ? "text-white" : "text-primary"
+                    }`}
+                  >
+                    {type.icon}
+                  </div>
+                  <span>{type.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "powertrain",
+        title: "Motorisierung",
+        isValid: () => Boolean(formData.fuelType.trim()) && (formData.power ?? 0) > 0,
+        render: () => (
+          <div className="space-y-6">
             <div>
-              <label className="text-sm font-semibold text-foreground">Modell eingeben</label>
+              <p className="text-sm font-semibold text-foreground">Kraftstoffart</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {["Benzin", "Diesel", "Hybrid", "Elektro"].map((fuel) => (
+                  <button
+                    key={fuel}
+                    type="button"
+                    onClick={() => updateField("fuelType", fuel)}
+                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                      formData.fuelType === fuel
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-foreground hover:border-primary"
+                    }`}
+                  >
+                    {fuel}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-foreground">PS angeben</label>
               <Input
-                value={formData.model}
-                onChange={(event) => updateField("model", event.target.value)}
-                placeholder={buildModelPlaceholder(normalizedMake)}
+                value={formData.power ?? ""}
+                onChange={(event) => {
+                  const digits = event.target.value.replace(/\D/g, "").slice(0, 3);
+                  updateField("power", digits ? Number(digits) : null);
+                }}
+                placeholder="z.B. 150"
+                inputMode="numeric"
+                maxLength={3}
                 className="mt-2"
               />
-              {modelsLoading && (
-                <p className="mt-2 text-xs text-muted-foreground">Modelle werden geladen ...</p>
-              )}
-              {modelsError && (
-                <p className="mt-2 text-xs text-destructive">
-                  Modelle konnten nicht geladen werden.
-                </p>
-              )}
+              <p className="mt-2 text-xs text-muted-foreground">Nur Zahlen eingeben.</p>
             </div>
-            {!modelsLoading && !modelsError && filteredModels.length > 0 && (
-              <div className="rounded-xl border border-border bg-muted/40 p-4">
-                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-3">
-                  Vorschlage
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {filteredModels.map((model) => (
-                    <button
-                      key={model}
-                      type="button"
-                      onClick={() => updateField("model", model)}
-                      className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
-                        formData.model === model
-                          ? "border-primary bg-primary text-white"
-                          : "border-border bg-background text-foreground hover:border-primary"
-                      }`}
-                    >
-                      {model}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         ),
       },
@@ -785,7 +841,7 @@ const VehiclePurchaseForm = ({
                 onChange={(event) => updateField("firstRegistrationMonth", event.target.value)}
                 className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">Monat auswahlen</option>
+                <option value="">Monat auswählen</option>
                 {months.map((month) => (
                   <option key={month} value={month}>
                     {month}
@@ -800,7 +856,7 @@ const VehiclePurchaseForm = ({
                 onChange={(event) => updateField("firstRegistrationYear", event.target.value)}
                 className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="">Jahr auswahlen</option>
+                <option value="">Jahr auswählen</option>
                 {years.map((year) => (
                   <option key={year} value={year}>
                     {year}
@@ -820,11 +876,11 @@ const VehiclePurchaseForm = ({
           <div className="space-y-6">
             <div className="rounded-xl border border-border bg-muted/40 p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">Schieberegler</p>
+                <p className="text-sm font-semibold text-foreground">Kilometerstand (Slider)</p>
                 <span className="text-sm text-muted-foreground">
                   {formData.mileage !== null
                     ? `${formatNumber(formData.mileage)} km`
-                    : "Bitte auswahlen"}
+                    : "Bitte auswählen"}
                 </span>
               </div>
               <Slider
@@ -837,7 +893,7 @@ const VehiclePurchaseForm = ({
               />
             </div>
             <div>
-              <label className="text-sm font-semibold text-foreground">Oder genau eingeben</label>
+              <label className="text-sm font-semibold text-foreground">Kilometerstand (genau)</label>
               <Input
                 value={mileageFocus ? mileageInput : mileageInput ? `${mileageInput} km` : ""}
                 onFocus={() => {
@@ -875,7 +931,7 @@ const VehiclePurchaseForm = ({
         isValid: isOwnersValid,
         render: () => (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Bitte Anzahl der Halter angeben.</p>
+            <p className="text-sm font-semibold text-foreground">Anzahl der Halter</p>
             <div className="flex items-center gap-4">
               <button
                 type="button"
@@ -942,7 +998,7 @@ const VehiclePurchaseForm = ({
                     onChange={(event) => updateField("lastServiceMonth", event.target.value)}
                     className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="">Monat auswahlen</option>
+                    <option value="">Monat auswählen</option>
                     {months.map((month) => (
                       <option key={month} value={month}>
                         {month}
@@ -957,7 +1013,7 @@ const VehiclePurchaseForm = ({
                     onChange={(event) => updateField("lastServiceYear", event.target.value)}
                     className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="">Jahr auswahlen</option>
+                    <option value="">Jahr auswählen</option>
                     {serviceYears.map((year) => (
                       <option key={year} value={year}>
                         {year}
@@ -972,7 +1028,7 @@ const VehiclePurchaseForm = ({
       },
       {
         id: "hu",
-        title: "HU fallig",
+        title: "HU fällig",
         isValid: isHuValid,
         render: () => (
           <div className="space-y-4">
@@ -1000,7 +1056,7 @@ const VehiclePurchaseForm = ({
                   disabled={formData.huExpired}
                   className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="">Monat auswahlen</option>
+                  <option value="">Monat auswählen</option>
                   {months.map((month) => (
                     <option key={month} value={month}>
                       {month}
@@ -1016,7 +1072,7 @@ const VehiclePurchaseForm = ({
                   disabled={formData.huExpired}
                   className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="">Jahr auswahlen</option>
+                  <option value="">Jahr auswählen</option>
                   {huYears.map((year) => (
                     <option key={year} value={year}>
                       {year}
@@ -1036,7 +1092,7 @@ const VehiclePurchaseForm = ({
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-foreground">Raucherfahrzeug?</p>
+                <p className="text-sm font-semibold text-foreground">Raucherfahrzeug</p>
                 <p className="text-xs text-muted-foreground">Bitte Auswahl treffen.</p>
               </div>
               <div className="flex gap-2">
@@ -1062,7 +1118,7 @@ const VehiclePurchaseForm = ({
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-foreground">Unfallfahrzeug?</p>
+                <p className="text-sm font-semibold text-foreground">Unfallfahrzeug</p>
                 <p className="text-xs text-muted-foreground">Falls ja, bitte Details angeben.</p>
               </div>
               <div className="flex gap-2">
@@ -1122,7 +1178,7 @@ const VehiclePurchaseForm = ({
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-foreground">Schadenshohe (EUR)</label>
+                  <label className="text-sm font-semibold text-foreground">Schadenshöhe (EUR)</label>
                   <Input
                     value={formData.accidentAmount}
                     onChange={(event) => updateField("accidentAmount", event.target.value)}
@@ -1134,7 +1190,7 @@ const VehiclePurchaseForm = ({
                 <div>
                   <label className="text-sm font-semibold text-foreground">Gutachten / Dokumente</label>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Hier konnen Sie Fotos oder Gutachten zum Unfallschaden einfugen.
+                    Hier können Sie Fotos oder Gutachten zum Unfallschaden einfügen.
                   </p>
                   <div
                     className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground"
@@ -1222,7 +1278,7 @@ const VehiclePurchaseForm = ({
               <div className="flex items-start gap-2">
                 <Info className="mt-0.5 h-4 w-4 text-primary" />
                 <p>
-                  Anhand der Fahrgestellnummer konnen wir Ausstattung und Historie besser
+                  Anhand der Fahrgestellnummer können wir Ausstattung und Historie besser
                   einordnen.
                 </p>
               </div>
@@ -1427,8 +1483,6 @@ const VehiclePurchaseForm = ({
     [
       accidentFiles.length,
       accidentError,
-      brandSearch,
-      filteredBrands,
       formData,
       interestNumber,
       interestVehicle,
@@ -1438,8 +1492,6 @@ const VehiclePurchaseForm = ({
       mileageInput,
       photoError,
       photoFiles,
-      otherBrandList,
-      showOtherBrands,
       topBrandList,
       topBrands,
       modelsError,
@@ -1488,6 +1540,9 @@ const VehiclePurchaseForm = ({
 
     ensureInput("make", data.make);
     ensureInput("model", data.model);
+    ensureInput("bodyType", data.bodyType);
+    ensureInput("fuelType", data.fuelType);
+    ensureInput("power", data.power !== null ? String(data.power) : "");
     ensureInput("firstRegistrationMonth", data.firstRegistrationMonth);
     ensureInput("firstRegistrationYear", data.firstRegistrationYear);
     ensureInput("mileage", data.mileage !== null ? String(data.mileage) : "");
@@ -1521,6 +1576,9 @@ const VehiclePurchaseForm = ({
     const payload = {
       make: formData.make,
       model: formData.model,
+      bodyType: formData.bodyType,
+      fuelType: formData.fuelType,
+      power: formData.power !== null ? String(formData.power) : "",
       firstRegistration: formData.firstRegistrationMonth && formData.firstRegistrationYear
         ? `${formData.firstRegistrationMonth}/${formData.firstRegistrationYear}`
         : "",
@@ -1595,15 +1653,15 @@ const VehiclePurchaseForm = ({
           </div>
 
           <div className="rounded-2xl border border-border bg-background p-6 md:p-8 shadow-soft">
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground mb-4">
-              <span>
+            <div className="mb-4 space-y-3">
+              <div className="w-full rounded-lg bg-[#0b1d3a] px-4 py-3 text-sm md:text-base font-display font-semibold text-white tracking-wide shadow-sm">
+                {step?.title}
+              </div>
+              <span className="text-sm text-muted-foreground">
                 Schritt {currentStep + 1} von {steps.length}
               </span>
-              <span className="text-base md:text-lg font-display font-semibold text-foreground tracking-wide">
-                {step?.title}
-              </span>
             </div>
-            <div className="h-2 w-full rounded-full bg-muted mb-6">
+            <div className="h-2 w-full rounded-full bg-primary/10 mb-6">
               <div
                 className="h-2 rounded-full bg-primary transition-all"
                 style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
@@ -1611,8 +1669,9 @@ const VehiclePurchaseForm = ({
             </div>
 
             {stepInstruction && (
-              <div className="mb-6 rounded-xl border border-border bg-muted/40 px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+              <div className="mb-6 relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-4 shadow-sm">
+                <div className="absolute left-0 top-0 h-full w-1 bg-primary" />
+                <p className="text-xs uppercase tracking-[0.3em] text-primary/80">
                   {stepInstruction.title}
                 </p>
                 <p className="mt-2 text-sm font-semibold text-foreground">

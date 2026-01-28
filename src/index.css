@@ -222,3 +222,43 @@
   scrollbar-width: thin;
   scrollbar-color: hsl(216 65% 32% / 0.3) transparent;
 }
+
+/* Navbar proportional scaling - nur bei Bildschirmen kleiner als 1920px */
+@media (min-width: 1024px) and (max-width: 1919px) {
+  .navbar-scalable {
+    /* Skaliert nur bei Bildschirmen kleiner als 1920px */
+    --navbar-scale: 100vw / 1920;
+    font-size: calc(16px * var(--navbar-scale));
+  }
+  
+  /* Skaliere Navigation Links */
+  .navbar-scalable .hidden.lg\:flex.items-center.gap-2 {
+    gap: calc(8px * var(--navbar-scale)) !important;
+    margin-left: calc(102px * var(--navbar-scale)) !important;
+    margin-right: calc(32px * var(--navbar-scale)) !important;
+  }
+  
+  /* Skaliere Link Padding */
+  .navbar-scalable a.px-3 {
+    padding-left: calc(12px * var(--navbar-scale)) !important;
+    padding-right: calc(12px * var(--navbar-scale)) !important;
+    padding-top: calc(8px * var(--navbar-scale)) !important;
+    padding-bottom: calc(8px * var(--navbar-scale)) !important;
+  }
+  
+  /* Skaliere Button Container */
+  .navbar-scalable .hidden.lg\:flex.items-center.gap-3 {
+    gap: calc(12px * var(--navbar-scale)) !important;
+  }
+  
+  /* Skaliere Container Padding */
+  .navbar-scalable .container {
+    padding-left: calc(16px * var(--navbar-scale)) !important;
+    padding-right: calc(16px * var(--navbar-scale)) !important;
+  }
+  
+  /* Skaliere Container Margin */
+  .navbar-scalable .container.max-w-7xl.lg\:ml-8 {
+    margin-left: calc(32px * var(--navbar-scale)) !important;
+  }
+}

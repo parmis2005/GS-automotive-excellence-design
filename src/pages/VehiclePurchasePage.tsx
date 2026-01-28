@@ -61,6 +61,7 @@ const VehiclePurchasePage = () => {
               loading="eager"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/20" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent via-background/40 to-background/80 backdrop-blur-sm" />
           </div>
 
           <div className="relative z-10">
@@ -78,7 +79,7 @@ const VehiclePurchasePage = () => {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 mb-10">
                   <Button asChild variant="hero" size="lg" className="justify-center">
-                    <a href="#ankauf-prozess">Kostenlose Bewertung starten</a>
+                    <a href="#vehicle-purchase-form">Kostenlose Bewertung starten</a>
                   </Button>
                   <Button asChild variant="white" size="lg" className="justify-center">
                     <a href="tel:021519422262">Direkt anrufen</a>
@@ -114,8 +115,11 @@ const VehiclePurchasePage = () => {
               {steps.map((step, index) => (
                 <div
                   key={step.title}
-                  className="rounded-xl border border-border bg-background p-6 shadow-soft"
+                  className="relative rounded-xl border border-border bg-background p-6 shadow-soft"
                 >
+                  {index < steps.length - 1 && (
+                    <span className="pointer-events-none absolute left-full top-1/2 hidden h-0.5 w-8 -translate-y-1/2 bg-primary/70 md:block" />
+                  )}
                   <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold mb-4">
                     0{index + 1}
                   </div>

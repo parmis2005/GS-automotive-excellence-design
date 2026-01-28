@@ -53,7 +53,6 @@ const Navbar = () => {
 
   const navLinks = [
     { label: "STARTSEITE", to: "/", isHash: false },
-    { label: "FAHRZEUGE", to: "/#vehicles", isHash: true, hash: "#vehicles" },
     { label: "SERVICE", to: "/#services", isHash: true, hash: "#services" },
     { label: "FAHRZEUGANKAUF", to: "/fahrzeugankauf", isHash: false },
     { label: "UNTERNEHMEN", to: "/#about", isHash: true, hash: "#about" },
@@ -88,13 +87,13 @@ const Navbar = () => {
 
       {/* Main Navbar */}
       <nav
-        className={`sticky top-0 z-50 transition-all duration-300 ${
+        className={`sticky top-0 z-50 transition-all duration-300 navbar-scalable ${
           isScrolled
             ? "bg-white/95 backdrop-blur-md shadow-md py-3"
             : "bg-white py-4"
         }`}
       >
-        <div className="container mx-auto px-4 max-w-7xl lg:ml-8">
+        <div className="container mx-auto px-4 max-w-7xl lg:ml-[30px]">
           <div className="flex items-center justify-between lg:justify-start">
             {/* Logo - Mobile: links, Desktop: normal */}
             <Link 
@@ -109,7 +108,7 @@ const Navbar = () => {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-2 flex-1 justify-center mx-8 ml-[102px]">
+            <div className="hidden xl:flex items-center gap-4 flex-1 justify-center mx-14" style={{ marginLeft: "clamp(64px, 8vw, 260px)" }}>
               {navLinks.map((link) => (
                 <Link
                   key={link.label}
@@ -121,7 +120,7 @@ const Navbar = () => {
                     : link.isHash 
                     ? (e) => handleHashNavClick(e, link.hash!) 
                     : undefined}
-                  className={`px-3 py-2 text-base font-display font-bold tracking-wide transition-colors relative group ${
+                  className={`px-4 py-2 text-base font-display font-bold tracking-wide transition-colors relative group ${
                     link.label === "STARTSEITE"
                       ? "text-primary hover:text-primary/80"
                       : "text-foreground/80 hover:text-primary"
@@ -134,7 +133,7 @@ const Navbar = () => {
             </div>
 
             {/* Mobile: Fahrzeug suchen Button in der Mitte */}
-            <div className="flex-1 flex justify-center lg:hidden mx-4">
+            <div className="flex-1 flex justify-center xl:hidden mx-4">
               <Link to="/fahrzeuge">
                 <Button 
                   variant="default" 
@@ -148,7 +147,7 @@ const Navbar = () => {
             </div>
 
             {/* CTA Button - Desktop */}
-            <div className="hidden lg:flex items-center gap-3 flex-shrink-0 ml-auto">
+            <div className="hidden xl:flex items-center gap-3 flex-shrink-0 ml-auto lg:mr-8">
               <Link to="/fahrzeuge">
                 <Button 
                   variant="default" 
@@ -163,7 +162,7 @@ const Navbar = () => {
 
             {/* Mobile Menu Button - ganz rechts */}
             <button
-              className="lg:hidden p-2 text-foreground hover:bg-secondary rounded-lg transition-colors ml-auto flex-shrink-0"
+              className="xl:hidden p-2 text-foreground hover:bg-secondary rounded-lg transition-colors ml-auto flex-shrink-0"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Menu"
             >
@@ -178,7 +177,7 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden border-t border-border bg-white">
+          <div className="xl:hidden border-t border-border bg-white">
             <div className="container mx-auto px-6 py-4">
               <div className="flex flex-col gap-1">
                 {navLinks.map((link) => (

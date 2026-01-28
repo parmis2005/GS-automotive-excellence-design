@@ -25,22 +25,21 @@ const Hero = () => {
           loading="eager"
           fetchPriority="high"
         />
-      </div>
-
-      {/* Text-Block (center-top) */}
-      <div 
-        className="absolute z-10 left-1/2 transform -translate-x-1/2 text-center"
-        style={{
-          top: 'clamp(150px, calc(6vh + 100px), 210px)',
-          maxWidth: '900px',
-          padding: '0 24px',
-          width: '100%'
-        }}
-      >
+        
+        {/* Text-Block (center-top) - positioned relative to image, scales with image */}
+        <div 
+          className="absolute z-10 left-1/2 transform -translate-x-1/2 text-center"
+          style={{
+            top: '18%',
+            maxWidth: '90%',
+            padding: '0 clamp(16px, 2vw, 24px)',
+            width: '100%'
+          }}
+        >
         <h1 
           className="text-white font-extrabold leading-tight mb-3 md:mb-4"
           style={{
-            fontSize: 'clamp(34px, 4.6vw, 64px)',
+            fontSize: 'clamp(28px, 4.5vw, 64px)',
             fontWeight: 800,
             letterSpacing: '-0.02em',
             textShadow: '0 2px 12px rgba(0, 0, 0, 0.5), 0 4px 20px rgba(0, 0, 0, 0.3)'
@@ -52,13 +51,14 @@ const Hero = () => {
         <p 
           className="text-white"
           style={{
-            fontSize: 'clamp(14px, 1.4vw, 18px)',
+            fontSize: 'clamp(12px, 1.4vw, 18px)',
             opacity: 0.9,
             textShadow: '0 1px 4px rgba(0, 0, 0, 0.4)'
           }}
         >
           Premium Jahres- & Gebrauchtwagen
         </p>
+        </div>
       </div>
     </section>
   );
