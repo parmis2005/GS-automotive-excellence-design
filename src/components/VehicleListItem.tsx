@@ -33,8 +33,12 @@ const VehicleListItem = ({
   category,
   vehicleType: vehicleTypeFromCargate,
   previousOwners,
+  arrivalDate,
+  standtage,
   isFirst = false,
 }: VehicleListItemProps) => {
+  // Standtage für Test-Anzeige: von API oder aus Zugangsdatum berechnen
+  const standtageDisplay = standtage ?? (arrivalDate ? Math.max(0, Math.floor((Date.now() - new Date(arrivalDate).getTime()) / 86400000)) : null);
   // Get image URL with fallback to placeholder
   const initialImageUrl = getVehicleImageWithFallback(image, id);
   const placeholderImageUrl = getPlaceholderImage();
@@ -138,11 +142,13 @@ const VehicleListItem = ({
           {/* Header Row */}
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap text-sm text-muted-foreground">
                 {internalNumber && (
-                  <Badge variant="outline" className="text-xs">
-                    {internalNumber}
-                  </Badge>
+                  <span className="font-medium text-foreground">Kennnr. {internalNumber}</span>
+                )}
+                {internalNumber && standtageDisplay !== null && <span aria-hidden>·</span>}
+                {standtageDisplay !== null && (
+                  <span>{standtageDisplay} Tage</span>
                 )}
               </div>
               {(() => {

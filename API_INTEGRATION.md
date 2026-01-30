@@ -6,19 +6,19 @@ Diese Anwendung nutzt eine serverseitige API zum Abrufen von Fahrzeugdaten von d
 
 ## Architektur
 
+**Datenquelle (konfigurierbar):**
+- **CarGate Carzilla V6 API:** Wenn `CARGATE_API_KEY` und `CARGATE_API_BASE_URL` gesetzt sind, werden Fahrzeuge über die offizielle API geladen (siehe Schnittstellenbeschreibung Carzilla V6 PDF).
+- **Fallback:** Ohne API-Konfiguration oder bei API-Fehlern: Scraping der GS Auto Website wie bisher.
+
 ```
 Frontend (React + Vite)          Backend (Express)
      │                                  │
      │  GET /api/vehicles              │
      ├─────────────────────────────────>│
+     │                                  │  Sync-Job: CarGate API ODER
+     │                                  │  Scraper → PostgreSQL
      │                                  │
-     │                                  │  Fetch HTML
-     │                                  ├─────────────> GS Auto Website
-     │                                  │
-     │                                  │  Parse <carzilla-ui-vehicle>
-     │                                  │  (Cheerio)
-     │                                  │
-     │                                  │  Cache (45 Min)
+     │                                  │  GET /api/vehicles → DB
      │                                  │
      │  JSON Response                  │
      │<─────────────────────────────────┤

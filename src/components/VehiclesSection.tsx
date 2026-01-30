@@ -19,10 +19,10 @@ const VehiclesSection = () => {
     
     // Filter: Only vehicles with photos (image URL exists and is valid)
     const vehiclesWithPhotos = vehicles.filter(v => 
-      v.image && 
-      v.image.trim() !== '' && 
+      v.image &&
+      v.image.trim() !== '' &&
       !v.image.includes('placeholder') &&
-      v.image.startsWith('http')
+      (v.image.startsWith('http://') || v.image.startsWith('https://'))
     );
     
     if (vehiclesWithPhotos.length === 0) return [];

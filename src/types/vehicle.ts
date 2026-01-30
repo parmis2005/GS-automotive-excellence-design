@@ -20,6 +20,7 @@ export interface Vehicle {
   offerUrl?: string; // URL zur Detail-Seite
   internalNumber?: string; // Dreistellige interne Nummer / Angebotsnummer
   arrivalDate?: string; // Datum wann das Fahrzeug eingetroffen ist (ISO format)
+  standtage?: number; // Tage im Bestand (von API oder aus arrivalDate berechnet)
   category?: string; // Kategorie: "Sport", "Familienwagen", "Kleinwagen", "SUV", "Luxus", "Kombi", etc.
   vatDisplayable?: boolean; // MwSt. ausweisbar (true) oder nicht ausweisbar (false)
   vehicleType?: string; // Fahrzeugtyp: "Cabrio", "Limousine", "Sportwagen", "Kombi", "SUV", "Van", etc.

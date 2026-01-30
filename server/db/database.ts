@@ -130,10 +130,17 @@ export async function getAllVehicles(): Promise<Vehicle[]> {
       ORDER BY updated_at DESC
     `);
     
-    return result.rows.map(row => ({
-      ...row,
-      price: parseFloat(row.price),
-    })) as Vehicle[];
+    return result.rows.map(row => {
+      const arrivalDate = row.arrivalDate as string | null;
+      const standtage = arrivalDate
+        ? Math.max(0, Math.floor((Date.now() - new Date(arrivalDate).getTime()) / 86400000))
+        : undefined;
+      return {
+        ...row,
+        price: parseFloat(row.price),
+        standtage,
+      };
+    }) as Vehicle[];
   } catch (error) {
     console.error("❌ Error fetching vehicles from database:", error);
     throw error;
@@ -186,9 +193,14 @@ export async function getVehicleById(id: string): Promise<Vehicle | null> {
     }
     
     const row = result.rows[0];
+    const arrivalDate = row.arrivalDate as string | null;
+    const standtage = arrivalDate
+      ? Math.max(0, Math.floor((Date.now() - new Date(arrivalDate).getTime()) / 86400000))
+      : undefined;
     return {
       ...row,
       price: parseFloat(row.price),
+      standtage,
     } as Vehicle;
   } catch (error) {
     console.error(`❌ Error fetching vehicle ${id} from database:`, error);
@@ -196,6 +208,26 @@ export async function getVehicleById(id: string): Promise<Vehicle | null> {
   } finally {
     client.release();
   }
+}
+
+/** Max lengths from schema (VARCHAR) – truncate to avoid "value too long" errors. */
+const MAX_LEN = {
+  id: 255,
+  brand: 255,
+  model: 255,
+  fuel: 100,
+  transmission: 100,
+  exterior_color: 100,
+  interior_color: 100,
+  internal_number: 50,
+  category: 100,
+  vehicle_type: 100,
+} as const;
+
+function truncate(str: string | null | undefined, max: number): string | null {
+  if (str == null) return null;
+  const s = String(str).trim();
+  return s.length <= max ? s : s.slice(0, max);
 }
 
 /**
@@ -210,6 +242,10 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
     const now = new Date();
     
     for (const vehicle of vehicles) {
+      const id = truncate(vehicle.id, MAX_LEN.id);
+      const brand = truncate(vehicle.brand, MAX_LEN.brand);
+      const model = truncate(vehicle.model, MAX_LEN.model);
+      if (!id || !brand || !model) continue;
       await client.query(
         `
         INSERT INTO vehicles (
@@ -246,29 +282,29 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           last_synced_at = $25
         `,
         [
-          vehicle.id,
+          id,
           vehicle.image || null,
-          vehicle.brand,
-          vehicle.model,
+          brand,
+          model,
           vehicle.price,
           vehicle.year,
           vehicle.mileage || 0,
-          vehicle.fuel || null,
-          vehicle.transmission || null,
+          truncate(vehicle.fuel, MAX_LEN.fuel),
+          truncate(vehicle.transmission, MAX_LEN.transmission),
           vehicle.isNew || false,
           vehicle.description || null,
           vehicle.power || null,
           vehicle.powerKw || null,
-          vehicle.exteriorColor || null,
-          vehicle.interiorColor || null,
+          truncate(vehicle.exteriorColor, MAX_LEN.exterior_color),
+          truncate(vehicle.interiorColor, MAX_LEN.interior_color),
           vehicle.equipment || null,
           vehicle.exposeUrl || null,
           vehicle.offerUrl || null,
-          vehicle.internalNumber || null,
+          truncate(vehicle.internalNumber, MAX_LEN.internal_number),
           vehicle.arrivalDate || null,
-          vehicle.category || null,
+          truncate(vehicle.category, MAX_LEN.category),
           vehicle.vatDisplayable ?? null,
-          vehicle.vehicleType || null,
+          truncate(vehicle.vehicleType, MAX_LEN.vehicle_type),
           vehicle.previousOwners || null,
           now,
         ]

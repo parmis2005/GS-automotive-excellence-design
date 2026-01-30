@@ -1,4 +1,8 @@
 import { fetchVehiclesFromWebsite } from "./vehicleScraper.js";
+import {
+  isCargateApiConfigured,
+  fetchVehiclesFromCargateApi,
+} from "./cargateApi.js";
 import { upsertVehicles, getLastSyncTimestamp, deleteOldVehicles } from "../db/database.js";
 import type { Vehicle } from "../types/vehicle.js";
 
@@ -6,9 +10,10 @@ let syncInterval: NodeJS.Timeout | null = null;
 let isSyncing = false;
 
 /**
- * Sync vehicles from GS Auto website to database
- * This is called by the background job
- * If the sync fails, the old data remains in the database (graceful degradation)
+ * Sync vehicles into the database.
+ * Uses CarGate Carzilla V6 API if CARGATE_API_KEY and CARGATE_API_BASE_URL are set,
+ * otherwise falls back to scraping the GS Auto website.
+ * If the sync fails, the old data remains in the database (graceful degradation).
  */
 export async function syncVehicles(): Promise<{ success: boolean; count: number; error?: string }> {
   // Prevent concurrent syncs
@@ -22,16 +27,28 @@ export async function syncVehicles(): Promise<{ success: boolean; count: number;
 
   try {
     console.log("🔄 Starting vehicle sync...");
-    
-    // Fetch vehicles from website
-    const vehicles = await fetchVehiclesFromWebsite();
+
+    let vehicles: Vehicle[];
+
+    if (isCargateApiConfigured()) {
+      console.log("📡 Using CarGate Carzilla V6 API as data source");
+      try {
+        vehicles = await fetchVehiclesFromCargateApi();
+      } catch (apiError) {
+        console.warn("⚠️ CarGate API failed, falling back to website scraper:", apiError);
+        vehicles = await fetchVehiclesFromWebsite();
+      }
+    } else {
+      console.log("📄 Using GS Auto website scraper (CarGate API not configured)");
+      vehicles = await fetchVehiclesFromWebsite();
+    }
     
     if (vehicles.length === 0) {
-      console.warn("⚠️  No vehicles fetched from website, keeping existing data");
+      console.warn("⚠️  No vehicles fetched, keeping existing data");
       return { success: false, count: 0, error: "No vehicles fetched" };
     }
 
-    console.log(`✅ Fetched ${vehicles.length} vehicles from website`);
+    console.log(`✅ Fetched ${vehicles.length} vehicles`);
 
     // Update database with new vehicles
     await upsertVehicles(vehicles);

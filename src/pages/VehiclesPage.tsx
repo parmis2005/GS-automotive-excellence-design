@@ -91,7 +91,7 @@ const VehiclesPage = () => {
 
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [sortBy, setSortBy] = useState<string>("price-desc");
+  const [sortBy, setSortBy] = useState<string>("arrival-desc");
 
   // Get available filter options from vehicles
   // This MUST be defined before the useEffect that uses it
@@ -413,6 +413,14 @@ const VehiclesPage = () => {
     // Then sort
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
+        case "arrival-desc":
+          // Neueste Zugänge zuerst = wenigste Standtage oben (Standtage aufsteigend)
+          const daysA = a.standtage ?? (a.arrivalDate ? Math.max(0, Math.floor((Date.now() - new Date(a.arrivalDate).getTime()) / 86400000)) : null);
+          const daysB = b.standtage ?? (b.arrivalDate ? Math.max(0, Math.floor((Date.now() - new Date(b.arrivalDate).getTime()) / 86400000)) : null);
+          if (daysA == null && daysB == null) return 0;
+          if (daysA == null) return 1;   // a ohne Standtage nach hinten
+          if (daysB == null) return -1;   // b ohne Standtage nach hinten
+          return daysA - daysB;          // wenigste Tage zuerst
         case "price-asc":
           return a.price - b.price;
         case "price-desc":
@@ -614,6 +622,7 @@ const VehiclesPage = () => {
                     <SelectValue placeholder="Sortieren nach" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="arrival-desc">Neueste Zugänge</SelectItem>
                     <SelectItem value="price-desc">Preis: Höchste zuerst</SelectItem>
                     <SelectItem value="price-asc">Preis: Niedrigste zuerst</SelectItem>
                     <SelectItem value="year-desc">Jahr: Neueste zuerst</SelectItem>
