@@ -26,7 +26,15 @@ import {
   ZoomOut,
   Calculator,
   ArrowRight,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Shield,
+  Radio,
+  Sun,
+  Car,
+  Sofa,
+  Settings,
+  Sparkles,
+  Armchair
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -38,7 +46,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { getPlaceholderImage, getVehicleImageWithFallback } from "@/lib/vehicleImage";
-import { splitModelName, getBaseModelName, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
+import { splitModelName, getBaseModelName, getVehicleDisplayName, groupEquipmentByCategory } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 
 /**
@@ -430,53 +438,34 @@ const VehicleDetailPage = () => {
               })()}
             </div>
 
-            {/* Similar Vehicles Section */}
+            {/* Ähnliche Angebote – gleiche Box wie Bildbereich, 3 sichtbar, Carousel, Kanten bündig */}
             {similarVehicles.length > 0 && (
-              <div className="mt-8">
+              <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-3 mt-6">
                 <h2 className="text-2xl font-bold mb-4">Ähnliche Angebote</h2>
-                <div className="relative px-12">
+                <div className="relative">
                   <Carousel
-                    opts={{
-                      align: "start",
-                      slidesToScroll: 1,
-                      loop: true,
-                    }}
+                    opts={{ align: "start", slidesToScroll: 1, loop: true }}
                     className="w-full"
                   >
-                    <CarouselContent className="-ml-2 md:-ml-4">
+                    <CarouselContent className="-ml-2 flex">
                       {similarVehicles.map((similarVehicle) => {
                         const placeholderImageUrl = getPlaceholderImage();
-                        
-                        // Determine if we should use placeholder
-                        // If no image or empty, use placeholder
-                        // The backend should clear image field for vehicles with only placeholder images
                         const shouldUsePlaceholder = !similarVehicle.image || !similarVehicle.image.trim();
                         const displayImageUrl = shouldUsePlaceholder ? placeholderImageUrl : getVehicleImageWithFallback(similarVehicle.image, similarVehicle.id);
                         const isPlaceholderDisplay = shouldUsePlaceholder;
-                        
                         return (
-                          <CarouselItem key={similarVehicle.id} className="pl-2 md:pl-4 basis-1/3">
+                          <CarouselItem key={similarVehicle.id} className="pl-2 basis-[calc((100%-1rem)/3)] min-w-0 shrink-0">
                             <Link to={`/fahrzeuge/${similarVehicle.id}`}>
                               <div className="group relative bg-background rounded-lg overflow-hidden border border-border shadow-sm hover:shadow-md transition-shadow flex flex-col">
-                                {/* Compact Image - Smaller height */}
                                 <div className="relative aspect-[16/9] overflow-hidden bg-secondary">
                                   <img
                                     src={displayImageUrl}
                                     alt={getVehicleDisplayName(similarVehicle.brand, similarVehicle.model, similarVehicle.productionSeries)}
-                                    className="w-full h-full transition-transform duration-300 group-hover:scale-105"
-                                    style={{ 
-                                      objectFit: isPlaceholderDisplay ? 'contain' : 'cover',
-                                      imageRendering: 'auto'
-                                    }}
+                                    className={`w-full h-full transition-transform duration-300 group-hover:scale-105 ${isPlaceholderDisplay ? "object-contain" : "object-cover"}`}
                                     loading="lazy"
                                     decoding="async"
-                                    onError={() => {
-                                      // If image fails to load, it will fallback to placeholder via state
-                                    }}
                                   />
                                 </div>
-                                
-                                {/* Compact Content - Brand, Model (+ Baureihe), Price, Mileage, Power */}
                                 <div className="p-2 space-y-1">
                                   <div className="text-[10px] text-primary font-medium uppercase tracking-wide">
                                     {similarVehicle.brand}
@@ -500,9 +489,7 @@ const VehicleDetailPage = () => {
                                         <span>·</span>
                                       </>
                                     )}
-                                    {similarVehicle.power && (
-                                      <span>{similarVehicle.power} PS</span>
-                                    )}
+                                    {similarVehicle.power && <span>{similarVehicle.power} PS</span>}
                                   </div>
                                 </div>
                               </div>
@@ -511,8 +498,8 @@ const VehicleDetailPage = () => {
                         );
                       })}
                     </CarouselContent>
-                    <CarouselPrevious className="left-0" />
-                    <CarouselNext className="right-0" />
+                    <CarouselPrevious className="-left-2 top-1/2 -translate-y-1/2" />
+                    <CarouselNext className="-right-2 top-1/2 -translate-y-1/2" />
                   </Carousel>
                 </div>
               </div>
@@ -704,12 +691,82 @@ const VehicleDetailPage = () => {
               )}
             </div>
             </div>
+          </div>
+        </div>
 
-            <Separator />
+        {/* Ausstattung (links) + Kaufanfrage (rechts) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 mt-10 lg:mt-12">
+          {/* Ausstattung – linke Hälfte */}
+          <div className="order-2 lg:order-1">
+                {vehicle.equipment && vehicle.equipment.length > 0 ? (
+                  <div className="h-full">
+                    <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </span>
+                      Ausstattung
+                    </h2>
+                    <div className="space-y-6 overflow-y-auto pr-1">
+                      {(() => {
+                        const grouped = groupEquipmentByCategory(vehicle.equipment);
+                        const categoryLabels: Record<string, string> = {
+                          Komfort: "Komfort",
+                          Sicherheit: "Sicherheit",
+                          Multimedia: "Multimedia",
+                          "Licht & Sicht": "Licht & Sicht",
+                          Außen: "Außen",
+                          Innenausstattung: "Innenausstattung",
+                          "Fahrwerk & Antrieb": "Fahrwerk & Antrieb",
+                          Sonstiges: "Weitere Ausstattung",
+                        };
+                        const categoryIcons: Record<string, React.ReactNode> = {
+                          Komfort: <Armchair className="w-4 h-4" />,
+                          Sicherheit: <Shield className="w-4 h-4" />,
+                          Multimedia: <Radio className="w-4 h-4" />,
+                          "Licht & Sicht": <Sun className="w-4 h-4" />,
+                          Außen: <Car className="w-4 h-4" />,
+                          Innenausstattung: <Sofa className="w-4 h-4" />,
+                          "Fahrwerk & Antrieb": <Settings className="w-4 h-4" />,
+                          Sonstiges: <Sparkles className="w-4 h-4" />,
+                        };
+                        return Array.from(grouped.entries()).map(([category, items]) => {
+                          if (items.length === 0) return null;
+                          return (
+                            <section
+                              key={category}
+                              className="rounded-2xl border border-border/80 bg-card/50 backdrop-blur-sm p-5 shadow-sm hover:shadow-md transition-shadow"
+                            >
+                              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2 text-muted-foreground">
+                                {categoryIcons[category]}
+                                {categoryLabels[category] ?? category}
+                              </h3>
+                              <div className="flex flex-wrap gap-2">
+                                {items.map((item, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center rounded-full bg-muted/70 px-3 py-1.5 text-sm text-foreground border border-border/50 hover:bg-muted transition-colors"
+                                  >
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            </section>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-border bg-muted/10 p-12 text-center text-muted-foreground">
+                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                    <p className="text-sm font-medium">Keine Ausstattungsdaten vorhanden</p>
+                  </div>
+                )}
+              </div>
 
-            {/* Purchase Inquiry Form */}
-            <div id="kaufanfrage" className="bg-card border border-border rounded-lg p-6 scroll-mt-20">
-              <h3 className="text-xl font-bold mb-4">Kaufanfrage</h3>
+          {/* Kaufanfrage – rechte Hälfte */}
+          <div id="kaufanfrage" className="order-1 lg:order-2 bg-card border border-border rounded-2xl p-6 lg:p-8 shadow-sm scroll-mt-20 self-start lg:sticky lg:top-24">
+                <h3 className="text-xl font-bold mb-4">Kaufanfrage</h3>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -957,28 +1014,11 @@ const VehicleDetailPage = () => {
                   Kaufanfrage absenden
                 </Button>
               </form>
-            </div>
           </div>
         </div>
 
-        {/* Additional Details Section */}
-        <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Equipment List */}
-          {vehicle.equipment && vehicle.equipment.length > 0 && (
-            <div className="lg:col-span-2">
-              <h2 className="text-2xl font-bold mb-6">Ausstattung</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {vehicle.equipment.map((item, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Contact Card */}
+        {/* Contact Card */}
+        <div className="mt-12">
           <div className="bg-card border border-border rounded-lg p-6">
             <h3 className="text-xl font-bold mb-4">Kontakt</h3>
             <div className="space-y-4">

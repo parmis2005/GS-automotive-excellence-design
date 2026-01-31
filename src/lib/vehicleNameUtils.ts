@@ -209,6 +209,91 @@ export function splitModelName(model: string): { base: string; variant: string }
   };
 }
 
+/**
+ * Gruppiert Ausstattungsliste nach Kategorien (Komfort, Sicherheit, Licht, etc.)
+ */
+export type EquipmentCategory =
+  | "Komfort"
+  | "Sicherheit"
+  | "Multimedia"
+  | "Licht & Sicht"
+  | "Außen"
+  | "Innenausstattung"
+  | "Fahrwerk & Antrieb"
+  | "Sonstiges";
+
+const EQUIPMENT_CATEGORY_KEYWORDS: Record<EquipmentCategory, string[]> = {
+  Komfort: [
+    "klima", "sitzheizung", "sitzkühlung", "lenkrad", "sportsitze", "leder", "stoff", "polster",
+    "massage", "memory", "elektrisch", "verstellbar", "head-up", "head up", "keyless",
+    "parkassistent", "einfahrkamera", "rückfahrkamera", "kamera", "pdc", "abstands",
+    "cruise control", "tempomat", "usb", "bluetooth", "wireless", "lade", "sitz", "komfort",
+    "elektrisch verstellbar", "sitzverstellung", "klimaautomatik", "zonenklima",
+  ],
+  Sicherheit: [
+    "airbag", "esp", "abs", "assistent", "abstand", "spur", "notbrems", "totwinkel",
+    "reifendruck", "isofix", "hinweis", "kontrolle", "warn", "kollisions", "sicherheit",
+    "reifendruckkontrolle", "ndc", "müdigkeits", "aufmerksamkeits",
+  ],
+  Multimedia: [
+    "navi", "navigation", "display", "touchscreen", "apple carplay", "carplay", "android auto",
+    "radio", "lautsprecher", "sound", "audio", "dab", "infotainment", "connect",
+  ],
+  "Licht & Sicht": [
+    "led", "xenon", "scheinwerfer", "abblend", "fernlicht", "tagfahr", "nebel",
+    "licht", "leuchte", "heckleuchte", "blinker", "scheibe", "heizbar", "regensensor",
+    "leuchtweiten", "automatisches licht", "lichtautomatik",
+  ],
+  Außen: [
+    "felge", "lm", "alufelge", "dach", "schiene", "spoiler", "paket", "pakete",
+    "lack", "spiegel", "heckscheiben", "wischer", "ahk", "anhänger", "dachreling",
+  ],
+  Innenausstattung: [
+    "innen", "innenausstattung", "armaturen", "multifunktions", "konsolen",
+    "handschuh", "kofferraum", "tonnendach", "himmel", "bezug", "verkleidung",
+  ],
+  "Fahrwerk & Antrieb": [
+    "getriebe", "allrad", "xdrive", "4matic", "quattro", "hil", "dcc", "fahrwerk",
+    "sportfahrwerk", "adaptiv", "dämpfer", "antrieb", "differenzial",
+  ],
+  Sonstiges: [],
+};
+
+export function groupEquipmentByCategory(equipment: string[]): Map<EquipmentCategory, string[]> {
+  const grouped = new Map<EquipmentCategory, string[]>();
+  const categories: EquipmentCategory[] = [
+    "Komfort",
+    "Sicherheit",
+    "Multimedia",
+    "Licht & Sicht",
+    "Außen",
+    "Innenausstattung",
+    "Fahrwerk & Antrieb",
+    "Sonstiges",
+  ];
+  for (const cat of categories) {
+    grouped.set(cat, []);
+  }
+
+  for (const item of equipment) {
+    if (!item || !item.trim()) continue;
+    const lower = item.toLowerCase();
+    let assigned = false;
+    for (const cat of categories.slice(0, -1)) {
+      if (EQUIPMENT_CATEGORY_KEYWORDS[cat].some((kw) => lower.includes(kw))) {
+        grouped.get(cat)!.push(item.trim());
+        assigned = true;
+        break;
+      }
+    }
+    if (!assigned) {
+      grouped.get("Sonstiges")!.push(item.trim());
+    }
+  }
+
+  return grouped;
+}
+
 /** Fahrzeugtypen der Startseite (VehicleTypeSelector) – einheitliche Zuordnung für Filter und API. */
 export const START_PAGE_VEHICLE_TYPES = ["Sportwagen", "Limousine", "Kleinwagen", "Kombi", "Van", "Cabrio", "SUV"] as const;
 

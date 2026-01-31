@@ -937,7 +937,7 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     }
   }
 
-  // Einmalig Struktur loggen: Modell/Make/Variant aus API (für Debug)
+  // Einmalig Struktur loggen: Modell/Make/Variant/Ausstattung aus API (für Debug)
   if (!_carzillaStructureLogged) {
     _carzillaStructureLogged = true;
     const modelRelated: Record<string, unknown> = {};
@@ -947,12 +947,15 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
         keyLower.includes("model") || keyLower.includes("modell") || keyLower.includes("make") || keyLower.includes("marke") ||
         keyLower.includes("series") || keyLower.includes("baureihe") || keyLower.includes("version") || keyLower.includes("variant") ||
         keyLower.includes("trim") || keyLower.includes("line") || keyLower.includes("title") ||
-        keyLower.includes("color") || keyLower.includes("farbe") || keyLower.includes("farbcode") || keyLower.includes("herstellerfarbe") || keyLower.includes("paint")
+        keyLower.includes("color") || keyLower.includes("farbe") || keyLower.includes("farbcode") || keyLower.includes("herstellerfarbe") || keyLower.includes("paint") ||
+        keyLower.includes("equipment") || keyLower.includes("ausstattung") || keyLower.includes("feature")
       ) {
         modelRelated[k] = raw[k];
       }
     }
-    console.warn("Carzilla: Modell/Make/Variant-Struktur (erstes Fahrzeug):", JSON.stringify(modelRelated, null, 2).slice(0, 2000));
+    console.warn("Carzilla: Modell/Make/Variant/Ausstattung (erstes Fahrzeug):", JSON.stringify(modelRelated, null, 2).slice(0, 3000));
+    // Alle Keys des ersten Fahrzeugs (für Struktur-Erkennung)
+    console.warn("Carzilla: Alle Keys des ersten Fahrzeugs:", Object.keys(raw).sort().join(", "));
   }
 
   // Standtage / Zugangsdatum (PDF: CreatedAt; Carzilla liefert .NET-Format /Date(ms+offset)/)
@@ -982,15 +985,60 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
   const displayModel = model || "Unbekannt";
   const category = determineCategory(displayBrand, displayModel, power, fuel);
 
-  // Ausstattung: Array von Strings, Array von Objekten mit Name/Text, oder kommaseparierter String
-  let equipment: string[] | undefined;
-  const eq = raw.equipment ?? raw.Equipment ?? raw.EquipmentList ?? raw.Features;
-  if (Array.isArray(eq)) {
-    equipment = eq
-      .map((x) => (x != null && typeof x === "object" && "Name" in (x as object) ? String((x as { Name: unknown }).Name) : String(x)))
-      .filter((s) => s && s !== "undefined");
-  } else if (typeof eq === "string") {
-    equipment = eq.split(",").map((s) => s.trim()).filter(Boolean);
+  // Ausstattung: 1) EquipmentIds + Katalog, 2) Equipment/EquipmentList Array, 3) kommaseparierter String
+  let equipment: string[] = [];
+  const equipmentIds = raw.EquipmentIds ?? raw.equipmentIds ?? raw.EquipmentId ?? raw.equipmentId;
+  if (catalog?.equipmentIdToName && equipmentIds) {
+    const ids = Array.isArray(equipmentIds) ? equipmentIds : [equipmentIds];
+    for (const idRaw of ids) {
+      const id = typeof idRaw === "number" ? idRaw : parseInt(String(idRaw), 10);
+      if (!Number.isNaN(id)) {
+        const name = catalog.equipmentIdToName.get(id);
+        if (name && !equipment.includes(name)) equipment.push(name);
+      }
+    }
+  }
+  if (equipment.length === 0) {
+    const eq = raw.equipment ?? raw.Equipment ?? raw.EquipmentList ?? raw.EquipmentItems ?? raw.Features ?? raw.Ausstattung ?? raw.StandardEquipment ?? raw.Serienausstattung;
+    if (Array.isArray(eq)) {
+      equipment = eq
+        .map((x) => {
+          if (x == null) return "";
+          if (typeof x === "string") return x.trim();
+          if (typeof x === "object" && !Array.isArray(x)) {
+            const o = x as Record<string, unknown>;
+            return String(o.Name ?? o.name ?? o.Text ?? o.text ?? o.Value ?? o.value ?? o.DisplayName ?? o.DisplayText ?? o.Description ?? "").trim();
+          }
+          return String(x).trim();
+        })
+        .filter((s): s is string => Boolean(s && s !== "undefined"));
+    } else if (typeof eq === "string") {
+      equipment = eq.split(/[,;|]/).map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  // Fallback: Alle Keys durchsuchen, die Arrays mit Name-Objekten enthalten (CarGate-Struktur variiert)
+  if (equipment.length === 0) {
+    for (const key of Object.keys(raw)) {
+      const keyLower = key.toLowerCase();
+      if (!keyLower.includes("equip") && !keyLower.includes("ausstattung") && !keyLower.includes("feature") && !keyLower.includes("option")) continue;
+      const v = raw[key];
+      if (!Array.isArray(v) || v.length === 0) continue;
+      const items = v
+        .map((x: unknown) => {
+          if (x == null) return "";
+          if (typeof x === "string") return x.trim();
+          if (typeof x === "object" && !Array.isArray(x)) {
+            const o = x as Record<string, unknown>;
+            return String(o.Name ?? o.name ?? o.Text ?? o.text ?? o.Value ?? o.value ?? "").trim();
+          }
+          return String(x).trim();
+        })
+        .filter((s: string) => s && s.length > 1);
+      if (items.length > 0) {
+        equipment = items;
+        break;
+      }
+    }
   }
 
   // Titel = Marke + Modell (nur CarGate-Daten). Baureihe (ProductionSeries) separat für Anzeige in Klammern.
@@ -1020,7 +1068,7 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     exteriorColor: exteriorColor || undefined,
     exteriorColorFull: exteriorColorFull || undefined,
     interiorColor: interiorColor || undefined,
-    equipment,
+    equipment: equipment.length > 0 ? equipment : undefined,
     exposeUrl: exposeUrl || undefined,
     offerUrl: offerUrl || undefined,
     internalNumber: internalNumber || undefined,
@@ -1175,17 +1223,31 @@ export function isCargateApiConfigured(): boolean {
 }
 
 /**
- * Suchkatalog: ModelId/MakeId → Name (laut PDF GetSearchCatalog für Dropdown-Werte).
- * Wird gecacht (10 Min wie in der Doku).
+ * Suchkatalog: ModelId/MakeId/EquipmentId → Name (laut PDF GetSearchCatalog).
+ * EquipmentIds (Ausstattungsmerkmale) werden aus dem Katalog aufgelöst.
  */
 export interface SearchCatalogMaps {
   modelIdToName: Map<number, string>;
   makeIdToName: Map<number, string>;
+  equipmentIdToName: Map<number, string>;
 }
 
 function parseCatalogIntoMaps(data: Record<string, unknown>): SearchCatalogMaps {
   const modelIdToName = new Map<number, string>();
   const makeIdToName = new Map<number, string>();
+  const equipmentIdToName = new Map<number, string>();
+
+  const pushEquipment = (arr: unknown[]) => {
+    if (!Array.isArray(arr)) return;
+    for (const item of arr) {
+      if (item == null || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const idRaw = o.EquipmentId ?? o.equipmentId ?? o.Id ?? o.id;
+      const id = typeof idRaw === "number" ? idRaw : parseInt(String(idRaw), 10);
+      const name = String(o.Name ?? o.name ?? o.Text ?? o.text ?? o.Value ?? o.value ?? "").trim();
+      if (!Number.isNaN(id) && name) equipmentIdToName.set(id, name);
+    }
+  };
 
   const pushModels = (arr: unknown[]) => {
     if (!Array.isArray(arr)) return;
@@ -1215,13 +1277,16 @@ function parseCatalogIntoMaps(data: Record<string, unknown>): SearchCatalogMaps 
     const viewModel = catalog.ViewModel as Record<string, unknown> | undefined;
     const modelsArr = catalog.Models ?? catalog.models ?? viewModel?.Models ?? [];
     const makesArr = catalog.Makes ?? catalog.makes ?? viewModel?.Makes ?? [];
+    const equipmentArr = catalog.Equipment ?? catalog.equipment ?? catalog.EquipmentItems ?? catalog.equipmentItems ?? viewModel?.Equipment ?? viewModel?.EquipmentItems ?? [];
     pushModels(Array.isArray(modelsArr) ? modelsArr : []);
     pushMakes(Array.isArray(makesArr) ? makesArr : []);
+    pushEquipment(Array.isArray(equipmentArr) ? equipmentArr : []);
   }
   pushModels(Array.isArray(data.Models) ? data.Models : Array.isArray(data.models) ? data.models : []);
   pushMakes(Array.isArray(data.Makes) ? data.Makes : Array.isArray(data.makes) ? data.makes : []);
+  pushEquipment(Array.isArray(data.Equipment) ? data.Equipment : Array.isArray(data.equipment) ? data.equipment : []);
 
-  return { modelIdToName, makeIdToName };
+  return { modelIdToName, makeIdToName, equipmentIdToName };
 }
 
 async function getSearchCatalogFromApi(): Promise<SearchCatalogMaps> {
@@ -1231,7 +1296,7 @@ async function getSearchCatalogFromApi(): Promise<SearchCatalogMaps> {
   const searchId = process.env.CARGATE_API_KEY?.trim();
   const baseUrl = process.env.CARGATE_API_BASE_URL?.trim();
   if (!searchId || !baseUrl) {
-    return { modelIdToName: new Map(), makeIdToName: new Map() };
+    return { modelIdToName: new Map(), makeIdToName: new Map(), equipmentIdToName: new Map() };
   }
 
   const searchParams = { IsWebVehicle: true, IsCarzillaVehicle: true };
@@ -1255,10 +1320,10 @@ async function getSearchCatalogFromApi(): Promise<SearchCatalogMaps> {
 
   // 1) GetSearchCatalog (laut Doku für Dropdown-Werte / Katalog)
   let data = await tryFetch("GetSearchCatalog");
-  let maps = data ? parseCatalogIntoMaps(data) : { modelIdToName: new Map(), makeIdToName: new Map() };
+  let maps = data ? parseCatalogIntoMaps(data) : { modelIdToName: new Map(), makeIdToName: new Map(), equipmentIdToName: new Map() };
 
   // 2) Falls leer: GetInitialData (laut Doku: liefert SearchParams, SearchInfo, SearchCatalog)
-  if (maps.modelIdToName.size === 0 && maps.makeIdToName.size === 0) {
+  if (maps.modelIdToName.size === 0 && maps.makeIdToName.size === 0 && maps.equipmentIdToName.size === 0) {
     data = await tryFetch("GetInitialData");
     if (data) {
       const searchCatalog = data.SearchCatalog ?? data.searchCatalog;
@@ -1269,8 +1334,14 @@ async function getSearchCatalogFromApi(): Promise<SearchCatalogMaps> {
   }
 
   cache.set(CACHE_KEY_CATALOG, maps, 10 * 60); // 10 Min wie in der Doku
-  if (maps.modelIdToName.size > 0 || maps.makeIdToName.size > 0) {
-    console.log(`✅ Carzilla Katalog: ${maps.makeIdToName.size} Marken, ${maps.modelIdToName.size} Modelle (für Titel/Modell)`);
+  if (maps.modelIdToName.size > 0 || maps.makeIdToName.size > 0 || maps.equipmentIdToName.size > 0) {
+    console.log(`✅ Carzilla Katalog: ${maps.makeIdToName.size} Marken, ${maps.modelIdToName.size} Modelle, ${maps.equipmentIdToName.size} Ausstattungen`);
+  }
+  if (maps.equipmentIdToName.size === 0 && data) {
+    const catalog = (data as Record<string, unknown>).SearchCatalog ?? (data as Record<string, unknown>).GetSearchCatalogResult ?? data;
+    const cat = catalog as Record<string, unknown>;
+    const catalogKeys = cat && typeof cat === "object" ? Object.keys(cat).join(", ") : "n/a";
+    console.warn("Carzilla: Katalog-Keys (Equipment fehlt?):", catalogKeys);
   }
   return maps;
 }
