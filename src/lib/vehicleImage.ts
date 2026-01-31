@@ -30,20 +30,20 @@ export function getPlaceholderImage(): string {
 }
 
 /**
- * Ensures the image URL uses "xl" format for high quality (for cargate images)
- * Replaces any format parameter (xlrm, xlrg, etc.) with "xl"
+ * Ensures the image URL uses high-quality format (cargate: xl, carzilla: l)
  * @param imageUrl - The image URL to process
  * @param vehicleId - The vehicle ID (used for fallback generation)
  * @returns High quality image URL
  */
 export function ensureHighQualityImageUrl(imageUrl: string, vehicleId: string): string {
-  if (!imageUrl || !imageUrl.includes('cargate360')) {
-    // If not a cargate URL, return placeholder
-    return PLACEHOLDER_IMAGE_URL;
+  if (!imageUrl) return PLACEHOLDER_IMAGE_URL;
+  if (imageUrl.includes('cargate360')) {
+    return imageUrl.replace(/format=[^&]*/i, 'format=xl');
   }
-  
-  // Replace any format parameter with "xl" for consistent high quality
-  return imageUrl.replace(/format=[^&]*/i, 'format=xl');
+  if (imageUrl.includes('carzilla-services.com')) {
+    return imageUrl.replace(/format=[^&]*/i, 'format=l');
+  }
+  return imageUrl;
 }
 
 /**
@@ -68,8 +68,11 @@ export function getVehicleImageWithFallback(imageUrl: string | undefined | null,
   if (imageUrl.includes('cargate360')) {
     return imageUrl.replace(/format=[^&]*/i, 'format=xl');
   }
+  // Carzilla: format l (large)
+  if (imageUrl.includes('carzilla-services.com')) {
+    return imageUrl.replace(/format=[^&]*/i, 'format=l');
+  }
 
-  // Return as-is for other image URLs
   return imageUrl;
 }
 

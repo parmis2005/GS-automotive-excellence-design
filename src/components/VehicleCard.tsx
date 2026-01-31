@@ -5,7 +5,8 @@ import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
-import { formatFuelType } from "@/lib/vehicleNameUtils";
+import { formatFuelType, getVehicleDisplayName, splitModelName } from "@/lib/vehicleNameUtils";
+import { VehicleTitle } from "@/components/VehicleTitle";
 
 interface VehicleCardProps extends Vehicle {
   showCategory?: boolean; // Optional prop to show/hide category badge
@@ -16,6 +17,9 @@ const VehicleCard = ({
   image,
   brand,
   model,
+  title,
+  productionSeries,
+  modelVariant: modelVariantProp,
   price,
   year,
   mileage,
@@ -30,9 +34,12 @@ const VehicleCard = ({
   offerUrl,
   category,
   arrivalDate,
+  standtage,
   vatDisplayable,
   showCategory = false, // Default: don't show category (only on homepage)
 }: VehicleCardProps) => {
+  // Standtage für Test-Anzeige: von API oder aus Zugangsdatum berechnen
+  const standtageDisplay = standtage ?? (arrivalDate ? Math.max(0, Math.floor((Date.now() - new Date(arrivalDate).getTime()) / 86400000)) : null);
   // Get image URL with fallback to placeholder
   const initialImageUrl = getVehicleImageWithFallback(image, id);
   const placeholderImageUrl = getPlaceholderImage();
@@ -43,18 +50,21 @@ const VehicleCard = ({
   
   // Check if the image is a placeholder (only one image exists AND it's a placeholder)
   useEffect(() => {
-    // Only check if we have an image URL from cargate
-    if (!image || !image.trim() || !image.includes('cargate360')) {
+    const isCargateImage = image?.includes('cargate360');
+    const isCarzillaImage = image?.includes('carzilla-services.com');
+    if (!image || !image.trim() || (!isCargateImage && !isCarzillaImage)) {
       setUsePlaceholder(true);
       return;
     }
-    
+
     // Check if image 1 is a real photo (by loading it and checking dimensions)
     // and if image 2 exists
     const checkImages = async () => {
       try {
-        // First check if image 2 exists - if it does, we definitely have real photos
-        const image2Url = `https://img.cargate360.de/default.aspx?vid=${id}&bid=1790&format=xl&ino=2&app=Kiste-Default`;
+        const bid = image?.match(/[?&]bid=([^&]+)/)?.[1] || '1790';
+        const image2Url = isCarzillaImage
+          ? `https://img.carzilla-services.com/Images.ashx?vid=${id}&bid=${bid}&format=l&ino=2&app=carzilla`
+          : `https://img.cargate360.de/default.aspx?vid=${id}&bid=1790&format=xl&ino=2&app=Kiste-Default`;
         const controller2 = new AbortController();
         const timeout2 = setTimeout(() => controller2.abort(), 2000);
         
@@ -146,7 +156,7 @@ const VehicleCard = ({
       <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
         <img
           src={displayImageUrl}
-          alt={`${brand} ${model}`}
+          alt={getVehicleDisplayName(brand, model, productionSeries, title)}
           className="w-full h-full transition-transform duration-500 group-hover:scale-105"
           style={{ 
             objectFit: isPlaceholderDisplay ? 'contain' : 'cover',
@@ -179,18 +189,27 @@ const VehicleCard = ({
             Neu eingetroffen
           </div>
         )}
+        {/* Standtage Test-Anzeige (später entfernen) */}
+        {standtageDisplay !== null && (
+          <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/70 text-white text-xs font-medium">
+            {standtageDisplay} Tage
+          </div>
+        )}
       </div>
 
       {/* Content */}
       <div className="p-5">
-        {/* Brand & Model - Modellname größer/stärker */}
+        {/* Volltitel: Marke + Modell (Baureihe inline), Modellzusatz darunter */}
         <div className="mb-4">
-          <span className="text-xs text-primary font-semibold uppercase tracking-wider">
-            {brand}
-          </span>
-          <h3 className="font-display text-2xl font-bold text-foreground mt-1">
-            {model}
-          </h3>
+          <VehicleTitle
+            brand={brand}
+            model={splitModelName(model).base}
+            productionSeries={productionSeries}
+            modelVariant={modelVariantProp ?? splitModelName(model).variant}
+            fallbackTitle={title}
+            className="font-display text-2xl font-bold text-foreground"
+            as="h3"
+          />
         </div>
 
         {/* Price - visuell dominanter */}
@@ -261,7 +280,8 @@ const VehicleCard = ({
               className="w-full"
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(exposeUrl, '_blank');
+                const exposeRedirectUrl = `${import.meta.env.VITE_API_URL || ""}/api/vehicles/${id}/expose`;
+                window.open(exposeRedirectUrl.startsWith("http") ? exposeRedirectUrl : `/api/vehicles/${id}/expose`, "_blank");
               }}
             >
               <Download className="w-4 h-4 mr-2" />

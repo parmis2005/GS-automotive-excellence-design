@@ -3,6 +3,20 @@
  */
 
 /**
+ * Gibt den Anzeigenamen eines Fahrzeugs zurück, Baureihe optional in Klammern (z. B. "BMW 3er Touring (G21)").
+ */
+export function getVehicleDisplayName(
+  brand: string,
+  model: string,
+  productionSeries?: string | null,
+  fallbackTitle?: string | null
+): string {
+  const base = [brand, model].filter(Boolean).join(" ").trim() || fallbackTitle?.trim() || "";
+  if (!base) return "Fahrzeug";
+  return productionSeries?.trim() ? `${base} (${productionSeries.trim()})` : base;
+}
+
+/**
  * Formats fuel type for display, removing "-Benzin" from "Plugin Hybrid-Benzin"
  */
 export function formatFuelType(fuel: string): string {
@@ -195,21 +209,57 @@ export function splitModelName(model: string): { base: string; variant: string }
   };
 }
 
+/** Fahrzeugtypen der Startseite (VehicleTypeSelector) – einheitliche Zuordnung für Filter und API. */
+export const START_PAGE_VEHICLE_TYPES = ["Sportwagen", "Limousine", "Kleinwagen", "Kombi", "Van", "Cabrio", "SUV"] as const;
+
+/**
+ * Mappt API-Fahrzeugtyp (BodyType/Karosserie) auf einen der Startseiten-Typen.
+ * So stimmen Klicks auf der Startseite mit den gefetchten Fahrzeugen überein.
+ */
+export function normalizeApiVehicleTypeToStartPage(apiType: string | undefined): string | null {
+  if (!apiType || !apiType.trim()) return null;
+  const lower = apiType.trim().toLowerCase();
+  if (START_PAGE_VEHICLE_TYPES.includes(apiType.trim() as typeof START_PAGE_VEHICLE_TYPES[number])) return apiType.trim();
+  if (lower.includes("sport") || lower.includes("coupe") || lower.includes("coupé")) return "Sportwagen";
+  if (lower.includes("cabrio") || lower.includes("roadster") || lower.includes("convertible")) return "Cabrio";
+  if (lower.includes("kombi") || lower.includes("avant") || lower.includes("touring") || lower.includes("estate") || lower.includes("break")) return "Kombi";
+  if (lower.includes("van") || lower.includes("transporter") || lower.includes("minibus") || lower.includes("minivan")) return "Van";
+  if (lower.includes("suv") || lower.includes("geländewagen") || lower.includes("off-road")) return "SUV";
+  if (lower.includes("kleinwagen") || lower.includes("kompakt") || lower.includes("stadtwagen")) return "Kleinwagen";
+  if (lower.includes("limousine") || lower.includes("sedan") || lower.includes("stufenheck")) return "Limousine";
+  return null;
+}
+
 /**
  * Extracts the vehicle type (Fahrzeugtyp) from the model name
  * This is a fallback function - prefer using vehicle.vehicleType from cargate if available
  * Examples: "Cabrio", "Limousine", "Sportwagen", "Kombi", "SUV", etc.
+ * Returned type is always one of START_PAGE_VEHICLE_TYPES for consistency with the start page.
  */
+/** Modelle, die immer als Kleinwagen gelten – auch wenn API „Sportwagen“/„Coupe“ liefert (z. B. Opel Corsa). */
+const KLEINWAGEN_MODEL_PATTERNS = [
+  "1er", "2er", "polo", "golf", "corsa", "up!", "up ", "fabia", "ibiza", "cooper", "mini ",
+  "a1", "a2", "fiat 500", "panda", "500c", "500l", "smart ", "fortwo", "forfour",
+  "clio", "208", "308", "yaris", "aygo", "mazda2", "mazda 2", "fiesta", "ka+", "ka ",
+];
+
+/** Prüft, ob das Modell ein Kleinwagen ist (z. B. Corsa, Polo, 1er) – für Filter/Sportwagen-Ausschluss. */
+export function isKleinwagenModel(model: string): boolean {
+  if (!model) return false;
+  const lower = model.toLowerCase();
+  return KLEINWAGEN_MODEL_PATTERNS.some((p) => lower.includes(p));
+}
+
 export function getVehicleType(model: string, vehicleTypeFromCargate?: string): string | null {
-  // If we have vehicleType from cargate, use it (most reliable)
+  const modelLower = model?.toLowerCase() ?? "";
+  
   if (vehicleTypeFromCargate) {
-    return vehicleTypeFromCargate;
+    const normalized = normalizeApiVehicleTypeToStartPage(vehicleTypeFromCargate);
+    if (normalized === "Sportwagen" && isKleinwagenModel(model)) return "Kleinwagen";
+    if (normalized) return normalized;
   }
   
-  // Otherwise, try to extract from model name
   if (!model) return null;
-  
-  const modelLower = model.toLowerCase();
   
   // Cabrio / Convertible
   if (modelLower.includes('cabrio') || modelLower.includes('cabriolet') || modelLower.includes('convertible')) {
@@ -236,9 +286,7 @@ export function getVehicleType(model: string, vehicleTypeFromCargate?: string): 
     return "SUV";
   }
   
-  // Sportwagen / Coupe
-  // Check for specific sport models (i4 Gran Coupe, M3, M4, etc.)
-  // Note: "Gran Coupe" is a 4-door coupe style, so it should be "Sportwagen"
+  // Sportwagen / Coupe – aber bekannte Kleinwagen (z. B. Opel Corsa Coupé) bleiben Kleinwagen
   if (modelLower.includes('gran coupe') || modelLower.includes('gran coupé') || 
       modelLower.includes('coupe') || modelLower.includes('coupé') || 
       modelLower.includes('sportwagen') || modelLower.includes('gt') || 
@@ -246,6 +294,7 @@ export function getVehicleType(model: string, vehicleTypeFromCargate?: string): 
       modelLower.includes('amg') || modelLower.includes('m3') || 
       modelLower.includes('m4') || modelLower.includes('m5') || 
       modelLower.includes('m6')) {
+    if (isKleinwagenModel(model)) return "Kleinwagen";
     return "Sportwagen";
   }
   
@@ -270,7 +319,9 @@ export function getVehicleType(model: string, vehicleTypeFromCargate?: string): 
     return "Van";
   }
   
-  // Limousine (default for sedans - if none of the above match)
-  // Most standard models without specific type indicators are limousines
+  // Kleinwagen / Kompakt (vor Limousine)
+  if (isKleinwagenModel(model)) return "Kleinwagen";
+  
+  // Limousine (default for sedans – nur wenn weder SUV, Kombi, Van, Sport noch Kleinwagen)
   return "Limousine";
 }

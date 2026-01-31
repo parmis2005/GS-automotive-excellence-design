@@ -9,6 +9,7 @@ import { modelsRouter } from "./routes/models.js";
 import { purchaseInquiryRouter } from "./routes/purchaseInquiry.js";
 import { initializeDatabase, closeDatabase } from "./db/database.js";
 import { startSyncJob, stopSyncJob } from "./services/syncService.js";
+import { isCargateApiConfigured } from "./services/cargateApi.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -35,48 +36,48 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Initialize database and start sync job
+// Server sofort starten, damit Vite-Proxy keine ECONNREFUSED bekommt; DB/Sync danach im Hintergrund
 async function startServer() {
-  try {
-    // Check if DATABASE_URL is set
-    if (!process.env.DATABASE_URL) {
-      console.error("❌ DATABASE_URL environment variable is not set!");
-      console.error("💡 Please set DATABASE_URL in your environment variables");
-      process.exit(1);
-    }
-
-    // Initialize database (create tables if they don't exist)
-    await initializeDatabase();
-
-    // Start background sync job (default: 30 minutes)
-    const syncIntervalMinutes = parseInt(process.env.SYNC_INTERVAL_MINUTES || "30", 10);
-    startSyncJob(syncIntervalMinutes);
-
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-      console.log(`📡 API available at http://localhost:${PORT}/api/vehicles`);
-      console.log(`🔄 Background sync job running (every ${syncIntervalMinutes} minutes)`);
-    });
-  } catch (error) {
-    console.error("❌ Failed to start server:", error);
+  if (!process.env.DATABASE_URL && !isCargateApiConfigured()) {
+    console.error("❌ DATABASE_URL oder CarGate API (CARGATE_API_KEY + CARGATE_API_BASE_URL) nötig.");
     process.exit(1);
   }
+
+  app.listen(PORT, async () => {
+    console.log(`🚀 Server: http://localhost:${PORT}`);
+    console.log(`📡 API: http://localhost:${PORT}/api/vehicles`);
+    try {
+      if (process.env.DATABASE_URL) {
+        await initializeDatabase();
+        const syncIntervalMinutes = parseInt(process.env.SYNC_INTERVAL_MINUTES || "30", 10);
+        startSyncJob(syncIntervalMinutes);
+        console.log(`🔄 Sync (every ${syncIntervalMinutes} min)`);
+      } else if (isCargateApiConfigured()) {
+        console.log("📡 Nur CarGate API (kein DB-Fallback ohne DATABASE_URL)");
+      }
+    } catch (error) {
+      console.error("❌ DB/Sync nach Start:", error);
+    }
+  });
 }
 
 // Graceful shutdown
-process.on("SIGTERM", async () => {
-  console.log("🛑 SIGTERM received, shutting down gracefully...");
-  stopSyncJob();
-  await closeDatabase();
+async function shutdown() {
+  if (process.env.DATABASE_URL) {
+    stopSyncJob();
+    await closeDatabase();
+  }
   process.exit(0);
+}
+
+process.on("SIGTERM", () => {
+  console.log("🛑 SIGTERM received, shutting down...");
+  void shutdown();
 });
 
-process.on("SIGINT", async () => {
-  console.log("🛑 SIGINT received, shutting down gracefully...");
-  stopSyncJob();
-  await closeDatabase();
-  process.exit(0);
+process.on("SIGINT", () => {
+  console.log("🛑 SIGINT received, shutting down...");
+  void shutdown();
 });
 
 // Start the server

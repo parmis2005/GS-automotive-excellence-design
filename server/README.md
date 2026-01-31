@@ -25,7 +25,17 @@ SYNC_INTERVAL_MINUTES=30
 
 # Server Port (optional, default: 3001)
 PORT=3001
+
+# --- CarGate Carzilla V6 API (empfohlen für Bestandsdaten) ---
+# Wenn gesetzt, werden Fahrzeuge über die offizielle API geladen statt per Website-Scraping.
+# Basis-URL und ggf. Endpunkt-Namen bitte aus der Schnittstellenbeschreibung (Carzilla V6 PDF) übernehmen.
+# CARGATE_API_KEY=<Ihr API-Key von CarGate>
+# CARGATE_API_BASE_URL=<laut PDF, z.B. https://api.cargate360.de/v6>
+# CARGATE_VEHICLES_PATH=vehicles   # optional, Endpunkt-Name laut PDF (Default: vehicles)
+# CARGATE_BRANCH_ID=1790
 ```
+
+**CarGate API aktivieren:** In der `.env` (im Projektroot) `CARGATE_API_KEY` und `CARGATE_API_BASE_URL` setzen (Basis-URL aus der Carzilla V6 Schnittstellenbeschreibung). Anschließend Server neu starten.
 
 **Wichtig:** Der `DATABASE_URL` sollte NIEMALS im Code hardcoded werden. Verwende immer Environment-Variablen!
 
@@ -64,7 +74,8 @@ server/
 ├── routes/
 │   └── vehicles.ts          # API Routes (read from database)
 └── services/
-    ├── vehicleScraper.ts    # HTML Parsing & Scraping Logic
+    ├── cargateApi.ts        # CarGate Carzilla V6 API (wenn API-Key gesetzt)
+    ├── vehicleScraper.ts    # HTML Parsing & Scraping (Fallback)
     └── syncService.ts       # Background Job für regelmäßige Updates
 ```
 
@@ -119,6 +130,14 @@ Ruft ein einzelnes Fahrzeug anhand der ID aus der Datenbank ab.
   }
 }
 ```
+
+## Datenquelle: CarGate API vs. Scraper
+
+- **CarGate Carzilla V6 API (empfohlen):** Wenn `CARGATE_API_KEY` und `CARGATE_API_BASE_URL` gesetzt sind:
+  - **Fahrzeuge kommen direkt von der API** (mit Cache, keine Datenbank nötig).
+  - Standtage/Zugangsdatum werden von der API gemappt und angezeigt.
+  - **DATABASE_URL ist dann optional** – Server startet ohne PostgreSQL.
+- **Ohne API:** Dann sind `DATABASE_URL` und Sync-Job nötig; Daten kommen aus dem Website-Scraper (kein Zugangsdatum/Standtage im Scraper).
 
 ## Background Sync Job
 

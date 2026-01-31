@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { Vehicle } from "@/types/vehicle";
 import { normalizeColorToBasic, BASIC_COLORS } from "@/lib/colorUtils";
-import { getBaseModelName, groupModelsBySeries, getVehicleType } from "@/lib/vehicleNameUtils";
+import { getBaseModelName, groupModelsBySeries, getVehicleType, isKleinwagenModel, START_PAGE_VEHICLE_TYPES } from "@/lib/vehicleNameUtils";
 import SEO from "@/components/SEO";
 import { getVehiclesPageSEO } from "@/utils/seo";
 
@@ -145,15 +145,24 @@ const VehiclesPage = () => {
     const fuelTypes = Array.from(new Set(vehicles.map(v => v.fuel))).sort();
     const transmissionTypes = Array.from(new Set(vehicles.map(v => v.transmission).filter(Boolean))).sort();
     
-    // Extract vehicle types using getVehicleType function
+    // Fahrzeugtypen: aus getVehicleType und aus Kategorie ableiten (Startseiten-Typen: Sportwagen, Limousine, …)
     const allVehicleTypes = new Set<string>();
+    const categoryToStartPageType: Record<string, string> = {
+      Sport: "Sportwagen",
+      Familienwagen: "Limousine",
+      Mittelklasse: "Limousine",
+      Kleinwagen: "Kleinwagen",
+      Kombi: "Kombi",
+      Van: "Van",
+      SUV: "SUV",
+    };
     vehicles.forEach(v => {
       const vehicleType = getVehicleType(v.model, v.vehicleType);
-      if (vehicleType) {
-        allVehicleTypes.add(vehicleType);
-      }
+      if (vehicleType) allVehicleTypes.add(vehicleType);
+      const categoryType = v.category ? categoryToStartPageType[v.category] : undefined;
+      if (categoryType) allVehicleTypes.add(categoryType);
     });
-    const vehicleTypes = Array.from(allVehicleTypes).sort();
+    const vehicleTypes = Array.from(allVehicleTypes).filter((t) => START_PAGE_VEHICLE_TYPES.includes(t as typeof START_PAGE_VEHICLE_TYPES[number])).sort();
     
     // Normalize exterior colors to basic colors for filter options
     const allExteriorColors = new Set<string>();
@@ -346,25 +355,23 @@ const VehiclesPage = () => {
         return false;
       }
       
-      // Vehicle type filter
+      // Vehicle type filter (Startseiten-Typen: Sportwagen, Limousine, Kleinwagen, Kombi, Van, Cabrio, SUV)
       if (filters.vehicleTypes.length > 0) {
         const vehicleType = getVehicleType(vehicle.model, vehicle.vehicleType);
+        const category = vehicle.category || "";
         let matchesFilter = false;
         
         for (const filterType of filters.vehicleTypes) {
-          // Special handling for "Kleinwagen" - check category instead of vehicleType
-          if (filterType === "Kleinwagen") {
-            if (vehicle.category === "Kleinwagen") {
-              matchesFilter = true;
-              break;
-            }
-          } else {
-            // For other types, check vehicleType
-            if (vehicleType === filterType) {
-              matchesFilter = true;
-              break;
-            }
+          if (vehicleType === filterType) {
+            matchesFilter = true;
+            break;
           }
+          // Kategorie zuordnen – Sportwagen nur wenn Modell kein Kleinwagen (z. B. Corsa ausschließen)
+          if (filterType === "Sportwagen" && category === "Sport" && !isKleinwagenModel(vehicle.model)) { matchesFilter = true; break; }
+          if (filterType === "Kleinwagen" && category === "Kleinwagen") { matchesFilter = true; break; }
+          if (filterType === "Kombi" && category === "Kombi") { matchesFilter = true; break; }
+          if (filterType === "Van" && category === "Van") { matchesFilter = true; break; }
+          if (filterType === "SUV" && category === "SUV") { matchesFilter = true; break; }
         }
         
         if (!matchesFilter) {
@@ -413,6 +420,14 @@ const VehiclesPage = () => {
     // Then sort
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
+        case "arrival-desc":
+          // Neueste Zugänge zuerst = wenigste Standtage oben (Standtage aufsteigend)
+          const daysA = a.standtage ?? (a.arrivalDate ? Math.max(0, Math.floor((Date.now() - new Date(a.arrivalDate).getTime()) / 86400000)) : null);
+          const daysB = b.standtage ?? (b.arrivalDate ? Math.max(0, Math.floor((Date.now() - new Date(b.arrivalDate).getTime()) / 86400000)) : null);
+          if (daysA == null && daysB == null) return 0;
+          if (daysA == null) return 1;   // a ohne Standtage nach hinten
+          if (daysB == null) return -1;   // b ohne Standtage nach hinten
+          return daysA - daysB;          // wenigste Tage zuerst
         case "price-asc":
           return a.price - b.price;
         case "price-desc":
@@ -614,6 +629,7 @@ const VehiclesPage = () => {
                     <SelectValue placeholder="Sortieren nach" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="arrival-desc">Neueste Zugänge</SelectItem>
                     <SelectItem value="price-desc">Preis: Höchste zuerst</SelectItem>
                     <SelectItem value="price-asc">Preis: Niedrigste zuerst</SelectItem>
                     <SelectItem value="year-desc">Jahr: Neueste zuerst</SelectItem>
