@@ -11,6 +11,8 @@ import {
 import { useVehicles } from "@/hooks/useVehicles";
 import { useBrands } from "@/hooks/useBrands";
 import { getVehicleImageWithFallback } from "@/lib/vehicleImage";
+import { getVehicleDisplayName, splitModelName } from "@/lib/vehicleNameUtils";
+import { VehicleTitle } from "@/components/VehicleTitle";
 import { useModels } from "@/hooks/useModels";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1434,15 +1436,20 @@ const VehiclePurchaseForm = ({
                       interestVehicle.image,
                       interestVehicle.id,
                     )}
-                    alt={`${interestVehicle.brand} ${interestVehicle.model}`}
+                    alt={getVehicleDisplayName(interestVehicle.brand, interestVehicle.model, interestVehicle.productionSeries)}
                     className="h-24 w-full rounded-lg object-cover sm:w-36"
                     loading="lazy"
                   />
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Fahrzeug gefunden</p>
-                    <h4 className="text-lg font-semibold text-foreground">
-                      {interestVehicle.brand} {interestVehicle.model}
-                    </h4>
+                    <VehicleTitle
+                      brand={interestVehicle.brand}
+                      model={splitModelName(interestVehicle.model).base}
+                      productionSeries={interestVehicle.productionSeries}
+                      modelVariant={interestVehicle.modelVariant ?? splitModelName(interestVehicle.model).variant}
+                      className="text-lg font-semibold text-foreground"
+                      as="h4"
+                    />
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span>{interestVehicle.year}</span>
                       <span>•</span>

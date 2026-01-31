@@ -17,8 +17,17 @@ pool.on("connect", () => {
 });
 
 pool.on("error", (err) => {
-  console.error("❌ Unexpected database error:", err);
+  console.error("❌ Database pool error:", err.message);
 });
+
+/** Holt einen Client aus dem Pool und fängt Fehler ab, damit Verbindungsabbrüche den Prozess nicht beenden. */
+async function getClient(): Promise<PoolClient> {
+  const client = await pool.connect();
+  client.on("error", (err: Error) => {
+    console.error("❌ Database client error (connection lost):", err.message);
+  });
+  return client;
+}
 
 // Database schema SQL
 const SCHEMA_SQL = `
@@ -53,6 +62,15 @@ CREATE TABLE IF NOT EXISTS vehicles (
   last_synced_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Baureihe (z. B. G21) – optional, für Anzeige in Klammern
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS production_series VARCHAR(20);
+
+-- Modellzusatz (z. B. eDrive40 GC M-SPORT-PRO) – unter Titel anzeigen
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS model_variant VARCHAR(255);
+
+-- Vollständige Herstellerfarbe (z. B. CAPE YORK GRUEN METALLIC) – für Detailansicht
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS exterior_color_full VARCHAR(150);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_vehicles_brand ON vehicles(brand);
 CREATE INDEX IF NOT EXISTS idx_vehicles_category ON vehicles(category);
@@ -80,7 +98,7 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
  * Initialize database - create tables if they don't exist
  */
 export async function initializeDatabase(): Promise<void> {
-  const client = await pool.connect();
+  const client = await getClient();
   try {
     // Execute schema
     await client.query(SCHEMA_SQL);
@@ -98,7 +116,7 @@ export async function initializeDatabase(): Promise<void> {
  * Get all vehicles from database
  */
 export async function getAllVehicles(): Promise<Vehicle[]> {
-  const client = await pool.connect();
+  const client = await getClient();
   try {
     const result = await client.query(`
       SELECT 
@@ -125,7 +143,10 @@ export async function getAllVehicles(): Promise<Vehicle[]> {
         category,
         vat_displayable as "vatDisplayable",
         vehicle_type as "vehicleType",
-        previous_owners as "previousOwners"
+        previous_owners as "previousOwners",
+        production_series as "productionSeries",
+        model_variant as "modelVariant",
+        exterior_color_full as "exteriorColorFull"
       FROM vehicles
       ORDER BY updated_at DESC
     `);
@@ -153,7 +174,7 @@ export async function getAllVehicles(): Promise<Vehicle[]> {
  * Get a single vehicle by ID
  */
 export async function getVehicleById(id: string): Promise<Vehicle | null> {
-  const client = await pool.connect();
+  const client = await getClient();
   try {
     const result = await client.query(
       `
@@ -181,7 +202,10 @@ export async function getVehicleById(id: string): Promise<Vehicle | null> {
         category,
         vat_displayable as "vatDisplayable",
         vehicle_type as "vehicleType",
-        previous_owners as "previousOwners"
+        previous_owners as "previousOwners",
+        production_series as "productionSeries",
+        model_variant as "modelVariant",
+        exterior_color_full as "exteriorColorFull"
       FROM vehicles
       WHERE id = $1
     `,
@@ -222,6 +246,9 @@ const MAX_LEN = {
   internal_number: 50,
   category: 100,
   vehicle_type: 100,
+  production_series: 20,
+  model_variant: 255,
+  exterior_color_full: 150,
 } as const;
 
 function truncate(str: string | null | undefined, max: number): string | null {
@@ -235,7 +262,7 @@ function truncate(str: string | null | undefined, max: number): string | null {
  * Uses a transaction to ensure all-or-nothing
  */
 export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
-  const client = await pool.connect();
+  const client = await getClient();
   try {
     await client.query("BEGIN");
     
@@ -250,11 +277,11 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
         `
         INSERT INTO vehicles (
           id, image, brand, model, price, year, mileage, fuel, transmission,
-          is_new, description, power, power_kw, exterior_color, interior_color,
+          is_new, description, power, power_kw, exterior_color, exterior_color_full, interior_color,
           equipment, expose_url, offer_url, internal_number, arrival_date,
-          category, vat_displayable, vehicle_type, previous_owners, last_synced_at
+          category, vat_displayable, vehicle_type, previous_owners, production_series, model_variant, last_synced_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
         ON CONFLICT (id) DO UPDATE SET
           image = EXCLUDED.image,
           brand = EXCLUDED.brand,
@@ -279,7 +306,10 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           vat_displayable = EXCLUDED.vat_displayable,
           vehicle_type = EXCLUDED.vehicle_type,
           previous_owners = EXCLUDED.previous_owners,
-          last_synced_at = $25
+          production_series = EXCLUDED.production_series,
+          model_variant = EXCLUDED.model_variant,
+          exterior_color_full = EXCLUDED.exterior_color_full,
+          last_synced_at = $28
         `,
         [
           id,
@@ -296,6 +326,7 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           vehicle.power || null,
           vehicle.powerKw || null,
           truncate(vehicle.exteriorColor, MAX_LEN.exterior_color),
+          truncate(vehicle.exteriorColorFull, MAX_LEN.exterior_color_full),
           truncate(vehicle.interiorColor, MAX_LEN.interior_color),
           vehicle.equipment || null,
           vehicle.exposeUrl || null,
@@ -306,6 +337,8 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           vehicle.vatDisplayable ?? null,
           truncate(vehicle.vehicleType, MAX_LEN.vehicle_type),
           vehicle.previousOwners || null,
+          truncate(vehicle.productionSeries, MAX_LEN.production_series),
+          truncate(vehicle.modelVariant, MAX_LEN.model_variant),
           now,
         ]
       );
@@ -328,7 +361,7 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
  * Only deletes vehicles that are not in the current vehicle list
  */
 export async function deleteOldVehicles(currentVehicleIds: string[]): Promise<number> {
-  const client = await pool.connect();
+  const client = await getClient();
   try {
     if (currentVehicleIds.length === 0) {
       // Don't delete anything if no vehicles were fetched
@@ -363,7 +396,7 @@ export async function deleteOldVehicles(currentVehicleIds: string[]): Promise<nu
  * Get the timestamp of the last successful sync
  */
 export async function getLastSyncTimestamp(): Promise<Date | null> {
-  const client = await pool.connect();
+  const client = await getClient();
   try {
     const result = await client.query(
       `SELECT MAX(last_synced_at) as last_sync FROM vehicles`

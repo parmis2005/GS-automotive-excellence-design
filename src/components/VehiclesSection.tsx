@@ -13,19 +13,21 @@ const VehiclesSection = () => {
   const sectionRef = useRef<HTMLElement>(null);
 
   // Get 6 vehicles in specific order: Sport, Familie, Elektro (top row), SUV, Kleinwagen, Elektro günstigstes (bottom row)
-  // Only vehicles with photos, specific selection criteria per category
+  // Prefer vehicles with photos; fallback to all vehicles so Startseite zeigt immer Autos
   const featuredVehicles = useMemo(() => {
     if (!vehicles) return [];
     
-    // Filter: Only vehicles with photos (image URL exists and is valid)
+    // Prefer vehicles with photos (image URL exists and is valid)
     const vehiclesWithPhotos = vehicles.filter(v => 
       v.image &&
       v.image.trim() !== '' &&
       !v.image.includes('placeholder') &&
       (v.image.startsWith('http://') || v.image.startsWith('https://'))
     );
+    // Fallback: alle Fahrzeuge nutzen, wenn keins mit Foto (damit Startseite wieder Autos zeigt)
+    const pool = vehiclesWithPhotos.length > 0 ? vehiclesWithPhotos : vehicles;
     
-    if (vehiclesWithPhotos.length === 0) return [];
+    if (pool.length === 0) return [];
     
     const selectedVehicles: Vehicle[] = [];
     const usedIds = new Set<string>();
@@ -65,7 +67,7 @@ const VehiclesSection = () => {
     };
     
     // 1. SPORT: Teuerstes Sport-Auto, muss Limousine sein (kein SUV)
-    const sportVehicles = vehiclesWithPhotos.filter(v => {
+    const sportVehicles = pool.filter(v => {
       if (usedIds.has(v.id)) return false;
       const category = v.category || "";
       const isSportCategory = category === "Sport";
@@ -78,7 +80,7 @@ const VehiclesSection = () => {
     }
     
     // 2. FAMILIE: Größtes Auto (Van)
-    const familyVehicles = vehiclesWithPhotos.filter(v => {
+    const familyVehicles = pool.filter(v => {
       if (usedIds.has(v.id)) return false;
       return isVan(v);
     });
@@ -97,7 +99,7 @@ const VehiclesSection = () => {
     }
     
     // 3. ELEKTRO: Neuestes Elektro-Auto mit Foto
-    const elektroVehicles = vehiclesWithPhotos.filter(v => {
+    const elektroVehicles = pool.filter(v => {
       if (usedIds.has(v.id)) return false;
       const category = v.category || "";
       return category === "Elektro";
@@ -122,7 +124,7 @@ const VehiclesSection = () => {
     }
     
     // 4. SUV: Teuerstes SUV
-    const suvVehicles = vehiclesWithPhotos.filter(v => {
+    const suvVehicles = pool.filter(v => {
       if (usedIds.has(v.id)) return false;
       const category = v.category || "";
       return category === "SUV";
@@ -134,7 +136,7 @@ const VehiclesSection = () => {
     }
     
     // 5. KLEINWAGEN: Jüngstes EZ (Erstzulassung) - Mini, Fiat, oder andere Kleinwagen
-    const kleinwagenVehicles = vehiclesWithPhotos.filter(v => {
+    const kleinwagenVehicles = pool.filter(v => {
       if (usedIds.has(v.id)) return false;
       const category = v.category || "";
       const brandLower = v.brand.toLowerCase();
@@ -168,7 +170,7 @@ const VehiclesSection = () => {
     }
     
     // 6. ELEKTRO (günstigstes): Günstigstes Elektro-Auto mit Foto
-    const elektroGuenstigVehicles = vehiclesWithPhotos.filter(v => {
+    const elektroGuenstigVehicles = pool.filter(v => {
       if (usedIds.has(v.id)) return false;
       const category = v.category || "";
       return category === "Elektro";
@@ -178,6 +180,20 @@ const VehiclesSection = () => {
       const elektroGuenstigVehicle = [...elektroGuenstigVehicles].sort((a, b) => a.price - b.price)[0];
       selectedVehicles.push(elektroGuenstigVehicle);
       usedIds.add(elektroGuenstigVehicle.id);
+    }
+    
+    // Fallback: Wenn keine/zu wenig kuratierte Auswahl, erste 6 Fahrzeuge anzeigen (wie früher)
+    if (selectedVehicles.length < 6) {
+      const remaining = pool
+        .filter(v => !usedIds.has(v.id))
+        .sort((a, b) => {
+          if (b.year !== a.year) return b.year - a.year;
+          if (a.arrivalDate && b.arrivalDate) return new Date(b.arrivalDate).getTime() - new Date(a.arrivalDate).getTime();
+          return 0;
+        });
+      for (let i = 0; i < Math.min(6 - selectedVehicles.length, remaining.length); i++) {
+        selectedVehicles.push(remaining[i]);
+      }
     }
     
     // Mark vehicles as "new" for display (only if < 30 days based on arrivalDate from cargate)

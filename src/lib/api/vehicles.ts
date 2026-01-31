@@ -51,9 +51,12 @@ console.log("🔗 VITE_API_URL env:", import.meta.env.VITE_API_URL);
  */
 export interface VehiclesResponse {
   success: boolean;
-  count: number;
-  data: Vehicle[];
-  timestamp: string;
+  count?: number;
+  data?: Vehicle[];
+  error?: string;
+  message?: string;
+  warning?: string;
+  timestamp?: string;
 }
 
 /**
@@ -83,27 +86,32 @@ export interface VehicleResponse {
  */
 export async function fetchVehicles(): Promise<Vehicle[]> {
   const url = `${API_BASE_URL}/vehicles`;
-  
+
   try {
     const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
       },
     });
-  
+
+    const data: VehiclesResponse = await response.json().catch(() => ({
+      success: false,
+      error: "Ungültige Server-Antwort",
+      message: response.statusText || `HTTP ${response.status}`,
+    }));
+
     if (!response.ok) {
-      const errorText = await response.text().catch(() => response.statusText);
-      console.error("❌ API Error:", response.status, errorText);
-      throw new Error(`Failed to fetch vehicles: ${response.status} ${response.statusText}`);
+      const msg = data?.error || data?.message || `${response.status} ${response.statusText}`;
+      console.error("❌ API Error:", response.status, msg);
+      throw new Error(msg);
     }
-  
-    const data: VehiclesResponse = await response.json();
-  
+
     if (!data.success) {
-      throw new Error("API returned unsuccessful response");
+      const msg = data?.error || data?.message || "Die Fahrzeuge konnten nicht geladen werden.";
+      throw new Error(msg);
     }
-  
-    return data.data;
+
+    return data.data ?? [];
   } catch (error) {
     console.error("❌ Fetch Vehicles Error:", error);
     console.error("📍 Attempted URL:", url);

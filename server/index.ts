@@ -36,29 +36,29 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Initialize database when DATABASE_URL is set (für Fallback wenn CarGate 404 o. ä.)
+// Server sofort starten, damit Vite-Proxy keine ECONNREFUSED bekommt; DB/Sync danach im Hintergrund
 async function startServer() {
-  try {
-    if (process.env.DATABASE_URL) {
-      await initializeDatabase();
-      const syncIntervalMinutes = parseInt(process.env.SYNC_INTERVAL_MINUTES || "30", 10);
-      startSyncJob(syncIntervalMinutes);
-      console.log(`🔄 Sync (every ${syncIntervalMinutes} min)`);
-    } else if (isCargateApiConfigured()) {
-      console.log("📡 Nur CarGate API (kein DB-Fallback ohne DATABASE_URL)");
-    } else {
-      console.error("❌ DATABASE_URL oder CarGate API (CARGATE_API_KEY + CARGATE_API_BASE_URL) nötig.");
-      process.exit(1);
-    }
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Server: http://localhost:${PORT}`);
-      console.log(`📡 API: http://localhost:${PORT}/api/vehicles`);
-    });
-  } catch (error) {
-    console.error("❌ Failed to start server:", error);
+  if (!process.env.DATABASE_URL && !isCargateApiConfigured()) {
+    console.error("❌ DATABASE_URL oder CarGate API (CARGATE_API_KEY + CARGATE_API_BASE_URL) nötig.");
     process.exit(1);
   }
+
+  app.listen(PORT, async () => {
+    console.log(`🚀 Server: http://localhost:${PORT}`);
+    console.log(`📡 API: http://localhost:${PORT}/api/vehicles`);
+    try {
+      if (process.env.DATABASE_URL) {
+        await initializeDatabase();
+        const syncIntervalMinutes = parseInt(process.env.SYNC_INTERVAL_MINUTES || "30", 10);
+        startSyncJob(syncIntervalMinutes);
+        console.log(`🔄 Sync (every ${syncIntervalMinutes} min)`);
+      } else if (isCargateApiConfigured()) {
+        console.log("📡 Nur CarGate API (kein DB-Fallback ohne DATABASE_URL)");
+      }
+    } catch (error) {
+      console.error("❌ DB/Sync nach Start:", error);
+    }
+  });
 }
 
 // Graceful shutdown

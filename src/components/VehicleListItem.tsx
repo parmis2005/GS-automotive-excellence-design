@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap, Phone, Mail, Car, Route, Cog, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
-import { Badge } from "@/components/ui/badge";
 import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
-import { splitModelName, getVehicleType, formatFuelType } from "@/lib/vehicleNameUtils";
+import { getVehicleType, formatFuelType, getVehicleDisplayName, splitModelName } from "@/lib/vehicleNameUtils";
+import { VehicleTitle } from "@/components/VehicleTitle";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
 
 interface VehicleListItemProps extends Vehicle {
@@ -17,6 +17,7 @@ const VehicleListItem = ({
   image,
   brand,
   model,
+  title,
   price,
   year,
   mileage,
@@ -35,8 +36,12 @@ const VehicleListItem = ({
   previousOwners,
   arrivalDate,
   standtage,
+  productionSeries,
+  modelVariant: modelVariantProp,
   isFirst = false,
 }: VehicleListItemProps) => {
+  const displayTitle = getVehicleDisplayName(brand, model, productionSeries, title);
+
   // Standtage für Test-Anzeige: von API oder aus Zugangsdatum berechnen
   const standtageDisplay = standtage ?? (arrivalDate ? Math.max(0, Math.floor((Date.now() - new Date(arrivalDate).getTime()) / 86400000)) : null);
   // Get image URL with fallback to placeholder
@@ -49,18 +54,21 @@ const VehicleListItem = ({
   
   // Check if the image is a placeholder (only one image exists AND it's a placeholder)
   useEffect(() => {
-    // Only check if we have an image URL from cargate
-    if (!image || !image.trim() || !image.includes('cargate360')) {
+    const isCargateImage = image?.includes('cargate360');
+    const isCarzillaImage = image?.includes('carzilla-services.com');
+    if (!image || !image.trim() || (!isCargateImage && !isCarzillaImage)) {
       setUsePlaceholder(true);
       return;
     }
-    
+
     // Check if image 1 is a real photo (by loading it and checking dimensions)
     // and if image 2 exists
     const checkImages = async () => {
       try {
-        // First check if image 2 exists - if it does, we definitely have real photos
-        const image2Url = `https://img.cargate360.de/default.aspx?vid=${id}&bid=1790&format=xl&ino=2&app=Kiste-Default`;
+        const bid = image?.match(/[?&]bid=([^&]+)/)?.[1] || '1790';
+        const image2Url = isCarzillaImage
+          ? `https://img.carzilla-services.com/Images.ashx?vid=${id}&bid=${bid}&format=l&ino=2&app=carzilla`
+          : `https://img.cargate360.de/default.aspx?vid=${id}&bid=1790&format=xl&ino=2&app=Kiste-Default`;
         const controller2 = new AbortController();
         const timeout2 = setTimeout(() => controller2.abort(), 2000);
         
@@ -119,13 +127,16 @@ const VehicleListItem = ({
   return (
     <div className="group bg-background border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 h-full flex flex-col min-h-[400px]">
       <div className="flex flex-col md:flex-row flex-1 min-h-full">
-        {/* Image - Left Side */}
-        <div className="relative w-full md:w-96 lg:w-[32rem] flex-shrink-0 bg-secondary overflow-hidden">
+        {/* Image - Left Side (klickbar zur Detailansicht) */}
+        <Link
+          to={`/fahrzeuge/${id}`}
+          className="relative w-full md:w-96 lg:w-[32rem] flex-shrink-0 bg-secondary overflow-hidden block group/image"
+        >
           <div className="relative w-full aspect-[4/3] p-1 bg-secondary">
             <img
               src={displayImageUrl}
-              alt={`${brand} ${model}`}
-              className="w-full h-full"
+              alt={displayTitle}
+              className="w-full h-full transition-transform duration-300 group-hover/image:scale-[1.02]"
               style={{ 
                 objectFit: isPlaceholderDisplay ? 'contain' : 'cover',
                 imageRendering: 'auto'
@@ -135,7 +146,7 @@ const VehicleListItem = ({
               onError={() => setImageError(true)}
             />
           </div>
-        </div>
+        </Link>
 
         {/* Content - Right Side */}
         <div className="flex-1 p-6 flex flex-col min-h-full">
@@ -144,33 +155,31 @@ const VehicleListItem = ({
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap text-sm text-muted-foreground">
                 {internalNumber && (
-                  <span className="font-medium text-foreground">Kennnr. {internalNumber}</span>
+                  <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium tracking-wide text-primary">
+                    NR. {internalNumber}
+                  </span>
                 )}
                 {internalNumber && standtageDisplay !== null && <span aria-hidden>·</span>}
                 {standtageDisplay !== null && (
                   <span>{standtageDisplay} Tage</span>
                 )}
               </div>
-              {(() => {
-                const { base, variant } = splitModelName(model);
-                return (
-                  <div className="mb-2">
-                    <h3 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                      {brand} {base}
-                    </h3>
-                    {variant && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {variant}
-                      </p>
-                    )}
-                    <div className="mt-1">
-                      <span className="inline-block bg-gray-800 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded">
-                        GEBRAUCHTWAGEN
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
+              <div className="mb-2">
+                <VehicleTitle
+                  brand={brand}
+                  model={splitModelName(model).base}
+                  productionSeries={productionSeries}
+                  modelVariant={modelVariantProp ?? splitModelName(model).variant}
+                  fallbackTitle={title}
+                  className="font-display text-2xl md:text-3xl font-bold text-foreground"
+                  as="h3"
+                />
+                <div className="mt-1">
+                  <span className="inline-block bg-gray-800 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded">
+                    GEBRAUCHTWAGEN
+                  </span>
+                </div>
+              </div>
             </div>
             
             {/* Price */}
@@ -298,7 +307,8 @@ const VehicleListItem = ({
                 className="flex-shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.open(exposeUrl, '_blank');
+                  const exposeRedirectUrl = `${import.meta.env.VITE_API_URL || ""}/api/vehicles/${id}/expose`;
+                  window.open(exposeRedirectUrl.startsWith("http") ? exposeRedirectUrl : `/api/vehicles/${id}/expose`, "_blank");
                 }}
               >
                 <Download className="w-4 h-4 mr-2" />
@@ -321,7 +331,7 @@ const VehicleListItem = ({
               className="flex-shrink-0"
               onClick={(e) => {
                 e.stopPropagation();
-                window.location.href = `mailto:info@gsauto.de?subject=Anfrage zu ${encodeURIComponent(brand + " " + model)}`;
+                window.location.href = `mailto:info@gsauto.de?subject=Anfrage zu ${encodeURIComponent(displayTitle)}`;
               }}
             >
               <Mail className="w-4 h-4 mr-2" />

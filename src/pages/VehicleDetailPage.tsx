@@ -38,7 +38,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { getPlaceholderImage, getVehicleImageWithFallback } from "@/lib/vehicleImage";
-import { splitModelName, getBaseModelName } from "@/lib/vehicleNameUtils";
+import { splitModelName, getBaseModelName, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
+import { VehicleTitle } from "@/components/VehicleTitle";
 
 /**
  * Helper function to build cargate360 image URL
@@ -303,7 +304,7 @@ const VehicleDetailPage = () => {
                   <img
                     key={selectedImageIndex}
                     src={availableImages[selectedImageIndex]}
-                    alt={`${vehicle.brand} ${vehicle.model} - Bild ${selectedImageIndex + 1}`}
+                    alt={`${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${selectedImageIndex + 1}`}
                     className="w-full h-full object-cover"
                     loading={selectedImageIndex === 0 ? "eager" : "lazy"}
                     fetchPriority={selectedImageIndex === 0 ? "high" : "auto"}
@@ -416,7 +417,7 @@ const VehicleDetailPage = () => {
                       >
                         <img
                           src={url}
-                          alt={`${vehicle.brand} ${vehicle.model} - Bild ${globalIndex + 1}`}
+                          alt={`${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${globalIndex + 1}`}
                           className="w-full h-full object-cover"
                           loading={globalIndex === 0 ? "eager" : "lazy"}
                           decoding="async"
@@ -444,7 +445,6 @@ const VehicleDetailPage = () => {
                   >
                     <CarouselContent className="-ml-2 md:-ml-4">
                       {similarVehicles.map((similarVehicle) => {
-                        const { base } = splitModelName(similarVehicle.model);
                         const placeholderImageUrl = getPlaceholderImage();
                         
                         // Determine if we should use placeholder
@@ -462,7 +462,7 @@ const VehicleDetailPage = () => {
                                 <div className="relative aspect-[16/9] overflow-hidden bg-secondary">
                                   <img
                                     src={displayImageUrl}
-                                    alt={`${similarVehicle.brand} ${similarVehicle.model}`}
+                                    alt={getVehicleDisplayName(similarVehicle.brand, similarVehicle.model, similarVehicle.productionSeries)}
                                     className="w-full h-full transition-transform duration-300 group-hover:scale-105"
                                     style={{ 
                                       objectFit: isPlaceholderDisplay ? 'contain' : 'cover',
@@ -476,14 +476,20 @@ const VehicleDetailPage = () => {
                                   />
                                 </div>
                                 
-                                {/* Compact Content - Brand, Model, Price, Mileage, Power */}
+                                {/* Compact Content - Brand, Model (+ Baureihe), Price, Mileage, Power */}
                                 <div className="p-2 space-y-1">
                                   <div className="text-[10px] text-primary font-medium uppercase tracking-wide">
                                     {similarVehicle.brand}
                                   </div>
-                                  <h3 className="text-xs font-semibold text-foreground line-clamp-1">
-                                    {base}
-                                  </h3>
+                                  <VehicleTitle
+                                    brand={similarVehicle.brand}
+                                    model={splitModelName(similarVehicle.model).base}
+                                    productionSeries={similarVehicle.productionSeries}
+                                    modelVariant={similarVehicle.modelVariant ?? splitModelName(similarVehicle.model).variant}
+                                    variantClassName="text-[10px] font-normal text-muted-foreground tracking-wide line-clamp-2"
+                                    className="text-xs font-semibold text-foreground"
+                                    as="h3"
+                                  />
                                   <div className="text-sm font-bold text-primary">
                                     {similarVehicle.price.toLocaleString("de-DE")} €
                                   </div>
@@ -519,27 +525,29 @@ const VehicleDetailPage = () => {
             <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-6 md:p-8 space-y-6">
               {/* Header */}
               <div>
-              {(() => {
-                const { base, variant } = splitModelName(vehicle.model);
-                return (
-                  <div className="mb-2">
-                    <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground">
-                      {vehicle.brand} {base}
-                    </h1>
-                    {variant && (
-                      <p className="text-base text-muted-foreground mt-1">
-                        {variant}
-                      </p>
-                    )}
-                  </div>
-                );
-              })()}
+              <div className="mb-2">
+                {(() => {
+                  const { base, variant } = splitModelName(vehicle.model);
+                  return (
+                    <VehicleTitle
+                      brand={vehicle.brand}
+                      model={base}
+                      productionSeries={vehicle.productionSeries}
+                      modelVariant={vehicle.modelVariant ?? variant}
+                      fallbackTitle={vehicle.brand + " " + vehicle.model}
+                      className="text-3xl md:text-4xl font-display font-bold text-foreground"
+                      as="h1"
+                    />
+                  );
+                })()}
+              </div>
               
               {/* Internal Number */}
               {vehicle.internalNumber && (
                 <div className="mb-4">
-                  <span className="text-sm text-muted-foreground">Interne Nummer: </span>
-                  <span className="text-sm font-semibold text-foreground">{vehicle.internalNumber}</span>
+                  <Badge variant="secondary" className="rounded-full px-3 py-1 font-medium">
+                    Kennnr. {vehicle.internalNumber}
+                  </Badge>
                 </div>
               )}
               
@@ -644,14 +652,14 @@ const VehicleDetailPage = () => {
                 </div>
               )}
 
-              {vehicle.exteriorColor && (
+              {(vehicle.exteriorColorFull || vehicle.exteriorColor) && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                     <div className="w-4 h-4 rounded-full border-2 border-primary" />
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground">Außenfarbe</div>
-                    <div className="font-semibold text-sm">{vehicle.exteriorColor}</div>
+                    <div className="font-semibold text-sm">{vehicle.exteriorColorFull ?? vehicle.exteriorColor}</div>
                   </div>
                 </div>
               )}
@@ -675,7 +683,7 @@ const VehicleDetailPage = () => {
                 size="default"
                 variant="outline"
                 className="flex-1"
-                onClick={() => window.location.href = "mailto:info@gsauto.de?subject=Anfrage zu " + encodeURIComponent(vehicle.brand + " " + vehicle.model)}
+                onClick={() => window.location.href = "mailto:info@gsauto.de?subject=Anfrage zu " + encodeURIComponent(getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries))}
               >
                 <Mail className="w-4 h-4 mr-2" />
                 Nachricht senden
@@ -685,7 +693,10 @@ const VehicleDetailPage = () => {
                   size="default"
                   variant="outline"
                   className="flex-1"
-                  onClick={() => window.open(vehicle.exposeUrl, '_blank')}
+                  onClick={() => {
+                    const exposeRedirectUrl = `${import.meta.env.VITE_API_URL || ""}/api/vehicles/${vehicle.id}/expose`;
+                    window.open(exposeRedirectUrl.startsWith("http") ? exposeRedirectUrl : `/api/vehicles/${vehicle.id}/expose`, "_blank");
+                  }}
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Exposé PDF
@@ -1022,7 +1033,7 @@ const VehicleDetailPage = () => {
               <>
                 <img
                   src={availableImages[selectedImageIndex]}
-                  alt={`${vehicle?.brand} ${vehicle?.model} - Bild ${selectedImageIndex + 1}`}
+                  alt={vehicle ? `${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${selectedImageIndex + 1}` : "Fahrzeugbild"}
                   className="max-w-full max-h-[95vh] object-contain"
                 />
                 
