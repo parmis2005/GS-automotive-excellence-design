@@ -706,6 +706,57 @@ const VehiclesPage = () => {
               <div className="flex-1">
                 {filteredAndSortedVehicles.length > 0 ? (
                   <>
+                    {/* Pagination - oben */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 mb-6">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="w-4 h-4 mr-1" />
+                          Zurück
+                        </Button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum: number;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={currentPage === pageNum ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(pageNum)}
+                                className="min-w-[40px]"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Weiter
+                          <ChevronRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      </div>
+                    )}
+                    <div className="text-center text-sm text-muted-foreground mb-4">
+                      Zeige {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedVehicles.length)} von {filteredAndSortedVehicles.length} Fahrzeugen
+                    </div>
                     <div className="space-y-4 mb-8">
                       {paginatedVehicles.map((vehicle, index) => (
                         <div key={vehicle.id} className="h-full">
