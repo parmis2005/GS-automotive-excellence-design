@@ -390,9 +390,16 @@ const VehiclesPage = () => {
       // Equipment filter (vehicle must have all selected equipment items)
       if (filters.equipment.length > 0) {
         const vehicleEquipment = vehicle.equipment || [];
-        const hasAllEquipment = filters.equipment.every(eq => 
-          vehicleEquipment.some(veq => veq.toLowerCase().includes(eq.toLowerCase()))
-        );
+        const eqMatchKeywords: Record<string, string[]> = {
+          "ACC": ["acc", "abstandstempomat"],
+        };
+        const hasAllEquipment = filters.equipment.every(eq => {
+          const keywords = eqMatchKeywords[eq] ?? [eq.toLowerCase()];
+          return vehicleEquipment.some(veq => {
+            const veqLower = veq.toLowerCase();
+            return keywords.some(kw => veqLower.includes(kw));
+          });
+        });
         if (!hasAllEquipment) {
           return false;
         }

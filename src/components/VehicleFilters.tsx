@@ -18,22 +18,49 @@ import { getVehicleTypeIcon } from "@/lib/vehicleTypeIcons";
 
 import type { Vehicle } from "@/types/vehicle";
 
-// Erlaubte Ausstattungsfilter
-const ALLOWED_EQUIPMENT_FILTERS = [
-  "Einparkhilfe",
-  "ALU",
-  "Navi",
-  "Klima",
-  "Klimaautomatik",
-  "Rückfahrkamera",
-  "LED",
-  "AHK",
-  "Sportsitze",
-  "Stoff",
-  "Teilleder",
-  "Leder",
-  "Panoramadach",
-  "Schiebedach",
+// Keywords für Equipment-Match (Anzeige in Filterliste)
+const EQUIPMENT_MATCH_KEYWORDS: Record<string, string[]> = {
+  ACC: ["acc", "abstandstempomat"],
+};
+
+const equipmentMatchesOptions = (allowed: string, equipmentList: string[]): boolean => {
+  const keywords = EQUIPMENT_MATCH_KEYWORDS[allowed] ?? [allowed.toLowerCase()];
+  return equipmentList.some((eq) => {
+    const eqLower = eq.toLowerCase();
+    return keywords.some((kw) => eqLower.includes(kw));
+  });
+};
+
+// Erlaubte Ausstattungsfilter, kategorisch sortiert
+const EQUIPMENT_FILTER_CATEGORIES: { label: string; items: string[] }[] = [
+  {
+    label: "Infotainment & Konnektivität",
+    items: ["Apple CarPlay", "Android Auto", "Navi", "Bluetooth", "Freisprecheinrichtung", "USB-anschluss", "Induktionsladen"],
+  },
+  {
+    label: "Klima & Komfort",
+    items: ["Klima", "Klimaautomatik", "Sitzheizung", "Lenkradheizung", "Standheizung"],
+  },
+  {
+    label: "Sicherheit & Fahrassistenz",
+    items: ["Einparkhilfe", "Rückfahrkamera", "360 grad kamera", "Totwinkelassistent", "Müdigkeitserkennung", "Fernlichtassistent", "ACC", "Tempomat"],
+  },
+  {
+    label: "Beleuchtung",
+    items: ["LED", "AHK"],
+  },
+  {
+    label: "Innenausstattung",
+    items: ["ALU", "Sportsitze", "Stoff", "Teilleder", "Leder", "Lederlenkrad", "Panoramadach", "Schiebedach"],
+  },
+  {
+    label: "Komfort & Zugang",
+    items: ["Keyless Go", "Keyless Entry", "Isofix"],
+  },
+  {
+    label: "Pakete & Sonstiges",
+    items: ["Sportpaket", "Garantie", "Regensensor"],
+  },
 ];
 
 interface VehicleFiltersProps {
@@ -775,39 +802,48 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
             </>
           )}
 
-          {/* Equipment - nur erlaubte Filter anzeigen */}
+          {/* Equipment - kategorisch sortiert */}
           {filterOptions.equipment && filterOptions.equipment.length > 0 && (() => {
-            // Filtere Equipment auf erlaubte Items
-            const filteredEquipment = ALLOWED_EQUIPMENT_FILTERS.filter(allowed =>
-              filterOptions.equipment.some(eq => 
-                eq.toLowerCase().includes(allowed.toLowerCase())
-              )
-            );
-            
-            if (filteredEquipment.length === 0) return null;
-            
+            const categoriesWithItems = EQUIPMENT_FILTER_CATEGORIES
+              .map((cat) => ({
+                ...cat,
+                items: cat.items.filter((allowed) =>
+                  equipmentMatchesOptions(allowed, filterOptions.equipment)
+                ),
+              }))
+              .filter((cat) => cat.items.length > 0);
+
+            if (categoriesWithItems.length === 0) return null;
+
             return (
               <>
                 <Separator className="mb-6" />
-                <div className="mb-6">
+                <div className="mb-6 space-y-5">
                   <Label className="mb-3 block">Ausstattung</Label>
-                  <div className="space-y-3">
-                    {filteredEquipment.map((eq) => (
-                      <div key={eq} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`equipment-${eq}`}
-                          checked={filters.equipment.includes(eq)}
-                          onCheckedChange={() => toggleEquipment(eq)}
-                        />
-                        <Label
-                          htmlFor={`equipment-${eq}`}
-                          className="text-sm font-normal cursor-pointer flex-1"
-                        >
-                          {eq}
-                        </Label>
+                  {categoriesWithItems.map((category) => (
+                    <div key={category.label}>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {category.label}
+                      </p>
+                      <div className="space-y-2">
+                        {category.items.map((eq) => (
+                          <div key={eq} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`equipment-${eq}`}
+                              checked={filters.equipment.includes(eq)}
+                              onCheckedChange={() => toggleEquipment(eq)}
+                            />
+                            <Label
+                              htmlFor={`equipment-${eq}`}
+                              className="text-sm font-normal cursor-pointer flex-1"
+                            >
+                              {eq}
+                            </Label>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               </>
             );
