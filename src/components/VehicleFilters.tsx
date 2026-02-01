@@ -82,9 +82,9 @@ interface VehicleFiltersProps {
 }
 
 const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: VehicleFiltersProps) => {
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [showFuelTypes, setShowFuelTypes] = useState(false);
-  const [showVehicleTypes, setShowVehicleTypes] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(true);
+  const [showFuelTypes, setShowFuelTypes] = useState(true);
+  const [showVehicleTypes, setShowVehicleTypes] = useState(true);
   const currentYear = new Date().getFullYear();
   
   // Calculate min/max price and year from vehicles
