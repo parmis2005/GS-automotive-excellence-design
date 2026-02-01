@@ -90,9 +90,14 @@
     @apply border-border;
   }
 
+  html, body {
+    @apply overflow-x-hidden;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Open Sans', sans-serif;
+    max-width: 100vw;
   }
 
   h1, h2, h3, h4, h5, h6 {

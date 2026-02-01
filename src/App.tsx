@@ -25,6 +25,7 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
+  <div className="min-w-0 w-full max-w-[100vw] overflow-x-hidden">
   <ErrorBoundary>
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
@@ -45,6 +46,7 @@ const App = () => (
       </QueryClientProvider>
     </HelmetProvider>
   </ErrorBoundary>
+  </div>
 );
 
 export default App;

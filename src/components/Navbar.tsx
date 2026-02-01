@@ -87,23 +87,23 @@ const Navbar = () => {
 
       {/* Main Navbar */}
       <nav
-        className={`sticky top-0 z-50 transition-all duration-300 navbar-scalable ${
+        className={`sticky top-0 z-50 transition-all duration-300 navbar-scalable overflow-x-hidden ${
           isScrolled
             ? "bg-white/95 backdrop-blur-md shadow-md py-3"
             : "bg-white py-4"
         }`}
       >
-        <div className="container mx-auto px-4 max-w-7xl lg:ml-[30px]">
-          <div className="flex items-center justify-between lg:justify-start">
+        <div className="w-full min-w-0 mx-auto px-3 sm:px-4 lg:px-6 max-w-7xl lg:ml-[30px]">
+          <div className="flex items-center justify-between lg:justify-start min-w-0 gap-2">
             {/* Logo - Mobile: links, Desktop: normal */}
             <Link 
               to="/"
-              className="flex items-center transition-transform hover:scale-105 duration-200 flex-shrink-0 lg:mr-0"
+              className="flex items-center transition-transform hover:scale-105 duration-200 flex-shrink-0 min-w-0 lg:mr-0"
             >
               <img 
                 src="/logo.png" 
                 alt="GS Automobile Rheinland" 
-                className="h-12 lg:h-14 md:h-16 w-auto"
+                className="h-10 sm:h-12 lg:h-14 md:h-16 w-auto max-w-[120px] sm:max-w-none"
               />
             </Link>
 
@@ -133,15 +133,16 @@ const Navbar = () => {
             </div>
 
             {/* Mobile: Fahrzeug suchen Button in der Mitte */}
-            <div className="flex-1 flex justify-center xl:hidden mx-4">
-              <Link to="/fahrzeuge">
+            <div className="flex-1 flex justify-center xl:hidden mx-2 min-w-0 shrink">
+              <Link to="/fahrzeuge" className="min-w-0">
                 <Button 
-                  variant="default" 
+                  variant="default"
                   size="sm"
-                  className="font-display font-semibold tracking-wide text-sm bg-primary hover:bg-primary/90 text-white shadow-md transition-all px-4 py-2 h-auto"
+                  className="font-display font-semibold tracking-wide text-xs sm:text-sm bg-primary hover:bg-primary/90 text-white shadow-md transition-all px-2 sm:px-4 py-1.5 sm:py-2 h-auto whitespace-nowrap"
                 >
-                  Fahrzeug suchen
-                  <ArrowRight className="w-4 h-4 ml-1.5" />
+                  <span className="hidden sm:inline">Fahrzeug suchen</span>
+                  <span className="sm:hidden">Suche</span>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1 sm:ml-1.5 inline" />
                 </Button>
               </Link>
             </div>
@@ -160,9 +161,9 @@ const Navbar = () => {
               </Link>
             </div>
 
-            {/* Mobile Menu Button - ganz rechts */}
+            {/* Mobile Menu Button - ganz rechts, immer sichtbar */}
             <button
-              className="xl:hidden p-2 text-foreground hover:bg-secondary rounded-lg transition-colors ml-auto flex-shrink-0"
+              className="xl:hidden p-2 text-foreground hover:bg-secondary rounded-lg transition-colors ml-auto flex-shrink-0 min-w-[44px]"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Menu"
             >
