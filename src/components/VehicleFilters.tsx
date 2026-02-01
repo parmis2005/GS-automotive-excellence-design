@@ -227,12 +227,12 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden sticky top-24 max-h-[calc(100vh-8rem)] flex flex-col">
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
       <div className="bg-[#0f2439] px-5 py-4 flex items-center gap-2 shrink-0">
         <SlidersHorizontal className="w-5 h-5 text-white" />
         <h2 className="text-xl font-bold text-white tracking-tight">Filter</h2>
       </div>
-      <div className="p-6 overflow-y-auto flex-1">
+      <div className="p-6">
 
       {/* Search */}
       <div className="mb-6">
@@ -777,7 +777,7 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
               <Separator className="mb-6" />
               <div className="mb-6">
                 <Label className="mb-3 block">Außenfarbe</Label>
-                <div className="space-y-3 max-h-48 overflow-y-auto">
+                <div className="space-y-3">
                   {filterOptions.exteriorColors.map((color) => (
                     <div key={color} className="flex items-center space-x-2">
                       <Checkbox
