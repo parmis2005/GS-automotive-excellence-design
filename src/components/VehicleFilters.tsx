@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Search, ChevronDown, Check, ChevronsUpDown } from "lucide-react";
+import { Search, ChevronDown, Check, ChevronsUpDown, SlidersHorizontal } from "lucide-react";
 import type { VehicleFiltersState } from "@/pages/VehiclesPage";
 import { getColorHex } from "@/lib/colorUtils";
 import { cn } from "@/lib/utils";
@@ -182,8 +182,12 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto">
-      <h2 className="text-xl font-semibold mb-6">Filter</h2>
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden sticky top-24 max-h-[calc(100vh-8rem)] flex flex-col">
+      <div className="bg-[#0f2439] px-5 py-4 flex items-center gap-2 shrink-0">
+        <SlidersHorizontal className="w-5 h-5 text-white" />
+        <h2 className="text-xl font-bold text-white tracking-tight">Filter</h2>
+      </div>
+      <div className="p-6 overflow-y-auto flex-1">
 
       {/* Search */}
       <div className="mb-6">
@@ -786,6 +790,7 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
           )}
         </CollapsibleContent>
       </Collapsible>
+      </div>
     </div>
   );
 };
