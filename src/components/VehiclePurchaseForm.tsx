@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   AlertTriangle,
   ChevronRight,
@@ -7,6 +8,7 @@ import {
   Minus,
   Plus,
   ImagePlus,
+  Search,
 } from "lucide-react";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useBrands } from "@/hooks/useBrands";
@@ -14,6 +16,7 @@ import { getVehicleImageWithFallback } from "@/lib/vehicleImage";
 import { getVehicleDisplayName, splitModelName } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 import { useModels } from "@/hooks/useModels";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
@@ -56,9 +59,9 @@ const huYears = Array.from({ length: 3 }, (_, index) =>
   String(currentYear + index),
 );
 
-const maxMileage = 500_000;
+const maxMileage = 300_000;
 const minMileage = 0;
-const maxOwners = 20;
+const maxOwners = 5;
 const minModelLength = 2;
 const minAccidentDescriptionLength = 10;
 const maxPhotoFiles = 10;
@@ -250,12 +253,8 @@ const stepInstructions: Record<string, { title: string; text: string }> = {
     text: "Wie viele Halter hatte das Fahrzeug bisher?",
   },
   service: {
-    title: "Servicehistorie",
-    text: "Scheckheft angeben. Falls vorhanden, bitte den letzten Service erfassen.",
-  },
-  hu: {
-    title: "HU-Status",
-    text: "Geben Sie den nachsten HU-Termin an oder markieren Sie \"abgelaufen\".",
+    title: "Service & HU",
+    text: "Letzter Service, Scheckheft-Status und nächster HU-Termin.",
   },
   condition: {
     title: "Fahrzeugzustand",
@@ -332,6 +331,8 @@ type VehiclePurchaseFormProps = {
   topBrands?: string[];
   labels?: Partial<Labels>;
   onSubmit?: (data: FormData) => void;
+  /** 3-stellige Kennnummer für Inzahlungsnahme (z. B. aus Detailansicht) */
+  initialInterestNumber?: string;
 };
 
 const defaultLabels: Labels = {
@@ -390,6 +391,7 @@ const VehiclePurchaseForm = ({
   topBrands = defaultTopBrands,
   labels,
   onSubmit,
+  initialInterestNumber: initialInterest = "",
 }: VehiclePurchaseFormProps) => {
   const mergedLabels = { ...defaultLabels, ...labels };
   const [currentStep, setCurrentStep] = useState(0);
@@ -426,7 +428,10 @@ const VehiclePurchaseForm = ({
     accidentAmount: "",
     vin: "",
     priceExpectation: "",
-    interestNumber: "",
+    interestNumber: (() => {
+      const digits = (initialInterest || "").replace(/\D/g, "").slice(0, 3);
+      return digits ? digits.padStart(3, "0") : "";
+    })(),
     contactFirstName: "",
     contactLastName: "",
     contactPhone: "",
@@ -688,10 +693,13 @@ const VehiclePurchaseForm = ({
               </p>
             </div>
 
-            {/* Kennnummer – optional, clean */}
+            {/* Kennnummer – Inzahlungsnahme, optional */}
             <div className="w-full max-w-sm mx-auto">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                Inzahlungsnahme?
+              <h4 className="text-sm font-semibold text-foreground mb-1">
+                Fahrzeug für Inzahlungsnahme auswählen
+              </h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                Geben Sie die 3-stellige Kennnummer des gewünschten Fahrzeugs ein – Sie finden sie in unserer Fahrzeugsuche.
               </p>
               <Input
                 value={interestNumber}
@@ -702,7 +710,20 @@ const VehiclePurchaseForm = ({
                 maxLength={3}
               />
               {interestNumber.length === 3 && !interestVehicle && (
-                <p className="mt-2 text-xs text-destructive">Nicht gefunden</p>
+                <p className="mt-2 text-xs text-destructive text-center">Nicht gefunden</p>
+              )}
+              {!interestVehicle && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Noch kein Fahrzeug im Blick?
+                  </p>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/fahrzeuge" className="inline-flex items-center gap-2">
+                      <Search className="h-4 w-4" />
+                      Fahrzeuge durchsuchen
+                    </Link>
+                  </Button>
+                </div>
               )}
               {interestVehicle && (
                 <div className="mt-6 w-full max-w-md mx-auto rounded-xl border border-border bg-card overflow-hidden shadow-md">
@@ -1064,17 +1085,46 @@ const VehiclePurchaseForm = ({
       },
       {
         id: "service",
-        title: "Scheckheft & letzter Service",
-        isValid: isServiceValid,
+        title: "Service & HU",
+        isValid: () => isServiceValid() && isHuValid(),
         render: () => (
           <div className="space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-lg font-bold text-foreground">Scheckheft vorhanden?</p>
-                <p className="text-xs text-muted-foreground">
-                  Wenn ja, bitte letztes Service-Datum.
-                </p>
+            {/* Letzter Service – letzte 4 Jahre */}
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-2">Letzter Service</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Monat</label>
+                  <select
+                    value={formData.lastServiceMonth}
+                    onChange={(event) => updateField("lastServiceMonth", event.target.value)}
+                    className="mt-1 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">–</option>
+                    {months.map((month) => (
+                      <option key={month} value={month}>{month}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Jahr</label>
+                  <select
+                    value={formData.lastServiceYear}
+                    onChange={(event) => updateField("lastServiceYear", event.target.value)}
+                    className="mt-1 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">–</option>
+                    {serviceYears.map((year) => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+            </div>
+
+            {/* Scheckheft vollständig gepflegt */}
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-2">Scheckheft vollständig gepflegt?</p>
               <div className="flex gap-2">
                 {[
                   { label: "Ja", value: true },
@@ -1084,7 +1134,7 @@ const VehiclePurchaseForm = ({
                     key={option.label}
                     type="button"
                     onClick={() => updateField("serviceBook", option.value)}
-                    className={`rounded-full border px-4 py-2 text-lg font-bold transition-colors ${
+                    className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                       formData.serviceBook === option.value
                         ? "border-primary bg-primary text-white"
                         : "border-border bg-background text-foreground hover:border-primary"
@@ -1096,96 +1146,49 @@ const VehiclePurchaseForm = ({
               </div>
             </div>
 
-            {formData.serviceBook && (
-              <div className="grid gap-4 sm:grid-cols-2">
+            {/* HU */}
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-foreground">HU fällig</p>
+                <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={formData.huExpired}
+                    onChange={(event) => updateField("huExpired", event.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary"
+                  />
+                  Abgelaufen
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-lg font-bold text-foreground">Monat</label>
+                  <label className="text-xs text-muted-foreground">Monat</label>
                   <select
-                    value={formData.lastServiceMonth}
-                    onChange={(event) => updateField("lastServiceMonth", event.target.value)}
-                    className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={formData.huMonth}
+                    onChange={(event) => updateField("huMonth", event.target.value)}
+                    disabled={formData.huExpired}
+                    className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="">Monat auswählen</option>
+                    <option value="">–</option>
                     {months.map((month) => (
-                      <option key={month} value={month}>
-                        {month}
-                      </option>
+                      <option key={month} value={month}>{month}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-lg font-bold text-foreground">Jahr</label>
+                  <label className="text-xs text-muted-foreground">Jahr</label>
                   <select
-                    value={formData.lastServiceYear}
-                    onChange={(event) => updateField("lastServiceYear", event.target.value)}
-                    className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={formData.huYear}
+                    onChange={(event) => updateField("huYear", event.target.value)}
+                    disabled={formData.huExpired}
+                    className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="">Jahr auswählen</option>
-                    {serviceYears.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
+                    <option value="">–</option>
+                    {huYears.map((year) => (
+                      <option key={year} value={year}>{year}</option>
                     ))}
                   </select>
                 </div>
-              </div>
-            )}
-          </div>
-        ),
-      },
-      {
-        id: "hu",
-        title: "HU fällig",
-        isValid: isHuValid,
-        render: () => (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-4">
-              <div>
-                <p className="text-lg font-bold text-foreground">HU abgelaufen</p>
-                <p className="text-xs text-muted-foreground">Deaktiviert den Termin.</p>
-              </div>
-              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={formData.huExpired}
-                  onChange={(event) => updateField("huExpired", event.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                />
-                Abgelaufen
-              </label>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-lg font-bold text-foreground">Monat</label>
-                <select
-                  value={formData.huMonth}
-                  onChange={(event) => updateField("huMonth", event.target.value)}
-                  disabled={formData.huExpired}
-                  className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="">Monat auswählen</option>
-                  {months.map((month) => (
-                    <option key={month} value={month}>
-                      {month}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-lg font-bold text-foreground">Jahr</label>
-                <select
-                  value={formData.huYear}
-                  onChange={(event) => updateField("huYear", event.target.value)}
-                  disabled={formData.huExpired}
-                  className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="">Jahr auswählen</option>
-                  {huYears.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
           </div>

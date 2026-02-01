@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -34,6 +34,8 @@ const highlights = [
 
 const VehiclePurchasePage = () => {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const kennnr = searchParams.get("kennnr") ?? "";
   const seoData = {
     title: generateTitle("Fahrzeugankauf"),
     description:
@@ -43,9 +45,19 @@ const VehiclePurchasePage = () => {
     type: "website" as const,
   };
 
+  const formElementId = "vehicle-purchase-form";
+
   useEffect(() => {
+    const hash = location.hash || "";
+    const wantsForm = hash === "#vehicle-purchase-form" || hash === `#${formElementId}` || kennnr;
+    if (wantsForm) {
+      const timer = setTimeout(() => {
+        document.getElementById(formElementId)?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [location.key]);
+  }, [location.key, location.hash, kennnr]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -133,7 +145,7 @@ const VehiclePurchasePage = () => {
           </div>
         </section>
 
-        <VehiclePurchaseForm />
+        <VehiclePurchaseForm initialInterestNumber={kennnr} />
 
         <section className="py-20">
           <div className="container mx-auto px-6">

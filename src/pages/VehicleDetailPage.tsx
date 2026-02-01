@@ -38,7 +38,9 @@ import {
   Users,
   Cog,
   Box,
-  Layers
+  Layers,
+  MapPin,
+  ExternalLink
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -618,9 +620,17 @@ const VehicleDetailPage = () => {
                       size="default"
                       variant="outline"
                       className="flex-1 bg-white/80 hover:bg-white border-gray-300/60 text-foreground hover:text-foreground font-semibold shadow-sm hover:shadow-md transition-all group border-2"
+                      asChild
                     >
-                      <ArrowLeftRight className="w-4 h-4 mr-2 text-primary group-hover:scale-110 transition-transform" />
-                      Inzahlungsnahme
+                      <Link
+                        to={(() => {
+                          const digits = (vehicle.internalNumber || "").replace(/\D/g, "").slice(0, 3);
+                          return digits ? `/fahrzeugankauf?kennnr=${encodeURIComponent(digits.padStart(3, "0"))}` : "/fahrzeugankauf";
+                        })()}
+                      >
+                        <ArrowLeftRight className="w-4 h-4 mr-2 text-primary group-hover:scale-110 transition-transform" />
+                        Inzahlungsnahme
+                      </Link>
                     </Button>
                   </div>
                 </div>
@@ -794,14 +804,16 @@ const VehicleDetailPage = () => {
             </div>
 
             {/* Kaufanfrage – unter Schnellinfos */}
-            <div id="kaufanfrage" className="mt-6 bg-card border border-border rounded-2xl p-6 lg:p-8 shadow-sm scroll-mt-20 shrink-0">
-              <h3 className="text-xl font-bold mb-4">Kaufanfrage</h3>
+            <div id="kaufanfrage" className="mt-6 bg-card border border-border rounded-2xl shadow-sm overflow-hidden scroll-mt-20 shrink-0">
+              <div className="bg-[#0f2439] px-6 py-4">
+                <h3 className="text-xl font-bold text-white tracking-tight">Kaufanfrage</h3>
+              </div>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   console.log("Form submitted:", formData);
                 }}
-                className="space-y-4"
+                className="p-6 lg:p-8 space-y-4"
               >
                 <div>
                   <Label htmlFor="salutation">Anrede *</Label>
@@ -1055,21 +1067,38 @@ const VehicleDetailPage = () => {
                     <div>So: Geschlossen</div>
                   </div>
                 </div>
+                <Separator />
+                <div>
+                  <div className="text-sm text-muted-foreground mb-2">Fahrzeugstandort</div>
+                  <div className="text-sm space-y-0.5 text-foreground">
+                    <div className="font-medium">GS Automobile Rheinland GmbH</div>
+                    <div>Kuhleshütte 149</div>
+                    <div>47809 Krefeld</div>
+                    <a
+                      href="tel:021519422262"
+                      className="inline-block mt-2 text-primary font-medium hover:underline"
+                    >
+                      Tel.: 02151 94 222 62
+                    </a>
+                  </div>
+                  <a
+                    href="https://www.google.com/maps/search/?api=1&query=Kuhlesh%C3%BCtte+149+47809+Krefeld"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 mt-3 py-4 px-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors group"
+                    title="Standort in Google Maps anzeigen"
+                  >
+                    <MapPin className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-foreground">Standort in Google Maps anzeigen</span>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
         </div>
         </div>
 
-        {/* Description */}
-        {vehicle.description && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-4">Beschreibung</h2>
-            <div className="prose prose-sm max-w-none text-muted-foreground">
-              <p>{vehicle.description}</p>
-            </div>
-          </div>
-        )}
       </main>
       <Footer />
       
@@ -1098,26 +1127,26 @@ const VehicleDetailPage = () => {
                   <ZoomOut className="w-5 h-5" />
                 </button>
                 
-                {/* Navigation Arrows in Zoom View */}
+                {/* Navigation Arrows in Zoom View – auf Mobil unauffälliger */}
                 {availableImages.length > 1 && (
                   <>
                     <button
                       onClick={() => setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : availableImages.length - 1))}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center z-10 transition-all"
+                      className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-black/15 hover:bg-black/35 sm:bg-black/50 sm:hover:bg-black/70 text-white/80 sm:text-white flex items-center justify-center z-10 transition-all"
                       aria-label="Vorheriges Bild"
                     >
-                      <ChevronLeft className="w-6 h-6" />
+                      <ChevronLeft className="w-4 h-4 sm:w-6 sm:h-6" />
                     </button>
                     <button
                       onClick={() => setSelectedImageIndex((prev) => (prev < availableImages.length - 1 ? prev + 1 : 0))}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center z-10 transition-all"
+                      className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-black/15 hover:bg-black/35 sm:bg-black/50 sm:hover:bg-black/70 text-white/80 sm:text-white flex items-center justify-center z-10 transition-all"
                       aria-label="Nächstes Bild"
                     >
-                      <ChevronRight className="w-6 h-6" />
+                      <ChevronRight className="w-4 h-4 sm:w-6 sm:h-6" />
                     </button>
                     
                     {/* Image Counter in Zoom View */}
-                    <div className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-full text-sm z-10">
+                    <div className="absolute bottom-4 right-4 bg-black/30 sm:bg-black/50 text-white/90 sm:text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm z-10">
                       {selectedImageIndex + 1} / {availableImages.length}
                     </div>
                   </>
