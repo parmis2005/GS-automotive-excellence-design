@@ -34,7 +34,11 @@ import {
   Sofa,
   Settings,
   Sparkles,
-  Armchair
+  Armchair,
+  Users,
+  Cog,
+  Box,
+  Layers
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -296,9 +300,9 @@ const VehicleDetailPage = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* Left Column - Images */}
-          <div className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
+          {/* Left Column - Images, Similar, Ausstattung */}
+          <div className="flex flex-col gap-4 min-h-0">
             {/* Image Gallery Container - Box with subtle background */}
             <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-3 space-y-3">
               {/* Main Image with Navigation */}
@@ -504,10 +508,58 @@ const VehicleDetailPage = () => {
                 </div>
               </div>
             )}
+
+            {/* Ausstattung – unter Ähnlichen Angeboten, scrollbar, endet wo Kaufanfrage endet */}
+            {vehicle.equipment && vehicle.equipment.length > 0 ? (
+              <div className="mt-6 flex-1 min-h-0 flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                <div className="bg-[#0f2439] px-5 py-4 flex items-center gap-2 shrink-0">
+                  <CheckCircle2 className="w-5 h-5 text-white" />
+                  <h2 className="text-xl font-bold text-white tracking-tight">Ausstattung</h2>
+                </div>
+                <div className="space-y-4 overflow-y-auto pr-1 min-h-0 flex-1 p-5 pt-4">
+                  {(() => {
+                    const grouped = groupEquipmentByCategory(vehicle.equipment);
+                    const categoryLabels: Record<string, string> = {
+                      Komfort: "Komfort", Sicherheit: "Sicherheit", Multimedia: "Multimedia",
+                      "Licht & Sicht": "Licht & Sicht", Außen: "Außen", Innenausstattung: "Innenausstattung",
+                      "Fahrwerk & Antrieb": "Fahrwerk & Antrieb", Sonstiges: "Weitere Ausstattung",
+                    };
+                    const categoryIcons: Record<string, React.ReactNode> = {
+                      Komfort: <Armchair className="w-4 h-4" />, Sicherheit: <Shield className="w-4 h-4" />,
+                      Multimedia: <Radio className="w-4 h-4" />, "Licht & Sicht": <Sun className="w-4 h-4" />,
+                      Außen: <Car className="w-4 h-4" />, Innenausstattung: <Sofa className="w-4 h-4" />,
+                      "Fahrwerk & Antrieb": <Settings className="w-4 h-4" />, Sonstiges: <Sparkles className="w-4 h-4" />,
+                    };
+                    return Array.from(grouped.entries()).map(([category, items]) => {
+                      if (items.length === 0) return null;
+                      return (
+                        <section key={category} className="rounded-lg border border-border/80 bg-muted/30 p-4">
+                          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            {categoryIcons[category]}
+                            {categoryLabels[category] ?? category}
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {items.map((item, idx) => (
+                              <span key={idx} className="inline-flex items-center rounded-full bg-background px-2.5 py-1 text-xs border border-border/60">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </section>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6 flex-1 min-h-0 rounded-xl border border-dashed border-border bg-muted/10 p-8 flex items-center justify-center text-sm text-muted-foreground">
+                Keine Ausstattungsdaten vorhanden
+              </div>
+            )}
           </div>
 
-          {/* Right Column - Details */}
-          <div className="space-y-6">
+          {/* Right Column - Details, Kaufanfrage unter Schnellinfos */}
+          <div className="flex flex-col gap-6 min-h-0">
             {/* Premium Box - Header, Price, Quick Specs, CTA Buttons */}
             <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-6 md:p-8 space-y-6">
               {/* Header */}
@@ -615,7 +667,7 @@ const VehicleDetailPage = () => {
               {vehicle.transmission && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Zap className="w-5 h-5 text-primary" />
+                    <Cog className="w-5 h-5 text-primary" />
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground">Getriebe</div>
@@ -650,12 +702,62 @@ const VehicleDetailPage = () => {
                   </div>
                 </div>
               )}
+
+              {vehicle.productionSeries && (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Car className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Baureihe</div>
+                    <div className="font-semibold">{vehicle.productionSeries}</div>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.previousOwners !== undefined && vehicle.previousOwners > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Vorbesitzer</div>
+                    <div className="font-semibold">{vehicle.previousOwners}</div>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.cubicCapacity && vehicle.cubicCapacity > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Box className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Hubraum</div>
+                    <div className="font-semibold">
+                      {vehicle.cubicCapacity.toLocaleString("de-DE")} cm³
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {vehicle.cylinders && vehicle.cylinders > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Layers className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Zylinder</div>
+                    <div className="font-semibold">{vehicle.cylinders}</div>
+                  </div>
+                </div>
+              )}
               </div>
             </div>
 
             <Separator />
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons – Ende der Schnellinfos-Box */}
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 size="default"
@@ -690,92 +792,17 @@ const VehicleDetailPage = () => {
                 </Button>
               )}
             </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Ausstattung (links) + Kaufanfrage (rechts) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 mt-10 lg:mt-12">
-          {/* Ausstattung – linke Hälfte */}
-          <div className="order-2 lg:order-1">
-                {vehicle.equipment && vehicle.equipment.length > 0 ? (
-                  <div className="h-full">
-                    <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <CheckCircle2 className="w-5 h-5" />
-                      </span>
-                      Ausstattung
-                    </h2>
-                    <div className="space-y-6 overflow-y-auto pr-1">
-                      {(() => {
-                        const grouped = groupEquipmentByCategory(vehicle.equipment);
-                        const categoryLabels: Record<string, string> = {
-                          Komfort: "Komfort",
-                          Sicherheit: "Sicherheit",
-                          Multimedia: "Multimedia",
-                          "Licht & Sicht": "Licht & Sicht",
-                          Außen: "Außen",
-                          Innenausstattung: "Innenausstattung",
-                          "Fahrwerk & Antrieb": "Fahrwerk & Antrieb",
-                          Sonstiges: "Weitere Ausstattung",
-                        };
-                        const categoryIcons: Record<string, React.ReactNode> = {
-                          Komfort: <Armchair className="w-4 h-4" />,
-                          Sicherheit: <Shield className="w-4 h-4" />,
-                          Multimedia: <Radio className="w-4 h-4" />,
-                          "Licht & Sicht": <Sun className="w-4 h-4" />,
-                          Außen: <Car className="w-4 h-4" />,
-                          Innenausstattung: <Sofa className="w-4 h-4" />,
-                          "Fahrwerk & Antrieb": <Settings className="w-4 h-4" />,
-                          Sonstiges: <Sparkles className="w-4 h-4" />,
-                        };
-                        return Array.from(grouped.entries()).map(([category, items]) => {
-                          if (items.length === 0) return null;
-                          return (
-                            <section
-                              key={category}
-                              className="rounded-2xl border border-border/80 bg-card/50 backdrop-blur-sm p-5 shadow-sm hover:shadow-md transition-shadow"
-                            >
-                              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2 text-muted-foreground">
-                                {categoryIcons[category]}
-                                {categoryLabels[category] ?? category}
-                              </h3>
-                              <div className="flex flex-wrap gap-2">
-                                {items.map((item, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="inline-flex items-center rounded-full bg-muted/70 px-3 py-1.5 text-sm text-foreground border border-border/50 hover:bg-muted transition-colors"
-                                  >
-                                    {item}
-                                  </span>
-                                ))}
-                              </div>
-                            </section>
-                          );
-                        });
-                      })()}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-border bg-muted/10 p-12 text-center text-muted-foreground">
-                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                    <p className="text-sm font-medium">Keine Ausstattungsdaten vorhanden</p>
-                  </div>
-                )}
-              </div>
-
-          {/* Kaufanfrage – rechte Hälfte */}
-          <div id="kaufanfrage" className="order-1 lg:order-2 bg-card border border-border rounded-2xl p-6 lg:p-8 shadow-sm scroll-mt-20 self-start lg:sticky lg:top-24">
-                <h3 className="text-xl font-bold mb-4">Kaufanfrage</h3>
+            {/* Kaufanfrage – unter Schnellinfos */}
+            <div id="kaufanfrage" className="mt-6 bg-card border border-border rounded-2xl p-6 lg:p-8 shadow-sm scroll-mt-20 shrink-0">
+              <h3 className="text-xl font-bold mb-4">Kaufanfrage</h3>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  // TODO: Implement form submission
                   console.log("Form submitted:", formData);
                 }}
                 className="space-y-4"
               >
-                {/* Anrede */}
                 <div>
                   <Label htmlFor="salutation">Anrede *</Label>
                   <Select
@@ -792,8 +819,6 @@ const VehicleDetailPage = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Vorname & Nachname */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName">Vorname *</Label>
@@ -814,8 +839,6 @@ const VehicleDetailPage = () => {
                     />
                   </div>
                 </div>
-
-                {/* Firma (optional) */}
                 <div>
                   <Label htmlFor="company">Firma</Label>
                   <Input
@@ -824,8 +847,6 @@ const VehicleDetailPage = () => {
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                   />
                 </div>
-
-                {/* Straße & Hausnummer */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="col-span-2">
                     <Label htmlFor="street">Straße *</Label>
@@ -837,7 +858,7 @@ const VehicleDetailPage = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="houseNumber">Hausnummer *</Label>
+                    <Label htmlFor="houseNumber">Hausnr. *</Label>
                     <Input
                       id="houseNumber"
                       value={formData.houseNumber}
@@ -846,9 +867,7 @@ const VehicleDetailPage = () => {
                     />
                   </div>
                 </div>
-
-                {/* PLZ & Ort */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="zipCode">PLZ *</Label>
                     <Input
@@ -858,7 +877,7 @@ const VehicleDetailPage = () => {
                       required
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div>
                     <Label htmlFor="city">Ort *</Label>
                     <Input
                       id="city"
@@ -868,8 +887,6 @@ const VehicleDetailPage = () => {
                     />
                   </div>
                 </div>
-
-                {/* Email & Telefon */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="email">E-Mail *</Label>
@@ -892,8 +909,6 @@ const VehicleDetailPage = () => {
                     />
                   </div>
                 </div>
-
-                {/* Geburtsdatum */}
                 <div>
                   <Label>Geburtsdatum *</Label>
                   <div className="grid grid-cols-3 gap-4 mt-2">
@@ -913,7 +928,6 @@ const VehicleDetailPage = () => {
                         onBlur={(e) => {
                           const numValue = parseInt(e.target.value);
                           if (e.target.value && (isNaN(numValue) || numValue < 1 || numValue > 31)) {
-                            // Reset if invalid
                             setFormData({ ...formData, birthDay: '' });
                           }
                         }}
@@ -937,7 +951,6 @@ const VehicleDetailPage = () => {
                         onBlur={(e) => {
                           const numValue = parseInt(e.target.value);
                           if (e.target.value && (isNaN(numValue) || numValue < 1 || numValue > 12)) {
-                            // Reset if invalid
                             setFormData({ ...formData, birthMonth: '' });
                           }
                         }}
@@ -960,8 +973,7 @@ const VehicleDetailPage = () => {
                         }}
                         onBlur={(e) => {
                           const numValue = parseInt(e.target.value);
-                          if (e.target.value && (isNaN(numValue) || numValue < 1925 || numValue > 2026)) {
-                            // Reset if invalid
+                          if (e.target.value && (isNaN(numValue) || numValue < 1900 || numValue > new Date().getFullYear())) {
                             setFormData({ ...formData, birthYear: '' });
                           }
                         }}
@@ -971,8 +983,6 @@ const VehicleDetailPage = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Nachricht */}
                 <div>
                   <Label htmlFor="message">Nachricht</Label>
                   <Textarea
@@ -983,8 +993,6 @@ const VehicleDetailPage = () => {
                     placeholder="Ihre Nachricht an uns..."
                   />
                 </div>
-
-                {/* Datenschutzerklärung */}
                 <div className="flex items-start space-x-2">
                   <Checkbox
                     id="privacy"
@@ -1003,8 +1011,6 @@ const VehicleDetailPage = () => {
                     gelesen und akzeptiert. *
                   </Label>
                 </div>
-
-                {/* Submit Button */}
                 <Button
                   type="submit"
                   size="lg"
@@ -1014,43 +1020,45 @@ const VehicleDetailPage = () => {
                   Kaufanfrage absenden
                 </Button>
               </form>
-          </div>
-        </div>
+            </div>
 
-        {/* Contact Card */}
-        <div className="mt-12">
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h3 className="text-xl font-bold mb-4">Kontakt</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Telefon</div>
-                <a
-                  href="tel:021519422262"
-                  className="text-foreground font-semibold hover:text-primary transition-colors"
-                >
-                  02151 94 222 62
-                </a>
+            {/* Kontakt – unter Fahrzeugankauf-Formular */}
+            <div className="mt-6 bg-card border border-border rounded-lg shadow-sm overflow-hidden shrink-0">
+              <div className="bg-[#0f2439] px-6 py-4">
+                <h3 className="text-xl font-bold text-white tracking-tight">Kontakt</h3>
               </div>
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">E-Mail</div>
-                <a
-                  href="mailto:info@gsauto.de"
-                  className="text-foreground font-semibold hover:text-primary transition-colors"
-                >
-                  info@gsauto.de
-                </a>
-              </div>
-              <Separator />
-              <div>
-                <div className="text-sm text-muted-foreground mb-2">Öffnungszeiten</div>
-                <div className="text-sm space-y-1">
-                  <div>Mo - Fr: 9:00 - 18:00 Uhr</div>
-                  <div>Sa: 9:00 - 14:00 Uhr</div>
-                  <div>So: Geschlossen</div>
+              <div className="space-y-4 p-6 pt-4">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Telefon</div>
+                  <a
+                    href="tel:021519422262"
+                    className="text-foreground font-semibold hover:text-primary transition-colors"
+                  >
+                    02151 94 222 62
+                  </a>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">E-Mail</div>
+                  <a
+                    href="mailto:info@gsauto.de"
+                    className="text-foreground font-semibold hover:text-primary transition-colors"
+                  >
+                    info@gsauto.de
+                  </a>
+                </div>
+                <Separator />
+                <div>
+                  <div className="text-sm text-muted-foreground mb-2">Öffnungszeiten</div>
+                  <div className="text-sm space-y-1">
+                    <div>Mo - Fr: 9:00 - 18:00 Uhr</div>
+                    <div>Sa: 9:00 - 14:00 Uhr</div>
+                    <div>So: Geschlossen</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
         </div>
 
         {/* Description */}
@@ -1065,16 +1073,20 @@ const VehicleDetailPage = () => {
       </main>
       <Footer />
       
-      {/* Zoom Dialog */}
+      {/* Zoom Dialog – Vollbild auf Desktop und Handy (iOS: -webkit-fill-available für korrekte Höhe) */}
       <Dialog open={isZoomed} onOpenChange={setIsZoomed}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] w-auto h-auto p-0 bg-black/95 border-none">
-          <div className="relative w-full h-full flex items-center justify-center">
+        <DialogContent 
+          className="inset-0 left-0 top-0 right-0 bottom-0 w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 rounded-none p-0 bg-black border-none data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-95 [&>button]:hidden overflow-hidden flex flex-col"
+          style={{ height: '100dvh', minHeight: '-webkit-fill-available' } as React.CSSProperties}
+        >
+          <div className="relative flex-1 min-h-0 flex items-center justify-center p-0 sm:p-6">
             {availableImages.length > 0 && (
               <>
                 <img
                   src={availableImages[selectedImageIndex]}
                   alt={vehicle ? `${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${selectedImageIndex + 1}` : "Fahrzeugbild"}
-                  className="max-w-full max-h-[95vh] object-contain"
+                  className="w-full sm:w-auto h-auto object-contain sm:max-w-[calc(100vw-3rem)]"
+                  style={{ maxHeight: 'calc(100vh - 2rem)' }}
                 />
                 
                 {/* Close Button with ZoomOut Icon */}

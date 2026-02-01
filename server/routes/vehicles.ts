@@ -45,6 +45,7 @@ vehiclesRouter.get("/", async (req, res) => {
       vehicles = await getAllVehicles();
     }
 
+    res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60, stale-while-revalidate=300");
     res.json({
       success: true,
       count: vehicles.length,
@@ -143,6 +144,7 @@ vehiclesRouter.get("/:id", async (req, res) => {
       });
     }
 
+    res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60, stale-while-revalidate=300");
     res.json({
       success: true,
       data: vehicle,

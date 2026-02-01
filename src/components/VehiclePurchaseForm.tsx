@@ -63,7 +63,21 @@ const minModelLength = 2;
 const minAccidentDescriptionLength = 10;
 const maxPhotoFiles = 10;
 const maxPhotoSizeMb = 10;
-const allowedUploadTypes = ["image/*", "application/pdf"];
+const allowedUploadTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/gif",
+  "application/pdf",
+];
+
+/** Safari auf macOS (MacBook) – dort friert der File-Upload ein. Safari auf iPhone funktioniert. */
+const isSafariOnMac = () =>
+  typeof navigator !== "undefined" &&
+  /^((?!chrome|chromium|crios|fxios|edg).)*safari/i.test(navigator.userAgent) &&
+  /Macintosh|Mac OS X/i.test(navigator.userAgent) &&
+  !/iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 const defaultTopBrands = [
   "Volkswagen",
@@ -255,6 +269,10 @@ const stepInstructions: Record<string, { title: string; text: string }> = {
     title: "Fotos hochladen (optional)",
     text: "Bis zu 10 Bilder helfen uns bei der schnellen Bewertung.",
   },
+  titleSlide: {
+    title: "Start",
+    text: "Vor dem Start: Fahrgestellnummer bereithalten. Optional: Fahrzeug für Inzahlungsnahme auswählen.",
+  },
   interest: {
     title: "Interessensnummer",
     text: "Bitte die Nummer des Fahrzeugs eingeben, an dem Sie interessiert sind (Inzahlungnahme).",
@@ -305,6 +323,7 @@ type Labels = {
   next: string;
   back: string;
   submit: string;
+  start?: string;
 };
 
 type VehiclePurchaseFormProps = {
@@ -321,6 +340,7 @@ const defaultLabels: Labels = {
   next: "Weiter",
   back: "Zurück",
   submit: "Anfrage absenden",
+  start: "Starten",
 };
 
 const formatNumber = (value: number) =>
@@ -515,60 +535,67 @@ const VehiclePurchaseForm = ({
     setMileageInput(formatNumber(bounded));
   };
 
-  const handlePhotoFiles = (files: FileList | File[]) => {
+  const processFilesAsync = (
+    files: FileList | File[],
+    onDone: (accepted: File[], rejected: string[]) => void,
+  ) => {
     const incoming = Array.from(files);
-    const accepted: File[] = [];
-    const rejected: string[] = [];
+    const maxBytes = maxPhotoSizeMb * 1024 * 1024;
 
-    incoming.forEach((file) => {
-      if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
-        rejected.push(`${file.name}: ungültiger Dateityp`);
+    const processOne = (i: number, accepted: File[], rejected: string[]) => {
+      if (i >= incoming.length) {
+        onDone(accepted, rejected);
         return;
       }
-      if (file.size > maxPhotoSizeMb * 1024 * 1024) {
-        rejected.push(`${file.name}: größer als ${maxPhotoSizeMb} MB`);
-        return;
-      }
-      accepted.push(file);
-    });
+      const file = incoming[i];
+      const type = file.type;
+      const size = file.size;
+      const name = file.name;
 
-    setPhotoFiles((prev) => {
-      const combined = [...prev, ...accepted];
-      if (combined.length > maxPhotoFiles) {
-        rejected.push(`Maximal ${maxPhotoFiles} Dateien`);
+      if (!type.startsWith("image/") && type !== "application/pdf") {
+        rejected.push(`${name}: ungültiger Dateityp`);
+      } else if (size > maxBytes) {
+        rejected.push(`${name}: größer als ${maxPhotoSizeMb} MB`);
+      } else {
+        accepted.push(file);
       }
-      return combined.slice(0, maxPhotoFiles);
-    });
 
-    setPhotoError(rejected.length ? rejected.join(" | ") : "");
+      if (i + 1 < incoming.length) {
+        queueMicrotask(() => processOne(i + 1, accepted, rejected));
+      } else {
+        onDone(accepted, rejected);
+      }
+    };
+
+    queueMicrotask(() => processOne(0, [], []));
+  };
+
+  const handlePhotoFiles = (files: FileList | File[]) => {
+    if (!files?.length) return;
+    processFilesAsync(files, (accepted, rejected) => {
+      setPhotoFiles((prev) => {
+        const combined = [...prev, ...accepted];
+        if (combined.length > maxPhotoFiles) {
+          rejected.push(`Maximal ${maxPhotoFiles} Dateien`);
+        }
+        return combined.slice(0, maxPhotoFiles);
+      });
+      setPhotoError(rejected.length ? rejected.join(" | ") : "");
+    });
   };
 
   const handleAccidentFiles = (files: FileList | File[]) => {
-    const incoming = Array.from(files);
-    const accepted: File[] = [];
-    const rejected: string[] = [];
-
-    incoming.forEach((file) => {
-      if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
-        rejected.push(`${file.name}: ungültiger Dateityp`);
-        return;
-      }
-      if (file.size > maxPhotoSizeMb * 1024 * 1024) {
-        rejected.push(`${file.name}: größer als ${maxPhotoSizeMb} MB`);
-        return;
-      }
-      accepted.push(file);
+    if (!files?.length) return;
+    processFilesAsync(files, (accepted, rejected) => {
+      setAccidentFiles((prev) => {
+        const combined = [...prev, ...accepted];
+        if (combined.length > maxPhotoFiles) {
+          rejected.push(`Maximal ${maxPhotoFiles} Dateien`);
+        }
+        return combined.slice(0, maxPhotoFiles);
+      });
+      setAccidentError(rejected.length ? rejected.join(" | ") : "");
     });
-
-    setAccidentFiles((prev) => {
-      const combined = [...prev, ...accepted];
-      if (combined.length > maxPhotoFiles) {
-        rejected.push(`Maximal ${maxPhotoFiles} Dateien`);
-      }
-      return combined.slice(0, maxPhotoFiles);
-    });
-
-    setAccidentError(rejected.length ? rejected.join(" | ") : "");
   };
 
   const updateOwners = (delta: number) => {
@@ -641,6 +668,78 @@ const VehiclePurchaseForm = ({
 
   const steps = useMemo(
     () => [
+      {
+        id: "titleSlide",
+        title: "Bereit zum Start",
+        isValid: () => interestNumber.length === 3 && Boolean(interestVehicle),
+        render: () => (
+          <div className="flex flex-col items-center text-center py-4">
+            {/* Fahrgestellnummer – mittig, reduziert */}
+            <div className="max-w-md mx-auto mb-8">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                <Info className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-2">
+                Fahrgestellnummer bereithalten
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Bitte halten Sie die 17-stellige Fahrgestellnummer Ihres Fahrzeugs bereit. 
+                Wir benötigen sie für Ausstattung und Historie – wichtig für eine faire Preisbestimmung.
+              </p>
+            </div>
+
+            {/* Kennnummer – optional, clean */}
+            <div className="w-full max-w-sm mx-auto">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                Inzahlungsnahme?
+              </p>
+              <Input
+                value={interestNumber}
+                onChange={(event) => updateField("interestNumber", event.target.value)}
+                placeholder="3-stellige Kennnr."
+                inputMode="numeric"
+                className="text-center h-12"
+                maxLength={3}
+              />
+              {interestNumber.length === 3 && !interestVehicle && (
+                <p className="mt-2 text-xs text-destructive">Nicht gefunden</p>
+              )}
+              {interestVehicle && (
+                <div className="mt-6 w-full max-w-md mx-auto rounded-xl border border-border bg-card overflow-hidden shadow-md">
+                  <div className="relative aspect-[16/9] w-full bg-muted">
+                    <img
+                      src={getVehicleImageWithFallback(
+                        interestVehicle.image,
+                        interestVehicle.id,
+                      )}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="p-4 text-center">
+                    <VehicleTitle
+                      brand={interestVehicle.brand}
+                      model={splitModelName(interestVehicle.model).base}
+                      productionSeries={interestVehicle.productionSeries}
+                      modelVariant={interestVehicle.modelVariant ?? splitModelName(interestVehicle.model).variant}
+                      className="text-xl font-semibold text-foreground"
+                      as="h4"
+                    />
+                    <div className="flex flex-wrap justify-center gap-3 mt-2 text-sm text-muted-foreground">
+                      <span>{interestVehicle.year}</span>
+                      <span>·</span>
+                      <span>{formatNumber(interestVehicle.mileage)} km</span>
+                      <span>·</span>
+                      <span>{interestVehicle.fuel}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ),
+      },
       {
         id: "make",
         title: "Marke / Hersteller",
@@ -1200,13 +1299,22 @@ const VehiclePurchaseForm = ({
                   <p className="mt-1 text-xs text-muted-foreground">
                     Hier können Sie Fotos oder Gutachten zum Unfallschaden einfügen.
                   </p>
+                  {isSafariOnMac() ? (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-4 py-4 text-sm">
+                      <p className="text-amber-800 dark:text-amber-200">
+                        Safari: Bitte nutzen Sie Chrome/Firefox oder senden Sie Dokumente per E-Mail an{" "}
+                        <a href="mailto:info@gsauto.de" className="underline font-medium">info@gsauto.de</a>.
+                      </p>
+                    </div>
+                  ) : (
                   <div
                     className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground"
                     onDragOver={(event) => event.preventDefault()}
                     onDrop={(event) => {
                       event.preventDefault();
-                      if (event.dataTransfer?.files?.length) {
-                        handleAccidentFiles(event.dataTransfer.files);
+                      const list = event.dataTransfer?.files;
+                      if (list?.length) {
+                        setTimeout(() => handleAccidentFiles(list), 0);
                       }
                     }}
                   >
@@ -1220,27 +1328,30 @@ const VehiclePurchaseForm = ({
                       Max. {maxPhotoFiles} Dateien.
                     </p>
                     <div className="mt-4 flex justify-center">
-                      <label
-                        htmlFor="accident-upload"
-                        className="inline-flex cursor-pointer items-center rounded-md bg-primary px-4 py-2 text-lg font-bold text-white hover:bg-primary/90"
-                      >
-                        Datei auswählen
+                      <label className="relative inline-flex cursor-pointer">
+                        <span className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-lg font-bold text-white hover:bg-primary/90 pointer-events-none">
+                          Datei auswählen
+                        </span>
+                        <input
+                          type="file"
+                          multiple
+                          accept={allowedUploadTypes.join(",")}
+                          onChange={(event) => {
+                            const list = event.target.files;
+                            if (list?.length) {
+                              setTimeout(() => {
+                                handleAccidentFiles(list);
+                                event.target.value = "";
+                              }, 0);
+                            }
+                          }}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          style={{ fontSize: 0 }}
+                        />
                       </label>
-                      <input
-                        id="accident-upload"
-                        type="file"
-                        multiple
-                        accept={allowedUploadTypes.join(",")}
-                        onChange={(event) => {
-                          if (event.target.files) {
-                            handleAccidentFiles(event.target.files);
-                            event.target.value = "";
-                          }
-                        }}
-                        className="sr-only"
-                      />
                     </div>
                   </div>
+                  )}
                   {accidentError && (
                     <p className="mt-2 text-xs text-destructive">{accidentError}</p>
                   )}
@@ -1312,13 +1423,32 @@ const VehiclePurchaseForm = ({
         isValid: () => true,
         render: () => (
           <div className="space-y-4">
+            {isSafariOnMac() ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-5 py-6 text-center">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100 mb-2">
+                  Safari: Foto-Upload aktuell nicht verfügbar
+                </p>
+                <p className="text-sm text-amber-800 dark:text-amber-200/90 mb-4">
+                  Bitte nutzen Sie <strong>Chrome</strong> oder <strong>Firefox</strong> für den Upload, 
+                  oder senden Sie Fotos nach dem Absenden per E-Mail an{" "}
+                  <a href="mailto:info@gsauto.de" className="underline font-medium hover:text-primary">
+                    info@gsauto.de
+                  </a>
+                  .
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-300/80">
+                  Sie können das Formular ohne Fotos absenden – wir melden uns bei Ihnen.
+                </p>
+              </div>
+            ) : (
             <div
               className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground"
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => {
                 event.preventDefault();
-                if (event.dataTransfer?.files?.length) {
-                  handlePhotoFiles(event.dataTransfer.files);
+                const list = event.dataTransfer?.files;
+                if (list?.length) {
+                  setTimeout(() => handlePhotoFiles(list), 0);
                 }
               }}
             >
@@ -1332,27 +1462,30 @@ const VehiclePurchaseForm = ({
                 Max. {maxPhotoFiles} Dateien.
               </p>
               <div className="mt-4 flex justify-center">
-                <label
-                  htmlFor="photo-upload"
-                  className="inline-flex cursor-pointer items-center rounded-md bg-primary px-4 py-2 text-lg font-bold text-white hover:bg-primary/90"
-                >
-                  Datei auswählen
+                <label className="relative inline-flex cursor-pointer">
+                  <span className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-lg font-bold text-white hover:bg-primary/90 pointer-events-none">
+                    Datei auswählen
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    accept={allowedUploadTypes.join(",")}
+                    onChange={(event) => {
+                      const list = event.target.files;
+                      if (list?.length) {
+                        setTimeout(() => {
+                          handlePhotoFiles(list);
+                          event.target.value = "";
+                        }, 0);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    style={{ fontSize: 0 }}
+                  />
                 </label>
-                <input
-                  id="photo-upload"
-                  type="file"
-                  multiple
-                  accept={allowedUploadTypes.join(",")}
-                  onChange={(event) => {
-                    if (event.target.files) {
-                      handlePhotoFiles(event.target.files);
-                      event.target.value = "";
-                    }
-                  }}
-                  className="sr-only"
-                />
               </div>
             </div>
+            )}
             {photoError && (
               <p className="mt-2 text-xs text-destructive">{photoError}</p>
             )}
@@ -1402,65 +1535,6 @@ const VehiclePurchaseForm = ({
                 Geben Sie einen Wunschpreis in Euro an.
               </p>
             </div>
-          </div>
-        ),
-      },
-      {
-        id: "interest",
-        title: "Interessens-Fahrzeugnummer",
-        isValid: isInterestValid,
-        render: () => (
-          <div className="space-y-4">
-            <div>
-              <label className="text-lg font-bold text-foreground">3-stellige Nummer</label>
-              <Input
-                value={interestNumber}
-                onChange={(event) => updateField("interestNumber", event.target.value)}
-                placeholder="123"
-                inputMode="numeric"
-                className="mt-2"
-                maxLength={3}
-              />
-              <p className="mt-2 text-xs text-muted-foreground">
-                Wir suchen sofort im Bestand.
-              </p>
-            </div>
-            {interestNumber.length === 3 && !interestVehicle && (
-              <p className="text-sm text-destructive">Keine Fahrzeuginfo gefunden.</p>
-            )}
-            {interestVehicle && (
-              <div className="rounded-xl border border-border bg-background p-4 shadow-soft">
-                <div className="flex flex-col gap-4 sm:flex-row">
-                  <img
-                    src={getVehicleImageWithFallback(
-                      interestVehicle.image,
-                      interestVehicle.id,
-                    )}
-                    alt={getVehicleDisplayName(interestVehicle.brand, interestVehicle.model, interestVehicle.productionSeries)}
-                    className="h-24 w-full rounded-lg object-cover sm:w-36"
-                    loading="lazy"
-                  />
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Fahrzeug gefunden</p>
-                    <VehicleTitle
-                      brand={interestVehicle.brand}
-                      model={splitModelName(interestVehicle.model).base}
-                      productionSeries={interestVehicle.productionSeries}
-                      modelVariant={interestVehicle.modelVariant ?? splitModelName(interestVehicle.model).variant}
-                      className="text-lg font-semibold text-foreground"
-                      as="h4"
-                    />
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      <span>{interestVehicle.year}</span>
-                      <span>•</span>
-                      <span>{formatNumber(interestVehicle.mileage)} km</span>
-                      <span>•</span>
-                      <span>{interestVehicle.fuel}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         ),
       },
@@ -1689,36 +1763,59 @@ const VehiclePurchaseForm = ({
             <p className="text-muted-foreground">{mergedLabels.subtitle}</p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-background p-6 md:p-8 shadow-soft">
-            <div className="mb-4 space-y-3">
-              <div className="w-full rounded-lg bg-[#0b1d3a] px-4 py-4 text-lg md:text-xl font-display font-semibold text-white tracking-wide shadow-sm">
-                {step?.title}
-              </div>
-              <span className="text-sm text-muted-foreground">
-                Schritt {currentStep + 1} von {steps.length}
-              </span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-primary/10 mb-6">
-              <div
-                className="h-2 rounded-full bg-primary transition-all"
-                style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-              />
-            </div>
+          <div className={`rounded-2xl border border-border bg-background shadow-soft overflow-hidden ${currentStep === 0 ? "md:p-10 p-6" : "p-6 md:p-8"}`}>
+            {currentStep === 0 ? (
+              /* Titelslide – dunkler Header, modern & clean */
+              <>
+                <div className="text-center py-10 px-6 -mx-6 md:-mx-8 -mt-6 md:-mt-8 mb-8 bg-[#0f2439]">
+                  <p className="text-xs uppercase tracking-[0.35em] text-primary-foreground/70 mb-2">
+                    Los geht's
+                  </p>
+                  <h3 className="text-2xl md:text-3xl font-display font-semibold text-white tracking-tight">
+                    Bereit für Ihre Bewertung
+                  </h3>
+                  <p className="text-sm text-white/75 mt-2 max-w-md mx-auto">
+                    In wenigen Schritten erfassen wir die Daten Ihres Fahrzeugs.
+                  </p>
+                </div>
+                <div className="py-8 md:py-10">
+                  {step?.render()}
+                </div>
+              </>
+            ) : (
+              /* Normale Formular-Slides */
+              <>
+                <div className="mb-4 space-y-3">
+                  <div className="w-full rounded-lg bg-[#0b1d3a] px-4 py-4 text-lg md:text-xl font-display font-semibold text-white tracking-wide shadow-sm">
+                    {step?.title}
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    Schritt {currentStep + 1} von {steps.length}
+                  </span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-primary/10 mb-6">
+                  <div
+                    className="h-2 rounded-full bg-primary transition-all"
+                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                  />
+                </div>
 
-            {stepInstruction && (
-              <div className="mb-6 relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-4 shadow-sm">
-                <div className="absolute left-0 top-0 h-full w-1 bg-primary" />
-                <p className="text-xs uppercase tracking-[0.3em] text-primary/80">
-                  {stepInstruction.title}
-                </p>
-                <p className="mt-2 text-sm font-semibold text-foreground">
-                  {stepInstruction.text}
-                </p>
-              </div>
+                {stepInstruction && (
+                  <div className="mb-6 relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-4 shadow-sm">
+                    <div className="absolute left-0 top-0 h-full w-1 bg-primary" />
+                    <p className="text-xs uppercase tracking-[0.3em] text-primary/80">
+                      {stepInstruction.title}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-foreground">
+                      {stepInstruction.text}
+                    </p>
+                  </div>
+                )}
+                <div className="min-h-[280px]">{step?.render()}</div>
+              </>
             )}
-            <div className="min-h-[280px]">{step?.render()}</div>
 
-            <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <div className={`flex flex-col-reverse gap-3 sm:flex-row sm:justify-between ${currentStep === 0 ? "pt-0 mt-8" : "mt-8"}`}>
               <button
                 type="button"
                 onClick={goBack}
@@ -1738,7 +1835,7 @@ const VehiclePurchaseForm = ({
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 }`}
               >
-                {isSubmitting ? "Sende..." : isLastStep ? mergedLabels.submit : mergedLabels.next}
+                {isSubmitting ? "Sende..." : isLastStep ? mergedLabels.submit : currentStep === 0 ? (mergedLabels.start ?? "Starten") : mergedLabels.next}
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>

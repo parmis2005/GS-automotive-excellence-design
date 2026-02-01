@@ -517,6 +517,134 @@ function getNum(obj: Record<string, unknown>, ...keys: string[]): number {
   return 0;
 }
 
+/** Sucht eine Zahl in Keys, die eines der Keywords enthalten (z. B. Hubraum, Zylinder). */
+function getNumFromMatchingKeys(obj: Record<string, unknown>, ...keywords: string[]): number {
+  const lower = (s: string) => s.toLowerCase();
+  for (const key of Object.keys(obj)) {
+    const keyLower = lower(key);
+    if (!keywords.some((kw) => keyLower.includes(lower(kw)))) continue;
+    if (keyLower.endsWith("id")) continue;
+    const v = obj[key];
+    if (typeof v === "number" && !Number.isNaN(v) && v > 0) return v;
+    if (typeof v === "string") {
+      const n = parseFloat(v.replace(/\./g, "").replace(",", "."));
+      if (!Number.isNaN(n) && n > 0) return n;
+    }
+    if (v != null && typeof v === "object" && !Array.isArray(v)) {
+      const o = v as Record<string, unknown>;
+      const val = o.Value ?? o.value ?? o.Amount ?? o.amount;
+      if (typeof val === "number" && !Number.isNaN(val) && val > 0) return val;
+    }
+  }
+  return 0;
+}
+
+/** Parst Hubraum aus Zahl oder String (z. B. 1995, "1.995", "2.0 l" -> ccm). */
+function parseCubicCapacityValue(v: unknown): number {
+  if (typeof v === "number" && !Number.isNaN(v) && v > 0) {
+    return v < 100 ? Math.round(v * 1000) : Math.round(v); // 2.0 Liter -> 2000 ccm
+  }
+  if (typeof v === "string") {
+    const s = v.trim();
+    const numMatch = s.match(/(\d[\d.,]*)\s*(?:ccm|cm³|cm3|cc|l|liter)?/i);
+    if (numMatch) {
+      const n = parseFloat(numMatch[1].replace(/\./g, "").replace(",", "."));
+      if (!Number.isNaN(n)) return n < 100 ? Math.round(n * 1000) : Math.round(n);
+    }
+  }
+  if (v != null && typeof v === "object" && !Array.isArray(v)) {
+    const o = v as Record<string, unknown>;
+    const val = o.Value ?? o.value ?? o.OriginalValue ?? o.originalValue ?? o.Amount ?? o.amount;
+    return parseCubicCapacityValue(val);
+  }
+  return 0;
+}
+
+/**
+ * Liest Hubraum (ccm) und Zylinder aus Roh-Objekt.
+ * CarGate/Carzilla: Daten oft in verschachteltem Engine/Motor-Objekt
+ * (analog zu Power mit FormattedValue/OriginalValue).
+ * PDF dokumentiert Rückgabewerte nicht – Feldnamen empirisch/üblich.
+ */
+function getEngineSpecsFromRaw(raw: Record<string, unknown>, catalog?: SearchCatalogMaps): { cubicCapacity: number; cylinders: number } {
+  let cubicCapacity = 0;
+  let cylinders = 0;
+
+  const checkObj = (o: Record<string, unknown>) => {
+    const cyl = getNum(o, "Cylinders", "cylinders", "CylinderCount", "cylinderCount", "Zylinder", "zylinder", "NumberOfCylinders", "numberOfCylinders");
+    if (cyl > 0) cylinders = cyl;
+    // Hubraum: explizite Felder + OriginalValue (wie bei Power)
+    const capKeys = ["CubicCapacity", "cubicCapacity", "EngineSize", "engineSize", "Displacement", "displacement", "Hubraum", "hubraum", "Ccm", "ccm", "Cm3", "cm3", "EngineCapacity", "engineCapacity", "EngineDisplacement", "engineDisplacement", "MotorDisplacement", "motorDisplacement"];
+    for (const k of capKeys) {
+      const val = o[k];
+      const parsed = parseCubicCapacityValue(val);
+      if (parsed >= 300 && parsed <= 10000) {
+        cubicCapacity = parsed;
+        break;
+      }
+    }
+    if (cubicCapacity <= 0) {
+      const orig = parseCubicCapacityValue(o.OriginalValue ?? o.originalValue);
+      if (orig >= 300 && orig <= 10000) cubicCapacity = orig;
+    }
+    if (cubicCapacity <= 0) {
+      const val = parseCubicCapacityValue(o.Value ?? o.value);
+      if (val >= 300 && val <= 10000) cubicCapacity = val;
+    }
+    // FormattedValue z. B. "1.995 ccm" oder "2.0 l" parsen
+    if (cubicCapacity <= 0) {
+      const fmt = o.FormattedValue ?? o.formattedValue ?? o.Formatted ?? o.formatted;
+      if (typeof fmt === "string") {
+        const parsed = parseCubicCapacityValue(fmt);
+        if (parsed >= 300 && parsed <= 10000) cubicCapacity = parsed;
+      }
+    }
+    // Durchsuche alle Keys die Hubraum-relevant sein könnten
+    if (cubicCapacity <= 0) {
+      const lower = (s: string) => s.toLowerCase();
+      for (const key of Object.keys(o)) {
+        const k = lower(key);
+        if (k.endsWith("id") || k.includes("cylinder") || k.includes("zylinder")) continue;
+        if (k.includes("cubic") || k.includes("hubraum") || k.includes("ccm") || k.includes("displacement") || k.includes("capacity") || k.includes("engine") && (k.includes("size") || k.includes("vol")) || k.includes("motor") && k.includes("size")) {
+          const parsed = parseCubicCapacityValue(o[key]);
+          if (parsed >= 300 && parsed <= 10000) {
+            cubicCapacity = parsed;
+            break;
+          }
+        }
+      }
+    }
+  };
+
+  const engineObj = raw.Engine ?? raw.engine ?? raw.Motor ?? raw.motor;
+  if (engineObj != null && typeof engineObj === "object" && !Array.isArray(engineObj)) {
+    checkObj(engineObj as Record<string, unknown>);
+  }
+  if (cubicCapacity <= 0 || cylinders <= 0) {
+    checkObj(raw);
+  }
+  // CubicCapacityId über Katalog auflösen (wie MotorTypeId)
+  if (cubicCapacity <= 0 && catalog?.cubicCapacityIdToValue) {
+    const capId = getNum(raw, "CubicCapacityId", "cubicCapacityId");
+    const engineObj2 = raw.Engine ?? raw.engine ?? raw.Motor ?? raw.motor;
+    const capIdFromEngine = engineObj2 != null && typeof engineObj2 === "object" && !Array.isArray(engineObj2)
+      ? getNum(engineObj2 as Record<string, unknown>, "CubicCapacityId", "cubicCapacityId") : 0;
+    const id = capId || capIdFromEngine;
+    if (id > 0) {
+      const val = catalog.cubicCapacityIdToValue.get(id);
+      if (val != null && val >= 300 && val <= 10000) cubicCapacity = val;
+    }
+  }
+  if (cubicCapacity <= 0) {
+    cubicCapacity = getNumFromMatchingKeys(raw, "cubic", "hubraum", "displacement", "engine", "capacity", "ccm", "cm3");
+    if (cubicCapacity > 0 && cubicCapacity < 100) cubicCapacity = Math.round(cubicCapacity * 1000);
+  }
+  if (cylinders <= 0) {
+    cylinders = getNumFromMatchingKeys(raw, "cylinder", "zylinder");
+  }
+  return { cubicCapacity, cylinders };
+}
+
 /** Liest Verkaufspreis aus Roh-Objekt: SalePrice, Price oft als Objekt mit Value/Amount/Price. */
 function getPriceFromRaw(raw: Record<string, unknown>): number {
   const priceKeys = ["SalePrice", "salePrice", "Price", "price", "sellingPrice", "selling_price", "Preis", "DealerPrice", "HousePrice", "CampaignPrice"];
@@ -750,8 +878,10 @@ function getPowerFromRaw(raw: Record<string, unknown>): { power?: number; powerK
 let _carzillaStructureLogged = false;
 let _carzillaPowerStructureLogged = false;
 let _carzillaYearStructureLogged = false;
+let _carzillaFuelLogged = false;
 let _carzillaPriceStructureLogged = false;
 let _carzillaExposeStructureLogged = false;
+let _carzillaEngineLogged = false;
 
 function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchCatalogMaps): Vehicle {
   const id =
@@ -810,8 +940,16 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
   }
   const mileage = getNum(raw, "Km", "km", "mileage", "Mileage", "kilometer", "odometer", "Kilometerstand");
   let fuel =
-    getStr(raw, "FuelType", "fuelType", "Fuel", "fuel", "fuelTypeName", "Kraftstoff") ||
-    getStrFromMatchingKeys(raw, "fuel", "kraftstoff", "fueltype");
+    getStr(raw, "FuelType", "fuelType", "Fuel", "fuel", "fuelTypeName", "Kraftstoff", "MotorType", "motorType", "MotorTypeName", "motorTypeName") ||
+    getStrFromMatchingKeys(raw, "fuel", "kraftstoff", "fueltype", "motor", "motortype", "motorart");
+  // MotorTypeId / FuelTypeId über Katalog auflösen (CarGate: MotorTypes = Motorarten-IDs)
+  if (!fuel && catalog?.motorTypeIdToName) {
+    const motorId = getNum(raw, "MotorTypeId", "motorTypeId", "FuelTypeId", "fuelTypeId");
+    if (motorId > 0) {
+      const name = catalog.motorTypeIdToName.get(motorId);
+      if (name) fuel = name;
+    }
+  }
   let transmission =
     getStr(raw, "Transmission", "transmission", "gearbox", "Getriebe", "TransmissionType") ||
     getStrFromMatchingKeys(raw, "transmission", "getriebe", "gearbox");
@@ -820,6 +958,22 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
   let powerKw = powerFromObj.powerKw ?? (getNum(raw, "PowerKw", "powerKw", "power_kw", "kW", "LeistungKw") || undefined);
   if (power && !powerKw) powerKw = Math.round(power / 1.36);
   if (powerKw && !power) power = Math.round(powerKw * 1.36);
+
+  // Hubraum (ccm) und Zylinderanzahl – aus Engine/Motor-Objekt oder Top-Level
+  const engineSpecs = getEngineSpecsFromRaw(raw, catalog);
+  const cubicCapacity = engineSpecs.cubicCapacity;
+  const cylinders = engineSpecs.cylinders;
+
+  // Einmalig Engine-Struktur loggen wenn Hubraum fehlt (Zylinder funktionieren – Hubraum-Feldname ermitteln)
+  if (!cubicCapacity && cylinders > 0 && !_carzillaEngineLogged) {
+    _carzillaEngineLogged = true;
+    const engineObj = raw.Engine ?? raw.engine ?? raw.Motor ?? raw.motor;
+    const engineKeys = engineObj != null && typeof engineObj === "object" && !Array.isArray(engineObj)
+      ? Object.keys(engineObj as Record<string, unknown>)
+      : [];
+    const engineSample = engineObj != null && typeof engineObj === "object" ? engineObj : {};
+    console.warn("Carzilla: Hubraum nicht gefunden (Zylinder ok). Engine-Keys:", engineKeys.join(", "), "| Engine-Sample:", JSON.stringify(engineSample, null, 2).slice(0, 1200));
+  }
 
   // Einmalig Power-Struktur loggen, wenn Leistung fehlt (Debug für API-Anpassung)
   if (!_carzillaPowerStructureLogged && !power && !powerKw) {
@@ -977,7 +1131,16 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     standtageNum = Math.max(0, Math.floor((Date.now() - new Date(arrivalDate).getTime()) / 86400000));
   }
 
-  if (!fuel) fuel = "Unbekannt";
+  if (!fuel) {
+    fuel = "Unbekannt";
+    if (!_carzillaFuelLogged) {
+      _carzillaFuelLogged = true;
+      const fuelKeys = Object.keys(raw).filter((k) => /fuel|kraftstoff|motor|motorart|motortype/i.test(k));
+      const sample: Record<string, unknown> = {};
+      for (const k of fuelKeys) sample[k] = raw[k];
+      console.warn("Carzilla: Kraftstoff nicht gefunden – Fallback Unbekannt. Rohdaten (fuel/motor-Keys):", JSON.stringify(sample, null, 2).slice(0, 800));
+    }
+  }
   if (!transmission) transmission = "Unbekannt";
 
   // Nur CarGate-Daten: keine Ableitung aus Titel oder Textanalyse. Marke/Modell exakt wie von der API.
@@ -1078,6 +1241,8 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     vehicleType: vehicleType || undefined,
     previousOwners: Number.isFinite(previousOwners) && previousOwners > 0 ? (previousOwners as number) : undefined,
     vatDisplayable: typeof vatDisplayable === "boolean" ? vatDisplayable : undefined,
+    cubicCapacity: cubicCapacity > 0 ? cubicCapacity : undefined,
+    cylinders: cylinders > 0 ? cylinders : undefined,
   };
 }
 
@@ -1223,19 +1388,48 @@ export function isCargateApiConfigured(): boolean {
 }
 
 /**
- * Suchkatalog: ModelId/MakeId/EquipmentId → Name (laut PDF GetSearchCatalog).
- * EquipmentIds (Ausstattungsmerkmale) werden aus dem Katalog aufgelöst.
+ * Suchkatalog: ModelId/MakeId/EquipmentId/MotorTypeId → Name (laut PDF GetSearchCatalog).
+ * MotorTypes (Motorarten-IDs) → Kraftstoff; EquipmentIds → Ausstattung.
  */
 export interface SearchCatalogMaps {
   modelIdToName: Map<number, string>;
   makeIdToName: Map<number, string>;
   equipmentIdToName: Map<number, string>;
+  motorTypeIdToName: Map<number, string>;
+  cubicCapacityIdToValue?: Map<number, number>;
 }
 
 function parseCatalogIntoMaps(data: Record<string, unknown>): SearchCatalogMaps {
   const modelIdToName = new Map<number, string>();
   const makeIdToName = new Map<number, string>();
   const equipmentIdToName = new Map<number, string>();
+  const motorTypeIdToName = new Map<number, string>();
+  const cubicCapacityIdToValue = new Map<number, number>();
+
+  const pushCubicCapacities = (arr: unknown[]) => {
+    if (!Array.isArray(arr)) return;
+    for (const item of arr) {
+      if (item == null || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const idRaw = o.CubicCapacityId ?? o.cubicCapacityId ?? o.Id ?? o.id;
+      const id = typeof idRaw === "number" ? idRaw : parseInt(String(idRaw), 10);
+      const valRaw = o.Value ?? o.value ?? o.CubicCapacity ?? o.cubicCapacity ?? o.Ccm ?? o.ccm;
+      const val = typeof valRaw === "number" ? valRaw : parseInt(String(valRaw || "").replace(/\D/g, ""), 10);
+      if (!Number.isNaN(id) && val >= 300 && val <= 10000) cubicCapacityIdToValue.set(id, val);
+    }
+  };
+
+  const pushMotorTypes = (arr: unknown[]) => {
+    if (!Array.isArray(arr)) return;
+    for (const item of arr) {
+      if (item == null || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const idRaw = o.MotorTypeId ?? o.motorTypeId ?? o.Id ?? o.id ?? o.FuelTypeId ?? o.fuelTypeId;
+      const id = typeof idRaw === "number" ? idRaw : parseInt(String(idRaw), 10);
+      const name = String(o.Name ?? o.name ?? o.Text ?? o.text ?? o.Value ?? o.value ?? "").trim();
+      if (!Number.isNaN(id) && name) motorTypeIdToName.set(id, name);
+    }
+  };
 
   const pushEquipment = (arr: unknown[]) => {
     if (!Array.isArray(arr)) return;
@@ -1278,15 +1472,21 @@ function parseCatalogIntoMaps(data: Record<string, unknown>): SearchCatalogMaps 
     const modelsArr = catalog.Models ?? catalog.models ?? viewModel?.Models ?? [];
     const makesArr = catalog.Makes ?? catalog.makes ?? viewModel?.Makes ?? [];
     const equipmentArr = catalog.Equipment ?? catalog.equipment ?? catalog.EquipmentItems ?? catalog.equipmentItems ?? viewModel?.Equipment ?? viewModel?.EquipmentItems ?? [];
+    const motorTypesArr = catalog.MotorTypes ?? catalog.motorTypes ?? catalog.MotorType ?? catalog.motorType ?? viewModel?.MotorTypes ?? viewModel?.MotorType ?? [];
+    const cubicCapacitiesArr = catalog.CubicCapacities ?? catalog.cubicCapacities ?? viewModel?.CubicCapacities ?? viewModel?.cubicCapacities ?? [];
     pushModels(Array.isArray(modelsArr) ? modelsArr : []);
     pushMakes(Array.isArray(makesArr) ? makesArr : []);
     pushEquipment(Array.isArray(equipmentArr) ? equipmentArr : []);
+    pushMotorTypes(Array.isArray(motorTypesArr) ? motorTypesArr : []);
+    pushCubicCapacities(Array.isArray(cubicCapacitiesArr) ? cubicCapacitiesArr : []);
   }
   pushModels(Array.isArray(data.Models) ? data.Models : Array.isArray(data.models) ? data.models : []);
   pushMakes(Array.isArray(data.Makes) ? data.Makes : Array.isArray(data.makes) ? data.makes : []);
   pushEquipment(Array.isArray(data.Equipment) ? data.Equipment : Array.isArray(data.equipment) ? data.equipment : []);
+  pushMotorTypes(Array.isArray(data.MotorTypes) ? data.MotorTypes : Array.isArray(data.motorTypes) ? data.motorTypes : []);
+  pushCubicCapacities(Array.isArray(data.CubicCapacities) ? data.CubicCapacities : Array.isArray(data.cubicCapacities) ? data.cubicCapacities : []);
 
-  return { modelIdToName, makeIdToName, equipmentIdToName };
+  return { modelIdToName, makeIdToName, equipmentIdToName, motorTypeIdToName, cubicCapacityIdToValue };
 }
 
 async function getSearchCatalogFromApi(): Promise<SearchCatalogMaps> {
@@ -1296,7 +1496,7 @@ async function getSearchCatalogFromApi(): Promise<SearchCatalogMaps> {
   const searchId = process.env.CARGATE_API_KEY?.trim();
   const baseUrl = process.env.CARGATE_API_BASE_URL?.trim();
   if (!searchId || !baseUrl) {
-    return { modelIdToName: new Map(), makeIdToName: new Map(), equipmentIdToName: new Map() };
+    return { modelIdToName: new Map(), makeIdToName: new Map(), equipmentIdToName: new Map(), motorTypeIdToName: new Map(), cubicCapacityIdToValue: new Map() };
   }
 
   const searchParams = { IsWebVehicle: true, IsCarzillaVehicle: true };
@@ -1320,10 +1520,10 @@ async function getSearchCatalogFromApi(): Promise<SearchCatalogMaps> {
 
   // 1) GetSearchCatalog (laut Doku für Dropdown-Werte / Katalog)
   let data = await tryFetch("GetSearchCatalog");
-  let maps = data ? parseCatalogIntoMaps(data) : { modelIdToName: new Map(), makeIdToName: new Map(), equipmentIdToName: new Map() };
+  let maps = data ? parseCatalogIntoMaps(data) : { modelIdToName: new Map(), makeIdToName: new Map(), equipmentIdToName: new Map(), motorTypeIdToName: new Map(), cubicCapacityIdToValue: new Map() };
 
   // 2) Falls leer: GetInitialData (laut Doku: liefert SearchParams, SearchInfo, SearchCatalog)
-  if (maps.modelIdToName.size === 0 && maps.makeIdToName.size === 0 && maps.equipmentIdToName.size === 0) {
+  if (maps.modelIdToName.size === 0 && maps.makeIdToName.size === 0 && maps.equipmentIdToName.size === 0 && maps.motorTypeIdToName.size === 0) {
     data = await tryFetch("GetInitialData");
     if (data) {
       const searchCatalog = data.SearchCatalog ?? data.searchCatalog;

@@ -34,12 +34,9 @@ const VehicleCard = ({
   offerUrl,
   category,
   arrivalDate,
-  standtage,
   vatDisplayable,
   showCategory = false, // Default: don't show category (only on homepage)
 }: VehicleCardProps) => {
-  // Standtage für Test-Anzeige: von API oder aus Zugangsdatum berechnen
-  const standtageDisplay = standtage ?? (arrivalDate ? Math.max(0, Math.floor((Date.now() - new Date(arrivalDate).getTime()) / 86400000)) : null);
   // Get image URL with fallback to placeholder
   const initialImageUrl = getVehicleImageWithFallback(image, id);
   const placeholderImageUrl = getPlaceholderImage();
@@ -187,12 +184,6 @@ const VehicleCard = ({
         {isNew && (
           <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide">
             Neu eingetroffen
-          </div>
-        )}
-        {/* Standtage Test-Anzeige (später entfernen) */}
-        {standtageDisplay !== null && (
-          <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/70 text-white text-xs font-medium">
-            {standtageDisplay} Tage
           </div>
         )}
       </div>

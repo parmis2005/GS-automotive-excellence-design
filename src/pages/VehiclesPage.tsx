@@ -142,7 +142,7 @@ const VehiclesPage = () => {
       )
     ).sort();
     const models = baseModels;
-    const fuelTypes = Array.from(new Set(vehicles.map(v => v.fuel))).sort();
+    const fuelTypes = Array.from(new Set(vehicles.map(v => v.fuel))).filter(Boolean).sort();
     const transmissionTypes = Array.from(new Set(vehicles.map(v => v.transmission).filter(Boolean))).sort();
     
     // Fahrzeugtypen: aus getVehicleType und aus Kategorie ableiten (Startseiten-Typen: Sportwagen, Limousine, …)
@@ -405,7 +405,7 @@ const VehiclesPage = () => {
         }
       }
       
-      // Search query filter - searches in brand, model, year, and internal number
+      // Search query filter - searches in brand, model, year, internal number
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
         const searchText = `${vehicle.brand} ${vehicle.model} ${vehicle.year} ${vehicle.internalNumber || ''}`.toLowerCase();

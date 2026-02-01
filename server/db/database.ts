@@ -71,6 +71,10 @@ ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS model_variant VARCHAR(255);
 -- Vollständige Herstellerfarbe (z. B. CAPE YORK GRUEN METALLIC) – für Detailansicht
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS exterior_color_full VARCHAR(150);
 
+-- Hubraum (ccm) und Zylinderanzahl
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS cubic_capacity INTEGER;
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS cylinders INTEGER;
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_vehicles_brand ON vehicles(brand);
 CREATE INDEX IF NOT EXISTS idx_vehicles_category ON vehicles(category);
@@ -146,7 +150,9 @@ export async function getAllVehicles(): Promise<Vehicle[]> {
         previous_owners as "previousOwners",
         production_series as "productionSeries",
         model_variant as "modelVariant",
-        exterior_color_full as "exteriorColorFull"
+        exterior_color_full as "exteriorColorFull",
+        cubic_capacity as "cubicCapacity",
+        cylinders
       FROM vehicles
       ORDER BY updated_at DESC
     `);
@@ -205,7 +211,9 @@ export async function getVehicleById(id: string): Promise<Vehicle | null> {
         previous_owners as "previousOwners",
         production_series as "productionSeries",
         model_variant as "modelVariant",
-        exterior_color_full as "exteriorColorFull"
+        exterior_color_full as "exteriorColorFull",
+        cubic_capacity as "cubicCapacity",
+        cylinders
       FROM vehicles
       WHERE id = $1
     `,
@@ -279,9 +287,10 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           id, image, brand, model, price, year, mileage, fuel, transmission,
           is_new, description, power, power_kw, exterior_color, exterior_color_full, interior_color,
           equipment, expose_url, offer_url, internal_number, arrival_date,
-          category, vat_displayable, vehicle_type, previous_owners, production_series, model_variant, last_synced_at
+          category, vat_displayable, vehicle_type, previous_owners, production_series, model_variant,
+          cubic_capacity, cylinders, last_synced_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
         ON CONFLICT (id) DO UPDATE SET
           image = EXCLUDED.image,
           brand = EXCLUDED.brand,
@@ -309,7 +318,9 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           production_series = EXCLUDED.production_series,
           model_variant = EXCLUDED.model_variant,
           exterior_color_full = EXCLUDED.exterior_color_full,
-          last_synced_at = $28
+          cubic_capacity = EXCLUDED.cubic_capacity,
+          cylinders = EXCLUDED.cylinders,
+          last_synced_at = $30
         `,
         [
           id,
@@ -339,6 +350,8 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           vehicle.previousOwners || null,
           truncate(vehicle.productionSeries, MAX_LEN.production_series),
           truncate(vehicle.modelVariant, MAX_LEN.model_variant),
+          vehicle.cubicCapacity || null,
+          vehicle.cylinders || null,
           now,
         ]
       );

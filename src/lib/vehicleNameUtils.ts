@@ -3,17 +3,18 @@
  */
 
 /**
- * Gibt den Anzeigenamen eines Fahrzeugs zurück, Baureihe optional in Klammern (z. B. "BMW 3er Touring (G21)").
+ * Gibt den Anzeigenamen eines Fahrzeugs zurück (ohne Baureihe in Klammern).
+ * productionSeries wird nicht angezeigt, bleibt aber für Suche/Filter verfügbar.
  */
 export function getVehicleDisplayName(
   brand: string,
   model: string,
-  productionSeries?: string | null,
+  _productionSeries?: string | null,
   fallbackTitle?: string | null
 ): string {
   const base = [brand, model].filter(Boolean).join(" ").trim() || fallbackTitle?.trim() || "";
   if (!base) return "Fahrzeug";
-  return productionSeries?.trim() ? `${base} (${productionSeries.trim()})` : base;
+  return base;
 }
 
 /**

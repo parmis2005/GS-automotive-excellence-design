@@ -35,15 +35,12 @@ const VehicleListItem = ({
   vehicleType: vehicleTypeFromCargate,
   previousOwners,
   arrivalDate,
-  standtage,
   productionSeries,
   modelVariant: modelVariantProp,
   isFirst = false,
 }: VehicleListItemProps) => {
   const displayTitle = getVehicleDisplayName(brand, model, productionSeries, title);
 
-  // Standtage für Test-Anzeige: von API oder aus Zugangsdatum berechnen
-  const standtageDisplay = standtage ?? (arrivalDate ? Math.max(0, Math.floor((Date.now() - new Date(arrivalDate).getTime()) / 86400000)) : null);
   // Get image URL with fallback to placeholder
   const initialImageUrl = getVehicleImageWithFallback(image, id);
   const placeholderImageUrl = getPlaceholderImage();
@@ -158,10 +155,6 @@ const VehicleListItem = ({
                   <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium tracking-wide text-primary">
                     NR. {internalNumber}
                   </span>
-                )}
-                {internalNumber && standtageDisplay !== null && <span aria-hidden>·</span>}
-                {standtageDisplay !== null && (
-                  <span>{standtageDisplay} Tage</span>
                 )}
               </div>
               <div className="mb-2">

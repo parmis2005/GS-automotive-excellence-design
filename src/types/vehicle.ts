@@ -29,4 +29,6 @@ export interface Vehicle {
   previousOwners?: number; // Anzahl der Vorbesitzer
   productionSeries?: string; // Baureihe (z. B. G21, F30) – optional hinter Modell anzeigbar
   modelVariant?: string; // Modellzusatz (z. B. eDrive40 GC M-SPORT-PRO) – von CarGate Version/Variant
+  cubicCapacity?: number; // Hubraum in ccm
+  cylinders?: number; // Anzahl Zylinder
 }
