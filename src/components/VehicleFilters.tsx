@@ -18,6 +18,24 @@ import { getVehicleTypeIcon } from "@/lib/vehicleTypeIcons";
 
 import type { Vehicle } from "@/types/vehicle";
 
+// Erlaubte Ausstattungsfilter
+const ALLOWED_EQUIPMENT_FILTERS = [
+  "Einparkhilfe",
+  "ALU",
+  "Navi",
+  "Klima",
+  "Klimaautomatik",
+  "Rückfahrkamera",
+  "LED",
+  "AHK",
+  "Sportsitze",
+  "Stoff",
+  "Teilleder",
+  "Leder",
+  "Panoramadach",
+  "Schiebedach",
+];
+
 interface VehicleFiltersProps {
   filters: VehicleFiltersState;
   setFilters: React.Dispatch<React.SetStateAction<VehicleFiltersState>>;
@@ -757,37 +775,43 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
             </>
           )}
 
-          {/* Equipment */}
-          {filterOptions.equipment && filterOptions.equipment.length > 0 && (
-            <>
-              <Separator className="mb-6" />
-              <div className="mb-6">
-                <Label className="mb-3 block">Ausstattung</Label>
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {filterOptions.equipment.slice(0, 50).map((eq) => (
-                    <div key={eq} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`equipment-${eq}`}
-                        checked={filters.equipment.includes(eq)}
-                        onCheckedChange={() => toggleEquipment(eq)}
-                      />
-                      <Label
-                        htmlFor={`equipment-${eq}`}
-                        className="text-sm font-normal cursor-pointer flex-1"
-                      >
-                        {eq}
-                      </Label>
-                    </div>
-                  ))}
+          {/* Equipment - nur erlaubte Filter anzeigen */}
+          {filterOptions.equipment && filterOptions.equipment.length > 0 && (() => {
+            // Filtere Equipment auf erlaubte Items
+            const filteredEquipment = ALLOWED_EQUIPMENT_FILTERS.filter(allowed =>
+              filterOptions.equipment.some(eq => 
+                eq.toLowerCase().includes(allowed.toLowerCase())
+              )
+            );
+            
+            if (filteredEquipment.length === 0) return null;
+            
+            return (
+              <>
+                <Separator className="mb-6" />
+                <div className="mb-6">
+                  <Label className="mb-3 block">Ausstattung</Label>
+                  <div className="space-y-3">
+                    {filteredEquipment.map((eq) => (
+                      <div key={eq} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`equipment-${eq}`}
+                          checked={filters.equipment.includes(eq)}
+                          onCheckedChange={() => toggleEquipment(eq)}
+                        />
+                        <Label
+                          htmlFor={`equipment-${eq}`}
+                          className="text-sm font-normal cursor-pointer flex-1"
+                        >
+                          {eq}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {filterOptions.equipment.length > 50 && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    + {filterOptions.equipment.length - 50} weitere Ausstattungen
-                  </p>
-                )}
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
         </CollapsibleContent>
       </Collapsible>
       </div>
