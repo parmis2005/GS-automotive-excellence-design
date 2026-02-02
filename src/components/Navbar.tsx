@@ -62,7 +62,7 @@ const Navbar = () => {
   return (
     <>
       {/* Top Bar */}
-      <div className="hidden lg:block bg-gray-900 border-b border-gray-800">
+      <div className="hidden lg:block bg-gray-950 border-b border-gray-800">
         <div className="container mx-auto px-6 py-2.5">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-6 text-sm text-gray-100">
@@ -89,8 +89,8 @@ const Navbar = () => {
       <nav
         className={`sticky top-0 z-50 transition-all duration-300 navbar-scalable overflow-x-hidden ${
           isScrolled
-            ? "bg-white/95 backdrop-blur-md shadow-md py-3"
-            : "bg-white py-4"
+            ? "bg-gray-200/95 backdrop-blur-md shadow-md py-3"
+            : "bg-gray-100 py-4"
         }`}
       >
         <div className="w-full min-w-0 mx-auto px-3 sm:px-4 lg:px-6 max-w-7xl lg:ml-[30px]">
@@ -178,7 +178,7 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="xl:hidden border-t border-border bg-white">
+          <div className="xl:hidden border-t border-border bg-gray-100">
             <div className="container mx-auto px-6 py-4">
               <div className="flex flex-col gap-1">
                 {navLinks.map((link) => (

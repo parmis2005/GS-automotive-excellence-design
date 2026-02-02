@@ -1,11 +1,23 @@
 import { Router } from "express";
 import { Resend } from "resend";
+import { insertPurchaseInquiry, getPurchaseInquiries } from "../db/database.js";
 
 export const purchaseInquiryRouter = Router();
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const resendFrom = process.env.RESEND_FROM || "onboarding@resend.dev";
-const resendTo = process.env.RESEND_TO || "sebo.ziemianski@web.de";
+/** GET /api/purchase-inquiry – alle Ankauf-Anfragen abrufen (z.B. für Admin) */
+purchaseInquiryRouter.get("/", async (_req, res) => {
+  try {
+    const inquiries = await getPurchaseInquiries();
+    res.json({ success: true, inquiries });
+  } catch (error) {
+    console.error("Failed to fetch purchase inquiries:", error);
+    res.status(500).json({ success: false, error: "Fehler beim Laden der Anfragen" });
+  }
+});
+
+const resendApiKey = process.env.RESEND_API_KEY?.trim();
+const resendFrom = process.env.RESEND_FROM?.trim() || "onboarding@resend.dev";
+const resendTo = process.env.RESEND_TO?.trim() || "sebo.ziemianski@web.de";
 
 const escapeHtml = (value: string) =>
   value
@@ -15,56 +27,146 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
-const formatRow = (label: string, value?: string | null) => {
-  const safeValue = value && value.trim() ? escapeHtml(value) : "-";
-  return `<tr><td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:600;color:#111827;">${label}</td><td style="padding:8px 12px;border:1px solid #e5e7eb;color:#111827;">${safeValue}</td></tr>`;
+const formatRow = (label: string, value?: string | number | null) => {
+  const str = value != null ? String(value).trim() : "";
+  const safeValue = str ? escapeHtml(str) : "-";
+  return `<tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;width:180px;">${label}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;color:#111827;">${safeValue}</td></tr>`;
+};
+
+const formatSection = (title: string, rows: string) =>
+  `<div style="margin-bottom:24px;"><h3 style="margin:0 0 12px;padding:8px 0;font-size:14px;font-weight:700;color:#0f2439;text-transform:uppercase;letter-spacing:0.05em;border-bottom:2px solid #0f2439;">${escapeHtml(title)}</h3><table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}</table></div>`;
+
+const formatPrice = (value?: string | null) => {
+  if (!value || !value.trim()) return "-";
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return value;
+  const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${formatted} €`;
 };
 
 purchaseInquiryRouter.post("/", async (req, res) => {
   try {
-    if (!resendApiKey) {
+    const payload = req.body || {};
+
+    // Immer in der Datenbank speichern (landet sofort)
+    try {
+      const id = await insertPurchaseInquiry(payload);
+      console.log(`✅ Ankauf-Anfrage #${id} gespeichert`);
+    } catch (dbError) {
+      console.error("Fehler beim Speichern in DB:", dbError);
       return res.status(500).json({
         success: false,
-        error: "RESEND_API_KEY missing",
+        error: "Fehler beim Speichern der Anfrage",
       });
     }
 
-    const payload = req.body || {};
-    const resend = new Resend(resendApiKey);
+    // Optional: E-Mail senden, wenn Resend konfiguriert ist
+    if (resendApiKey) {
+      const resend = new Resend(resendApiKey);
+      const now = new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
 
-    const html = `
-      <div style="font-family:Arial, sans-serif; background:#f9fafb; padding:24px;">
-        <div style="max-width:720px; margin:0 auto; background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; padding:24px;">
-          <h2 style="margin:0 0 16px; color:#111827;">Neue Ankauf-Anfrage</h2>
-          <table style="width:100%; border-collapse:collapse; font-size:14px;">
-            <tbody>
-              ${formatRow("Marke", payload.make)}
-              ${formatRow("Modell", payload.model)}
-              ${formatRow("Erstzulassung", payload.firstRegistration)}
-              ${formatRow("Kilometerstand", payload.mileage)}
-              ${formatRow("Halteranzahl", payload.ownersCount)}
-              ${formatRow("Scheckheft", payload.serviceBook)}
-              ${formatRow("Letzter Service", payload.lastService)}
-              ${formatRow("HU", payload.hu)}
-              ${formatRow("Raucherfahrzeug", payload.smoker)}
-              ${formatRow("Unfallfahrzeug", payload.accident)}
-              ${formatRow("Unfall behoben", payload.accidentRepaired)}
-              ${formatRow("Schadenbeschreibung", payload.accidentDescription)}
-              ${formatRow("Schadenshoehe", payload.accidentAmount)}
-              ${formatRow("VIN", payload.vin)}
-              ${formatRow("Interessensnummer", payload.interestNumber)}
-              ${formatRow("Fahrzeug aus Bestand", payload.interestVehicle)}
-              ${formatRow("Foto-Dateien", payload.photoFiles)}
-              ${formatRow("Gutachten-Dateien", payload.accidentFiles)}
-              ${formatRow("Vorname", payload.contactFirstName)}
-              ${formatRow("Nachname", payload.contactLastName)}
-              ${formatRow("Telefon", payload.contactPhone)}
-              ${formatRow("E-Mail", payload.contactEmail)}
-            </tbody>
-          </table>
-        </div>
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neue Ankauf-Anfrage</title>
+</head>
+<body style="margin:0; padding:0; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color:#f3f4f6; -webkit-font-smoothing:antialiased;">
+  <div style="max-width:680px; margin:0 auto; padding:32px 16px;">
+    <div style="background:#ffffff; border-radius:16px; box-shadow:0 4px 6px rgba(0,0,0,0.05); overflow:hidden;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg, #0f2439 0%, #1e3a5f 100%); padding:28px 32px; text-align:center;">
+        <h1 style="margin:0; font-size:22px; font-weight:700; color:#ffffff; letter-spacing:0.02em;">GS Automobile Rheinland</h1>
+        <p style="margin:8px 0 0; font-size:14px; color:rgba(255,255,255,0.85);">Neue Ankauf-Anfrage</p>
+        <p style="margin:16px 0 0; font-size:12px; color:rgba(255,255,255,0.6);">${escapeHtml(now)}</p>
       </div>
-    `;
+
+      <!-- Content -->
+      <div style="padding:32px;">
+        ${formatSection(
+          "Fahrzeugdaten",
+          `
+          <tbody>
+            ${formatRow("Marke", payload.make)}
+            ${formatRow("Modell", payload.model)}
+            ${formatRow("Karosserieform", payload.bodyType)}
+            ${formatRow("Kraftstoff", payload.fuelType)}
+            ${formatRow("Erstzulassung", payload.firstRegistration)}
+            ${formatRow("Kilometerstand", payload.mileage)}
+            ${formatRow("Leistung (PS)", payload.power)}
+            ${formatRow("Halteranzahl", payload.ownersCount)}
+            ${formatRow("VIN / Fahrgestellnummer", payload.vin)}
+          </tbody>`
+        )}
+
+        ${formatSection(
+          "Service & HU",
+          `
+          <tbody>
+            ${formatRow("Scheckheft vollständig", payload.serviceBook)}
+            ${formatRow("Letzter Service", payload.lastService)}
+            ${formatRow("HU fällig", payload.hu)}
+          </tbody>`
+        )}
+
+        ${formatSection(
+          "Ausstattung & Zustand",
+          `
+          <tbody>
+            ${formatRow("Außenfarbe", payload.exteriorColor)}
+            ${formatRow("Getriebe", payload.transmission)}
+            ${formatRow("Antrieb", payload.driveType)}
+            ${formatRow("Ausstattung", payload.equipment)}
+            ${formatRow("Allgemeiner Zustand", payload.generalCondition)}
+          </tbody>`
+        )}
+
+        ${formatSection(
+          "Preisvorstellung",
+          `
+          <tbody>
+            <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;width:180px;">Preisvorstellung</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;color:#0f2439;font-weight:700;font-size:16px;">${formatPrice(payload.priceExpectation)}</td></tr>
+          </tbody>`
+        )}
+
+        ${formatSection(
+          "Zustand & Unfall",
+          `
+          <tbody>
+            ${formatRow("Raucherfahrzeug", payload.smoker)}
+            ${formatRow("Unfallfahrzeug", payload.accident)}
+            ${formatRow("Unfall behoben", payload.accidentRepaired)}
+            ${formatRow("Schadenbeschreibung", payload.accidentDescription)}
+            ${formatRow("Schadenshöhe", payload.accidentAmount)}
+            ${formatRow("Interessensnummer (Inzahlungnahme)", payload.interestNumber)}
+            ${formatRow("Fahrzeug aus Bestand", payload.interestVehicle)}
+            ${formatRow("Foto-Dateien", payload.photoFiles)}
+            ${formatRow("Gutachten-Dateien", payload.accidentFiles)}
+          </tbody>`
+        )}
+
+        ${formatSection(
+          "Kontaktdaten",
+          `
+          <tbody>
+            ${formatRow("Vorname", payload.contactFirstName)}
+            ${formatRow("Nachname", payload.contactLastName)}
+            ${formatRow("Telefon", payload.contactPhone)}
+            ${formatRow("E-Mail", payload.contactEmail)}
+          </tbody>`
+        )}
+      </div>
+
+      <!-- Footer -->
+      <div style="background:#f9fafb; padding:20px 32px; border-top:1px solid #e5e7eb; text-align:center;">
+        <p style="margin:0; font-size:12px; color:#6b7280;">Diese Anfrage wurde über das Ankauf-Formular der Website gesendet.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
 
     const text = [
       "Neue Ankauf-Anfrage",
@@ -76,6 +178,12 @@ purchaseInquiryRouter.post("/", async (req, res) => {
       `Scheckheft: ${payload.serviceBook || "-"}`,
       `Letzter Service: ${payload.lastService || "-"}`,
       `HU: ${payload.hu || "-"}`,
+      `Außenfarbe: ${payload.exteriorColor || "-"}`,
+      `Getriebe: ${payload.transmission || "-"}`,
+      `Antrieb: ${payload.driveType || "-"}`,
+      `Ausstattung: ${payload.equipment || "-"}`,
+      `Allgemeiner Zustand: ${payload.generalCondition || "-"}`,
+      `Preisvorstellung: ${payload.priceExpectation || "-"}`,
       `Raucherfahrzeug: ${payload.smoker || "-"}`,
       `Unfallfahrzeug: ${payload.accident || "-"}`,
       `Unfall behoben: ${payload.accidentRepaired || "-"}`,
@@ -92,13 +200,21 @@ purchaseInquiryRouter.post("/", async (req, res) => {
       `E-Mail: ${payload.contactEmail || "-"}`,
     ].join("\n");
 
-    await resend.emails.send({
-      from: resendFrom,
-      to: resendTo,
-      subject: `Ankauf-Anfrage ${payload.make || ""} ${payload.model || ""}`.trim(),
-      html,
-      text,
-    });
+      try {
+        await resend.emails.send({
+          from: resendFrom,
+          to: resendTo,
+          subject: `Ankauf-Anfrage ${payload.make || ""} ${payload.model || ""}`.trim(),
+          html,
+          text,
+        });
+        console.log(`📧 E-Mail an ${resendTo} gesendet`);
+      } catch (emailError) {
+        console.error("E-Mail-Versand fehlgeschlagen (Anfrage ist in DB gespeichert):", emailError);
+      }
+    } else {
+      console.warn("RESEND_API_KEY nicht gesetzt – E-Mail wurde nicht versendet. Anfrage ist in der Datenbank gespeichert.");
+    }
 
     res.json({ success: true });
   } catch (error) {

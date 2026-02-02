@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
-import { formatFuelType, getVehicleDisplayName, splitModelName } from "@/lib/vehicleNameUtils";
+import { formatFuelType, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 
 interface VehicleCardProps extends Vehicle {
@@ -194,9 +194,9 @@ const VehicleCard = ({
         <div className="mb-4">
           <VehicleTitle
             brand={brand}
-            model={splitModelName(model).base}
+            model={model}
             productionSeries={productionSeries}
-            modelVariant={modelVariantProp ?? splitModelName(model).variant}
+            modelVariant={modelVariantProp}
             fallbackTitle={title}
             className="font-display text-2xl font-bold text-foreground"
             as="h3"
@@ -264,21 +264,24 @@ const VehicleCard = ({
               Fahrzeug ansehen
             </Button>
           </Link>
-          {exposeUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={(e) => {
-                e.stopPropagation();
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              const url = exposeUrl?.trim();
+              if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+                window.open(url, "_blank");
+              } else {
                 const exposeRedirectUrl = `${import.meta.env.VITE_API_URL || ""}/api/vehicles/${id}/expose`;
                 window.open(exposeRedirectUrl.startsWith("http") ? exposeRedirectUrl : `/api/vehicles/${id}/expose`, "_blank");
-              }}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Exposé herunterladen
-            </Button>
-          )}
+              }
+            }}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Exposé herunterladen
+          </Button>
         </div>
       </div>
     </div>

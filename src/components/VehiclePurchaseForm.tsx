@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   ChevronRight,
@@ -13,8 +13,9 @@ import {
 import { useVehicles } from "@/hooks/useVehicles";
 import { useBrands } from "@/hooks/useBrands";
 import { getVehicleImageWithFallback } from "@/lib/vehicleImage";
-import { getVehicleDisplayName, splitModelName } from "@/lib/vehicleNameUtils";
+import { getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
+import { getColorHex, BASIC_COLORS } from "@/lib/colorUtils";
 import { useModels } from "@/hooks/useModels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -256,6 +257,22 @@ const stepInstructions: Record<string, { title: string; text: string }> = {
     title: "Service & HU",
     text: "Letzter Service, Scheckheft-Status und nächster HU-Termin.",
   },
+  color: {
+    title: "Fahrzeugfarbe",
+    text: "Wählen Sie die Außenfarbe Ihres Fahrzeugs.",
+  },
+  transmissionDrive: {
+    title: "Getriebe & Antrieb",
+    text: "Getriebeart und Antriebsart Ihres Fahrzeugs auswählen.",
+  },
+  equipment: {
+    title: "Ausstattung",
+    text: "Wählen Sie die vorhandene Ausstattung Ihres Fahrzeugs aus.",
+  },
+  generalCondition: {
+    title: "Allgemeiner Zustand",
+    text: "Wie würden Sie den Gesamtzustand Ihres Fahrzeugs einschätzen?",
+  },
   condition: {
     title: "Fahrzeugzustand",
     text: "Raucherfahrzeug und Unfallfreiheit angeben. Bei Unfall bitte Details erganzen.",
@@ -277,8 +294,8 @@ const stepInstructions: Record<string, { title: string; text: string }> = {
     text: "Bitte die Nummer des Fahrzeugs eingeben, an dem Sie interessiert sind (Inzahlungnahme).",
   },
   priceExpectation: {
-    title: "Preisvorstellung",
-    text: "Bitte nennen Sie Ihre Preisvorstellung für Ihr Fahrzeug.",
+    title: "realistische Preisvorstellung",
+    text: "Bitte nennen Sie Ihre realistische Preisvorstellung für Ihr Fahrzeug.",
   },
   contact: {
     title: "Kontaktdaten",
@@ -302,6 +319,11 @@ type FormData = {
   huMonth: string;
   huYear: string;
   huExpired: boolean;
+  exteriorColor: string;
+  transmission: string;
+  driveType: string;
+  equipment: string[];
+  generalCondition: string;
   smoker: boolean | null;
   accident: boolean | null;
   accidentRepaired: boolean | null;
@@ -346,6 +368,13 @@ const defaultLabels: Labels = {
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("de-DE").format(value);
+
+/** Formatiert Ziffern mit Tausendertrennzeichen (Punkt im deutschen Format), z.B. 1200 -> "1.200" */
+const formatPriceWithDots = (digits: string): string => {
+  const d = digits.replace(/\D/g, "");
+  if (!d) return "";
+  return d.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
 
 const toNumberInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -404,6 +433,7 @@ const VehiclePurchaseForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState<FormData>({
     make: "",
@@ -421,6 +451,11 @@ const VehiclePurchaseForm = ({
     huMonth: "",
     huYear: "",
     huExpired: false,
+    exteriorColor: "",
+    transmission: "",
+    driveType: "",
+    equipment: [],
+    generalCondition: "",
     smoker: null,
     accident: null,
     accidentRepaired: null,
@@ -741,9 +776,9 @@ const VehiclePurchaseForm = ({
                   <div className="p-4 text-center">
                     <VehicleTitle
                       brand={interestVehicle.brand}
-                      model={splitModelName(interestVehicle.model).base}
+                      model={interestVehicle.model}
                       productionSeries={interestVehicle.productionSeries}
-                      modelVariant={interestVehicle.modelVariant ?? splitModelName(interestVehicle.model).variant}
+                      modelVariant={interestVehicle.modelVariant}
                       className="text-xl font-semibold text-foreground"
                       as="h4"
                     />
@@ -1091,7 +1126,7 @@ const VehiclePurchaseForm = ({
           <div className="space-y-4">
             {/* Letzter Service – letzte 4 Jahre */}
             <div>
-              <p className="text-sm font-semibold text-foreground mb-2">Letzter Service</p>
+              <p className="text-lg font-bold text-foreground mb-3">Letzter Service</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground">Monat</label>
@@ -1124,7 +1159,7 @@ const VehiclePurchaseForm = ({
 
             {/* Scheckheft vollständig gepflegt */}
             <div>
-              <p className="text-sm font-semibold text-foreground mb-2">Scheckheft vollständig gepflegt?</p>
+              <p className="text-lg font-bold text-foreground mb-3">Scheckheft vollständig gepflegt?</p>
               <div className="flex gap-2">
                 {[
                   { label: "Ja", value: true },
@@ -1149,7 +1184,7 @@ const VehiclePurchaseForm = ({
             {/* HU */}
             <div className="rounded-lg border border-border bg-muted/30 p-3">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-foreground">HU fällig</p>
+                <p className="text-lg font-bold text-foreground">HU fällig</p>
                 <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                   <input
                     type="checkbox"
@@ -1193,6 +1228,212 @@ const VehiclePurchaseForm = ({
             </div>
           </div>
         ),
+      },
+      {
+        id: "color",
+        title: "Fahrzeugfarbe",
+        isValid: () => Boolean(formData.exteriorColor?.trim()),
+        render: () => (
+          <div className="space-y-4">
+            <p className="text-lg font-bold text-foreground mb-4">Außenfarbe wählen</p>
+            <div className="flex flex-wrap gap-3">
+              {BASIC_COLORS.map((colorName) => {
+                const hex = getColorHex(colorName);
+                const isSelected = formData.exteriorColor === colorName;
+                return (
+                  <button
+                    key={colorName}
+                    type="button"
+                    onClick={() => updateField("exteriorColor", colorName)}
+                    className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                      isSelected ? "border-primary ring-2 ring-primary ring-offset-2" : "border-border bg-background hover:border-primary/50"
+                    }`}
+                    title={colorName}
+                  >
+                    <span
+                      className="h-10 w-10 sm:h-12 sm:w-12 rounded-md shadow-inner border border-black/10"
+                      style={{ backgroundColor: hex }}
+                      aria-hidden
+                    />
+                    <span className="text-xs font-medium text-foreground">{colorName}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "transmissionDrive",
+        title: "Getriebe & Antrieb",
+        isValid: () => Boolean(formData.transmission?.trim() && formData.driveType?.trim()),
+        render: () => (
+          <div className="space-y-6">
+            {/* Getriebe */}
+            <div>
+              <p className="text-lg font-bold text-foreground mb-3">Getriebe</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: "Automatikgetriebe", value: "Automatik" },
+                  { label: "Schaltgetriebe", value: "Schaltgetriebe" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => updateField("transmission", option.value)}
+                    className={`rounded-full border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                      formData.transmission === option.value
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Antrieb */}
+            <div>
+              <p className="text-lg font-bold text-foreground mb-3">Antrieb</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: "Allrad", value: "Allrad" },
+                  { label: "Heckantrieb", value: "Heckantrieb" },
+                  { label: "Vorderantrieb", value: "Vorderantrieb" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => updateField("driveType", option.value)}
+                    className={`rounded-full border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                      formData.driveType === option.value
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "equipment",
+        title: "Ausstattung",
+        isValid: () => true,
+        render: () => {
+          const equipmentCategories = [
+            {
+              label: "Infotainment & Konnektivität",
+              items: ["Apple CarPlay", "Android Auto", "Navi", "Bluetooth", "Freisprecheinrichtung", "USB-Anschluss", "Induktionsladen"],
+            },
+            {
+              label: "Klima & Komfort",
+              items: ["Klimaautomatik", "Sitzheizung", "Lenkradheizung", "Standheizung", "Sitzbelüftung"],
+            },
+            {
+              label: "Sicherheit & Fahrassistenz",
+              items: ["Einparkhilfe", "Rückfahrkamera", "360°-Kamera", "Totwinkelassistent", "ACC", "Tempomat", "Spurhalteassistent"],
+            },
+            {
+              label: "Beleuchtung & Außen",
+              items: ["LED-Scheinwerfer", "Matrix-LED", "AHK", "Dachgepäckträger"],
+            },
+            {
+              label: "Innenausstattung",
+              items: ["Leder", "Teilleder", "Sportsitze", "Panoramadach", "Schiebedach", "Head-up Display"],
+            },
+            {
+              label: "Komfort & Zugang",
+              items: ["Keyless Go", "Keyless Entry", "Elektrische Heckklappe", "Elektrische Sitze"],
+            },
+          ];
+          const toggleEquipment = (item: string) => {
+            const current = formData.equipment || [];
+            if (current.includes(item)) {
+              updateField("equipment", current.filter((e) => e !== item));
+            } else {
+              updateField("equipment", [...current, item]);
+            }
+          };
+          return (
+            <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+              {equipmentCategories.map((category) => (
+                <div key={category.label}>
+                  <p className="text-lg font-bold text-foreground mb-3">{category.label}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {category.items.map((item) => {
+                      const isSelected = formData.equipment?.includes(item);
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => toggleEquipment(item)}
+                          className={`rounded-full border-2 px-3 py-1.5 text-sm font-medium transition-colors ${
+                            isSelected
+                              ? "border-primary bg-primary text-white"
+                              : "border-border bg-background text-foreground hover:border-primary/50"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        },
+      },
+      {
+        id: "generalCondition",
+        title: "Allgemeiner Zustand",
+        isValid: () => Boolean(formData.generalCondition?.trim()),
+        render: () => {
+          const options = [
+            {
+              value: "Eher schlecht",
+              label: "Eher schlecht",
+              description: "Deutlicher Verschleiß im Innen- und Außenbereich. Hinzu kommen technische Mängel.",
+            },
+            {
+              value: "Mittel",
+              label: "Mittel",
+              description: "Lediglich normale Gebrauchsspuren im Innenraum und im Außenbereich (kleinere Kratzer oder Dellen). Mechanisch ist das Auto in einem guten Zustand und lässt sich ohne Einschränkung fahren.",
+            },
+            {
+              value: "Gut",
+              label: "Gut",
+              description: "Einwandfreier Zustand von Innen- und Außenbereich. Das Fahrzeug ist technisch und mechanisch in einem guten Zustand.",
+            },
+          ];
+          return (
+            <div className="space-y-4">
+              <p className="text-lg font-bold text-foreground mb-4">Gesamtzustand wählen</p>
+              <div className="flex flex-col gap-3">
+                {options.map((opt) => {
+                  const isSelected = formData.generalCondition === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => updateField("generalCondition", opt.value)}
+                      className={`text-left rounded-xl border-2 p-4 transition-all hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                        isSelected ? "border-primary bg-primary/5" : "border-border bg-background"
+                      }`}
+                    >
+                      <p className="font-bold text-foreground mb-1">{opt.label}</p>
+                      <p className="text-sm text-muted-foreground">{opt.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        },
       },
       {
         id: "condition",
@@ -1521,17 +1762,23 @@ const VehiclePurchaseForm = ({
       },
       {
         id: "priceExpectation",
-        title: "Preisvorstellung",
+        title: "realistische Preisvorstellung",
         isValid: () => Boolean(formData.priceExpectation.trim()),
         render: () => (
           <div className="space-y-4">
             <div>
-              <label className="text-lg font-bold text-foreground">Preisvorstellung (€)</label>
+              <label className="text-lg font-bold text-foreground">
+                <span className="text-primary font-extrabold">realistische</span> Preisvorstellung (€)
+              </label>
               <Input
-                value={formData.priceExpectation}
-                onChange={(event) => updateField("priceExpectation", event.target.value)}
+                value={formatPriceWithDots(formData.priceExpectation)}
+                onChange={(event) => {
+                  const digits = event.target.value.replace(/\D/g, "").slice(0, 6);
+                  updateField("priceExpectation", digits);
+                }}
                 placeholder="z.B. 12.500"
                 inputMode="numeric"
+                pattern="[0-9.]*"
                 className="mt-2"
               />
               <p className="mt-2 text-xs text-muted-foreground">
@@ -1665,6 +1912,11 @@ const VehiclePurchaseForm = ({
     ensureInput("huMonth", data.huMonth);
     ensureInput("huYear", data.huYear);
     ensureInput("huExpired", String(data.huExpired));
+    ensureInput("exteriorColor", data.exteriorColor);
+    ensureInput("transmission", data.transmission);
+    ensureInput("driveType", data.driveType);
+    ensureInput("equipment", data.equipment?.join(", ") || "");
+    ensureInput("generalCondition", data.generalCondition);
     ensureInput("smoker", data.smoker === null ? "" : String(data.smoker));
     ensureInput("accident", data.accident === null ? "" : String(data.accident));
     ensureInput("accidentRepaired", data.accidentRepaired === null ? "" : String(data.accidentRepaired));
@@ -1706,6 +1958,11 @@ const VehiclePurchaseForm = ({
         : formData.huMonth && formData.huYear
         ? `${formData.huMonth}/${formData.huYear}`
         : "",
+      exteriorColor: formData.exteriorColor || "",
+      transmission: formData.transmission || "",
+      driveType: formData.driveType || "",
+      equipment: formData.equipment?.length ? formData.equipment.join(", ") : "",
+      generalCondition: formData.generalCondition || "",
       smoker: formData.smoker === null ? "" : formData.smoker ? "Ja" : "Nein",
       accident: formData.accident === null ? "" : formData.accident ? "Ja" : "Nein",
       accidentRepaired:
@@ -1743,6 +2000,7 @@ const VehiclePurchaseForm = ({
       })
       .then(() => {
         setSubmitSuccess(true);
+        navigate("/?ankauf=success", { replace: true });
       })
       .catch(() => {
         setSubmitError("Senden fehlgeschlagen. Bitte erneut versuchen.");
@@ -1807,7 +2065,11 @@ const VehiclePurchaseForm = ({
                   <div className="mb-6 relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-4 shadow-sm">
                     <div className="absolute left-0 top-0 h-full w-1 bg-primary" />
                     <p className="text-xs uppercase tracking-[0.3em] text-primary/80">
-                      {stepInstruction.title}
+                      {step?.id === "priceExpectation" ? (
+                        <><span className="font-extrabold text-primary">realistische</span> Preisvorstellung</>
+                      ) : (
+                        stepInstruction.title
+                      )}
                     </p>
                     <p className="mt-2 text-sm font-semibold text-foreground">
                       {stepInstruction.text}
@@ -1844,9 +2106,6 @@ const VehiclePurchaseForm = ({
             </div>
             {submitError && (
               <p className="mt-4 text-sm text-destructive">{submitError}</p>
-            )}
-            {submitSuccess && (
-              <p className="mt-4 text-sm text-green-600">Anfrage wurde gesendet.</p>
             )}
           </div>
         </div>

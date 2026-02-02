@@ -4,7 +4,7 @@ import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap, Phone, Mail, Car, Rou
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
-import { getVehicleType, formatFuelType, getVehicleDisplayName, splitModelName } from "@/lib/vehicleNameUtils";
+import { getVehicleType, formatFuelType, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
 
@@ -160,9 +160,9 @@ const VehicleListItem = ({
               <div className="mb-2">
                 <VehicleTitle
                   brand={brand}
-                  model={splitModelName(model).base}
+                  model={model}
                   productionSeries={productionSeries}
-                  modelVariant={modelVariantProp ?? splitModelName(model).variant}
+                  modelVariant={modelVariantProp}
                   fallbackTitle={title}
                   className="font-display text-2xl md:text-3xl font-bold text-foreground"
                   as="h3"
@@ -294,20 +294,23 @@ const VehicleListItem = ({
                 Details ansehen
               </Button>
             </Link>
-            {exposeUrl && (
-              <Button
-                variant="outline"
-                className="flex-shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
+            <Button
+              variant="outline"
+              className="flex-shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                const url = exposeUrl?.trim();
+                if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+                  window.open(url, "_blank");
+                } else {
                   const exposeRedirectUrl = `${import.meta.env.VITE_API_URL || ""}/api/vehicles/${id}/expose`;
                   window.open(exposeRedirectUrl.startsWith("http") ? exposeRedirectUrl : `/api/vehicles/${id}/expose`, "_blank");
-                }}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Exposé
-              </Button>
-            )}
+                }
+              }}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Exposé
+            </Button>
             <Button
               variant="outline"
               className="flex-shrink-0"

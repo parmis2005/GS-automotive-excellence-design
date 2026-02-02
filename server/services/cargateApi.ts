@@ -192,20 +192,25 @@ function getStr(obj: Record<string, unknown>, ...keys: string[]): string {
 }
 
 /**
- * Liest den Modellzusatz (z. B. Elegance LED Kamera Sitzhzg.) aus CarGate-Feldern.
- * VersionAdditional hat Priorität (Ausstattungszeile), Version/ModelVersion können Modellname duplizieren.
+ * Liest den Modellzusatz (Ausstattungszeile, z. B. "M-SPORT ACC AHK 360° HEAD-UP") aus CarGate.
+ * NUR VersionAdditional – enthält die Ausstattungszeile. Version/ModelVersion sind das Modell (z. B. "220 Active Tourer").
  */
-function getModelVariantFromRaw(raw: Record<string, unknown>): string {
-  // VersionAdditional zuerst – enthält Ausstattung (z. B. "Elegance LED Kamera Sitzhzg.PDCvorn 17''")
+function getVersionAdditionalFromRaw(raw: Record<string, unknown>): string {
   const additional = getStr(raw, "VersionAdditional", "versionAdditional", "VersionAdditionalText");
-  if (additional) return additional;
+  return additional || "";
+}
 
-  const variantKeys = [
+/**
+ * Liest das Modell (z. B. "220 Active Tourer", "3er Touring", "i4 eDrive40 GC") aus CarGate.
+ * Version/ModelVersion haben Priorität – enthalten den vollen Modellnamen. NICHT die Ausstattungszeile.
+ */
+function getVersionFromRaw(raw: Record<string, unknown>): string {
+  const versionKeys = [
     "Version", "version", "ModelVersion", "modelVersion", "Variant", "variant",
     "ModelLine", "modelLine", "ModelVariant", "modelVariant", "Trim", "trim",
     "Line", "line", "Modellvariante", "model_variant", "model_line",
   ];
-  for (const key of variantKeys) {
+  for (const key of versionKeys) {
     const v = raw[key];
     if (v != null && typeof v === "string") {
       const s = (v as string).trim();
@@ -224,7 +229,7 @@ function getModelVariantFromRaw(raw: Record<string, unknown>): string {
   const modelObj = raw.Model ?? raw.model;
   if (modelObj != null && typeof modelObj === "object" && !Array.isArray(modelObj)) {
     const o = modelObj as Record<string, unknown>;
-    for (const key of variantKeys) {
+    for (const key of versionKeys) {
       const v = o[key];
       if (v != null && typeof v === "string") {
         const s = (v as string).trim();
@@ -1041,16 +1046,11 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
   const useVidParam = (process.env.CARGATE_EXPOSE_USE_VID || "").toLowerCase() === "true";
   if (!exposeUrl && id) {
     let oidForExpose = getStr(raw, "Oid", "oid", "OfferId", "OfferGuid", "VehicleGuid", "Uuid", "Guid") || getUrlFromRaw(raw, "Oid", "oid", "OfferId");
-    if (!oidForExpose && offerUrl) {
-      const uuidInPath = offerUrl.match(/\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\//) || offerUrl.match(/\/([0-9a-fA-F]{32})\/(?:\d+|$)/);
-      if (uuidInPath) {
-        const hex = uuidInPath[1].replace(/-/g, "");
-        if (hex.length === 32) oidForExpose = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
-        else oidForExpose = uuidInPath[1];
-      }
-    }
+    if (!oidForExpose && offerUrl) oidForExpose = extractOidFromOfferUrl(offerUrl) || "";
+    const hasRealOid = oidForExpose && isUuidLike(oidForExpose);
     if (!oidForExpose) oidForExpose = id;
-    const defaultDetailUrl = offerUrl || `${exposeBaseUrl}/Fahrzeugsuche/Details?vid=${id}`;
+    oidForExpose = formatOidAsUuid(oidForExpose);
+    const defaultDetailUrl = (offerUrl && (offerUrl.startsWith("http") || offerUrl.startsWith("/")) ? offerUrl : null) || `${exposeBaseUrl}/Fahrzeugsuche/Details?vid=${id}`;
     if (exposeTemplate) {
       exposeUrl = exposeTemplate
         .replace(/\{id\}/gi, id)
@@ -1062,7 +1062,7 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
         exposeUrl = (exposeUrl.startsWith("/") ? exposeBaseUrl + exposeUrl : exposeBaseUrl + "/" + exposeUrl);
       }
     } else {
-      if (useVidParam) {
+      if (useVidParam || !hasRealOid) {
         exposeUrl = `${exposeBaseUrl}/Expose.pdf?vid=${encodeURIComponent(id)}&ourl=${encodeURIComponent(defaultDetailUrl)}`;
       } else {
         exposeUrl = `${exposeBaseUrl}/Expose.pdf?oid=${encodeURIComponent(oidForExpose)}&ourl=${encodeURIComponent(defaultDetailUrl)}`;
@@ -1073,23 +1073,8 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
   const previousOwners = typeof raw.PreviousOwners === "number" ? raw.PreviousOwners : typeof raw.previousOwners === "number" ? raw.previousOwners : getNum(raw, "PreviousOwners", "previousOwners", "numberOfPreviousOwners");
   const vatDisplayable = raw.HasVat ?? raw.vatDisplayable ?? raw.vat_displayable;
 
-  // Modellzusatz (VersionAdditional/Variant) aus API lesen
-  let modelVariantFromApi = getModelVariantFromRaw(raw);
-  // Version kann Modellname duplizieren (z. B. beide "Mokka-e") – dann nicht als Zusatz anzeigen
-  if (modelVariantFromApi && modelVariantFromApi.toLowerCase() === model?.toLowerCase()) {
-    modelVariantFromApi = "";
-  }
-  // Fallback: Aus Title ableiten, wenn API keinen eigenen Version/Variant-Feld hat (z. B. "BMW i4 eDrive40 GC..." → "eDrive40 GC...")
-  if (!modelVariantFromApi) {
-    const fullTitle = getStr(raw, "Title", "title", "FullName", "DisplayName", "VehicleTitle", "Name");
-    const prefix = [brand, model].filter(Boolean).join(" ").trim();
-    if (fullTitle && prefix && fullTitle.length > prefix.length) {
-      const rest = fullTitle.slice(prefix.length).trim();
-      if (rest && rest.length >= 2 && !looksLikeEquipmentOrDescription(rest)) {
-        modelVariantFromApi = rest;
-      }
-    }
-  }
+  // Modellzusatz (VersionAdditional) – Ausstattungszeile wie "M-SPORT ACC AHK 360° HEAD-UP"
+  let modelVariantFromApi = getVersionAdditionalFromRaw(raw);
 
   // Einmalig Struktur loggen: Modell/Make/Variant/Ausstattung aus API (für Debug)
   if (!_carzillaStructureLogged) {
@@ -1145,7 +1130,7 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
 
   // Nur CarGate-Daten: keine Ableitung aus Titel oder Textanalyse. Marke/Modell exakt wie von der API.
   const displayBrand = brand || "Unbekannt";
-  const displayModel = model || "Unbekannt";
+  let displayModel = model || "Unbekannt";
   const category = determineCategory(displayBrand, displayModel, power, fuel);
 
   // Ausstattung: 1) EquipmentIds + Katalog, 2) Equipment/EquipmentList Array, 3) kommaseparierter String
@@ -1204,11 +1189,51 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     }
   }
 
-  // Titel = Marke + Modell (nur CarGate-Daten). Baureihe (ProductionSeries) separat für Anzeige in Klammern.
+  // Modell = Version/ModelVersion (z. B. "220 Active Tourer") hat Priorität vor Katalog-Modell ("2er")
+  const versionFromApi = getVersionFromRaw(raw);
+  if (versionFromApi && versionFromApi.length >= displayModel.length && !looksLikeEquipmentOrDescription(versionFromApi)) {
+    displayModel = versionFromApi;
+  }
+  // Fallback: Aus FullTitle extrahieren (Brand + Model + Modellzusatz) → Model = Rest nach Brand minus Modellzusatz
+  else {
+    const fullTitleFromApi = getFullTitleFromRaw(raw);
+    if (fullTitleFromApi && displayBrand && modelVariantFromApi) {
+      const brandEscaped = displayBrand.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      let restAfterBrand = fullTitleFromApi.replace(new RegExp(`^${brandEscaped}\\s+`, "i"), "").trim();
+      // Modellzusatz am Ende entfernen → ergibt Modell (z. B. "220 Active Tourer")
+      const v = modelVariantFromApi.trim();
+      if (restAfterBrand.toLowerCase().endsWith(v.toLowerCase())) {
+        restAfterBrand = restAfterBrand.slice(0, -v.length).trim();
+      }
+      if (restAfterBrand && restAfterBrand.length > displayModel.length && !looksLikeEquipmentOrDescription(restAfterBrand)) {
+        displayModel = restAfterBrand;
+      }
+    } else if (fullTitleFromApi && displayBrand && !modelVariantFromApi) {
+      const brandEscaped = displayBrand.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const restAfterBrand = fullTitleFromApi.replace(new RegExp(`^${brandEscaped}\\s+`, "i"), "").trim();
+      if (restAfterBrand && restAfterBrand.length > displayModel.length && !looksLikeEquipmentOrDescription(restAfterBrand)) {
+        displayModel = restAfterBrand;
+      }
+    }
+  }
+
+  // Fallback Modellzusatz: Aus Title extrahieren, wenn VersionAdditional fehlt (Rest nach Brand + Modell)
+  if (!modelVariantFromApi && displayBrand && displayModel && displayModel !== "Unbekannt") {
+    const fullTitle = getFullTitleFromRaw(raw);
+    const prefix = `${displayBrand} ${displayModel}`.trim();
+    if (fullTitle && fullTitle.length > prefix.length && fullTitle.toLowerCase().startsWith(prefix.toLowerCase())) {
+      const rest = fullTitle.slice(prefix.length).trim();
+      if (rest && rest.length >= 2 && !looksLikeEquipmentOrDescription(rest)) {
+        modelVariantFromApi = rest;
+      }
+    }
+  }
+
+  // Titel = Marke + Modell. Modellzusatz separat (wird darunter angezeigt).
   const displayTitle =
     displayBrand && displayModel && displayModel !== "Unbekannt"
       ? `${displayBrand} ${displayModel}`.trim()
-      : title?.trim() || "";
+      : getFullTitleFromRaw(raw) || title?.trim() || "";
   const productionSeriesOut = productionSeriesRaw?.trim() || undefined;
 
   return {
@@ -1365,17 +1390,58 @@ function getStrFromRaw(raw: Record<string, unknown>, ...keys: string[]): string 
 }
 
 /**
- * Baut die Exposé-PDF-URL aus einem Carzilla Vehicle-Objekt (GetVehicle-Antwort).
- * Laut Doku liefert Carzilla kein PDF; der Händler stellt Expose.pdf?oid=…&ourl=… bereit.
- * Wir verwenden Oid aus der API und die konfigurierte Basis-URL (CARGATE_EXPOSE_BASE_URL).
+ * Formatiert 32-stelligen Hex-String als UUID (mit Bindestrichen).
+ * Erwartetes Format der funktionierenden Seite: oid=91f374f1-c405-4bb4-9b58-dace6dc0a446
+ */
+function formatOidAsUuid(oid: string): string {
+  const hex = (oid || "").replace(/-/g, "").trim();
+  if (hex.length !== 32 || !/^[0-9a-fA-F]+$/.test(hex)) return oid;
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+/**
+ * Extrahiert Oid (UUID) aus OfferUrl-Pfad, falls vorhanden (z. B. …/91f374f1c4054bb49b58dace6dc0a446/1302).
+ */
+function extractOidFromOfferUrl(offerUrl: string): string | null {
+  if (!offerUrl || !offerUrl.includes("/")) return null;
+  const withDashes = offerUrl.match(/\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:\/|$)/);
+  if (withDashes) return withDashes[1];
+  const noDashes = offerUrl.match(/\/([0-9a-fA-F]{32})\/(?:\d+|$)/);
+  if (noDashes) return formatOidAsUuid(noDashes[1]);
+  return null;
+}
+
+/**
+ * Prüft, ob der String eine gültige UUID (32 Hex-Zeichen, mit oder ohne Bindestriche) ist.
+ */
+function isUuidLike(s: string): boolean {
+  const hex = (s || "").replace(/-/g, "").trim();
+  return hex.length === 32 && /^[0-9a-fA-F]+$/.test(hex);
+}
+
+/**
+ * Baut die Exposé-PDF-URL für die Händlerseite.
+ *
+ * Hinweis: Die Carzilla V6-Dokumentation beschreibt KEINEN Exposé-PDF-Download.
+ * Sie nennt nur den Image-Service (vid, bid) und TemplateInfo.Links (DetailsPage mit vid={Vehicle.VehicleId}).
+ * Das Exposé-PDF wird vom Händlerserver bereitgestellt (z. B. /Expose.pdf).
+ *
+ * Wir verwenden vid (VehicleId), wenn die API keinen echten Oid/UUID liefert, da die Doku
+ * nur VehicleId für Details und Bilder kennt. Wenn die API Oid oder eine OfferUrl mit UUID
+ * zurückgibt, verwenden wir oid.
  */
 export function buildExposeUrlFromCarzillaVehicle(raw: Record<string, unknown>, vehicleId: string): string | null {
-  const oid = getStrFromRaw(raw, "Oid", "oid", "OfferId", "OfferGuid", "VehicleGuid", "Uuid", "Guid");
-  const offerUrl = getStrFromRaw(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link");
   const base = (process.env.CARGATE_EXPOSE_BASE_URL || "https://fahrzeuge.gs-automobile-rheinland.de").replace(/\/+$/, "");
-  const oidForExpose = oid || vehicleId;
-  const detailUrl = offerUrl || `${base}/Fahrzeugsuche/Details?vid=${vehicleId}`;
-  return `${base}/Expose.pdf?oid=${encodeURIComponent(oidForExpose)}&ourl=${encodeURIComponent(detailUrl)}`;
+  let oid = getStrFromRaw(raw, "Oid", "oid", "OfferId", "OfferGuid", "VehicleGuid", "Uuid", "Guid");
+  const offerUrl = getStr(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link") || getStrFromRaw(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link");
+  if (!oid && offerUrl) oid = extractOidFromOfferUrl(offerUrl) || "";
+  const hasRealOid = oid && isUuidLike(oid);
+  const detailUrl = offerUrl && (offerUrl.startsWith("http") || offerUrl.startsWith("/")) ? offerUrl : `${base}/Fahrzeugsuche/Details?vid=${vehicleId}`;
+  const ourl = encodeURIComponent(detailUrl);
+  if (hasRealOid) {
+    return `${base}/Expose.pdf?oid=${encodeURIComponent(formatOidAsUuid(oid!))}&ourl=${ourl}`;
+  }
+  return `${base}/Expose.pdf?vid=${encodeURIComponent(vehicleId)}&ourl=${ourl}`;
 }
 
 /**

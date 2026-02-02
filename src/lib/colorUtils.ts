@@ -21,9 +21,13 @@ export function normalizeColorToBasic(color: string): string {
     return "Weiß";
   }
   
-  // Silber/Grau variants
-  if (colorLower.includes('silber') || colorLower.includes('silver') || colorLower.includes('grau') || colorLower.includes('grey') || colorLower.includes('gray')) {
+  // Silber variants
+  if (colorLower.includes('silber') || colorLower.includes('silver')) {
     return "Silber";
+  }
+  // Grau variants
+  if (colorLower.includes('grau') || colorLower.includes('grey') || colorLower.includes('gray')) {
+    return "Grau";
   }
   
   // Blau variants
@@ -66,11 +70,6 @@ export function normalizeColorToBasic(color: string): string {
     return "Violett";
   }
   
-  // Gold variants
-  if (colorLower.includes('gold')) {
-    return "Gold";
-  }
-  
   // Return original if no match found
   return color;
 }
@@ -84,6 +83,7 @@ export function getColorHex(basicColor: string): string {
     "Schwarz": "#000000",
     "Weiß": "#FFFFFF",
     "Silber": "#C0C0C0",
+    "Grau": "#6B7280",
     "Blau": "#0000FF",
     "Rot": "#FF0000",
     "Grün": "#008000",
@@ -92,7 +92,6 @@ export function getColorHex(basicColor: string): string {
     "Gelb": "#FFFF00",
     "Orange": "#FFA500",
     "Violett": "#800080",
-    "Gold": "#FFD700",
   };
   
   return colorMap[basicColor] || "#CCCCCC";
@@ -105,6 +104,7 @@ export const BASIC_COLORS = [
   "Schwarz",
   "Weiß",
   "Silber",
+  "Grau",
   "Blau",
   "Rot",
   "Grün",
@@ -113,5 +113,4 @@ export const BASIC_COLORS = [
   "Gelb",
   "Orange",
   "Violett",
-  "Gold",
 ];

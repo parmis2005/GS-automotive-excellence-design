@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import QuickSearch from "@/components/QuickSearch";
@@ -15,7 +16,19 @@ import { getDefaultSEO } from "@/utils/seo";
 
 const Index = () => {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const seoData = getDefaultSEO();
+
+  // Erfolgsmeldung nach Ankauf-Anfrage
+  useEffect(() => {
+    if (searchParams.get("ankauf") === "success") {
+      toast.success("Erfolgreich gesendet", {
+        description: "Ihre Ankauf-Anfrage wurde erfolgreich übermittelt. Wir melden uns in Kürze.",
+      });
+      searchParams.delete("ankauf");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Handle hash navigation - scroll to section when hash is present in URL
   useEffect(() => {

@@ -52,7 +52,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { getPlaceholderImage, getVehicleImageWithFallback } from "@/lib/vehicleImage";
-import { splitModelName, getBaseModelName, getVehicleDisplayName, groupEquipmentByCategory } from "@/lib/vehicleNameUtils";
+import { getBaseModelName, getVehicleDisplayName, groupEquipmentByCategory } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 
 /**
@@ -478,9 +478,9 @@ const VehicleDetailPage = () => {
                                   </div>
                                   <VehicleTitle
                                     brand={similarVehicle.brand}
-                                    model={splitModelName(similarVehicle.model).base}
+                                    model={similarVehicle.model}
                                     productionSeries={similarVehicle.productionSeries}
-                                    modelVariant={similarVehicle.modelVariant ?? splitModelName(similarVehicle.model).variant}
+                                    modelVariant={similarVehicle.modelVariant}
                                     variantClassName="text-[10px] font-normal text-muted-foreground tracking-wide line-clamp-2"
                                     className="text-xs font-semibold text-foreground"
                                     as="h3"
@@ -568,13 +568,12 @@ const VehicleDetailPage = () => {
               <div>
               <div className="mb-2">
                 {(() => {
-                  const { base, variant } = splitModelName(vehicle.model);
                   return (
                     <VehicleTitle
                       brand={vehicle.brand}
-                      model={base}
+                      model={vehicle.model}
                       productionSeries={vehicle.productionSeries}
-                      modelVariant={vehicle.modelVariant ?? variant}
+                      modelVariant={vehicle.modelVariant}
                       fallbackTitle={vehicle.brand + " " + vehicle.model}
                       className="text-3xl md:text-4xl font-display font-bold text-foreground"
                       as="h1"
@@ -787,20 +786,23 @@ const VehicleDetailPage = () => {
                 <Mail className="w-4 h-4 mr-2" />
                 Nachricht senden
               </Button>
-              {vehicle.exposeUrl && (
-                <Button
-                  size="default"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
+              <Button
+                size="default"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  const url = vehicle.exposeUrl?.trim();
+                  if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+                    window.open(url, "_blank");
+                  } else {
                     const exposeRedirectUrl = `${import.meta.env.VITE_API_URL || ""}/api/vehicles/${vehicle.id}/expose`;
                     window.open(exposeRedirectUrl.startsWith("http") ? exposeRedirectUrl : `/api/vehicles/${vehicle.id}/expose`, "_blank");
-                  }}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Exposé PDF
-                </Button>
-              )}
+                  }
+                }}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Exposé PDF
+              </Button>
             </div>
 
             {/* Kaufanfrage – unter Schnellinfos */}

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, MapPin, Clock, ArrowRight } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, ArrowRight, ExternalLink } from "lucide-react";
 
 const ContactSection = () => {
   return (
@@ -21,7 +21,7 @@ const ContactSection = () => {
           <div className="space-y-6 animate-fade-up">
             {/* Address Card */}
             <div className="p-6 rounded-lg bg-background border border-border">
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-4 mb-4">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <MapPin className="w-5 h-5 text-primary" />
                 </div>
@@ -34,6 +34,17 @@ const ContactSection = () => {
                   </p>
                 </div>
               </div>
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=Kuhlesh%C3%BCtte+149+47809+Krefeld"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors group"
+                title="Standort in Google Maps anzeigen"
+              >
+                <MapPin className="h-5 w-5 text-primary" />
+                <span className="font-medium text-foreground text-sm">Standort in Google Maps anzeigen</span>
+                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+              </a>
             </div>
 
             {/* Contact Methods */}

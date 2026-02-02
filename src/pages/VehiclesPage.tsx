@@ -17,6 +17,7 @@ import SEO from "@/components/SEO";
 import { getVehiclesPageSEO } from "@/utils/seo";
 
 export interface VehicleFiltersState {
+  internalNumber: string; // 3-stellige Kennnummer (Angebotsnummer)
   brands: string[];
   models: string[];
   priceRange: [number, number];
@@ -67,6 +68,7 @@ const VehiclesPage = () => {
   }, [vehicles]);
 
   const [filters, setFilters] = useState<VehicleFiltersState>({
+    internalNumber: "",
     brands: initialBrand ? [initialBrand] : [],
     models: [],
     priceRange: [minPrice, maxPrice],
@@ -412,6 +414,17 @@ const VehiclesPage = () => {
         }
       }
       
+      // 3-stellige Kennnummer: exakter Match auf (normierte) Angebotsnummer
+      if (filters.internalNumber && filters.internalNumber.trim()) {
+        const filterDigits = (filters.internalNumber || "").replace(/\D/g, "").slice(0, 10);
+        if (filterDigits.length > 0) {
+          const vehicleDigits = (vehicle.internalNumber || "").replace(/\D/g, "");
+          if (!vehicleDigits || !vehicleDigits.startsWith(filterDigits)) {
+            return false;
+          }
+        }
+      }
+
       // Search query filter - searches in brand, model, year, internal number
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
@@ -492,6 +505,7 @@ const VehiclesPage = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [
+    filters.internalNumber,
     filters.brands,
     filters.models,
     filters.priceRange,
@@ -520,6 +534,7 @@ const VehiclesPage = () => {
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
+    if (filters.internalNumber && filters.internalNumber.trim()) count++;
     if (filters.brands.length > 0) count++;
     if (filters.models.length > 0) count++;
     // Calculate dynamic min/max for comparison
@@ -544,6 +559,7 @@ const VehiclesPage = () => {
 
   const clearAllFilters = () => {
     setFilters({
+      internalNumber: "",
       brands: [],
       models: [],
       priceRange: [minPrice, maxPrice],
@@ -567,108 +583,15 @@ const VehiclesPage = () => {
       <Navbar />
       <main className="pt-8 pb-20">
         <div className="max-w-[1560px] mx-auto px-6 lg:px-8">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-                  Fahrzeugsuche
-                </h1>
-                {vehicles && (
-                  <p className="text-muted-foreground">
-                    {filteredAndSortedVehicles.length} {filteredAndSortedVehicles.length === 1 ? "Fahrzeug" : "Fahrzeuge"} gefunden
-                    {activeFilterCount > 0 && (
-                      <button
-                        onClick={clearAllFilters}
-                        className="ml-2 text-primary hover:underline"
-                      >
-                        Filter zurücksetzen
-                      </button>
-                    )}
-                  </p>
-                )}
-              </div>
-
-              {/* Sort & Items per Page + Mobile Filter Button */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Mobile Filter Button */}
-                <Sheet open={isMobileFiltersOpen} onOpenChange={setIsMobileFiltersOpen}>
-                  <SheetTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="lg:hidden w-full sm:w-auto flex items-center justify-center gap-2"
-                    >
-                      <Filter className="w-4 h-4" />
-                      Filtern
-                      {activeFilterCount > 0 && (
-                        <span className="ml-1 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-bold rounded-full">
-                          {activeFilterCount}
-                        </span>
-                      )}
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-full sm:w-[400px] overflow-y-auto">
-                    <SheetHeader>
-                      <SheetTitle>Filter</SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-6">
-                      <VehicleFilters
-                        filters={filters}
-                        setFilters={setFilters}
-                        filterOptions={filterOptions}
-                        vehicles={vehicles}
-                      />
-                    </div>
-                    <div className="mt-6 pt-6 border-t sticky bottom-0 bg-background">
-                      <Button 
-                        onClick={() => setIsMobileFiltersOpen(false)}
-                        className="w-full"
-                        size="lg"
-                      >
-                        Speichern
-                      </Button>
-                    </div>
-                  </SheetContent>
-                </Sheet>
-
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="Sortieren nach" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="arrival-desc">Neueste Zugänge</SelectItem>
-                    <SelectItem value="price-desc">Preis: Höchste zuerst</SelectItem>
-                    <SelectItem value="price-asc">Preis: Niedrigste zuerst</SelectItem>
-                    <SelectItem value="year-desc">Jahr: Neueste zuerst</SelectItem>
-                    <SelectItem value="year-asc">Jahr: Älteste zuerst</SelectItem>
-                    <SelectItem value="mileage-asc">Kilometerstand: Niedrigste zuerst</SelectItem>
-                    <SelectItem value="mileage-desc">Kilometerstand: Höchste zuerst</SelectItem>
-                    <SelectItem value="power-desc">Leistung: Höchste zuerst</SelectItem>
-                    <SelectItem value="power-asc">Leistung: Niedrigste zuerst</SelectItem>
-                    <SelectItem value="brand-asc">Marke: A-Z</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select 
-                  value={itemsPerPage.toString()} 
-                  onValueChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-full sm:w-[150px]">
-                    <SelectValue placeholder="Pro Seite" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10 pro Seite</SelectItem>
-                    <SelectItem value="20">20 pro Seite</SelectItem>
-                    <SelectItem value="50">50 pro Seite</SelectItem>
-                    <SelectItem value="100">100 pro Seite</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* Header – nur Titel, wenn (noch) keine Fahrzeuge geladen */}
+          {(!vehicles || isLoading) && (
+            <div className="mb-6">
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+                Fahrzeugsuche
+              </h1>
             </div>
-          </div>
+          )}
+
 
           {/* Loading State */}
           {isLoading && (
@@ -691,72 +614,179 @@ const VehiclesPage = () => {
 
           {/* Content */}
           {vehicles && !isLoading && (
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* Filters Sidebar - Desktop only */}
-              <aside className="hidden lg:block lg:w-72 flex-shrink-0">
-                <VehicleFilters
-                  filters={filters}
-                  setFilters={setFilters}
-                  filterOptions={filterOptions}
-                  vehicles={vehicles}
-                />
-              </aside>
+            <div className="flex flex-col">
+              {/* Zeige-Info (oben) */}
+              {filteredAndSortedVehicles.length > 0 && (
+                <div className="text-center text-sm text-muted-foreground mb-4">
+                  Zeige {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedVehicles.length)} von {filteredAndSortedVehicles.length} Fahrzeugen
+                </div>
+              )}
 
-              {/* Vehicles List */}
-              <div className="flex-1">
-                {filteredAndSortedVehicles.length > 0 ? (
-                  <>
-                    {/* Pagination - oben */}
-                    {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2 mb-6">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                          disabled={currentPage === 1}
+              {/* Titel | Pagination | Sortierung – alle auf gleicher Höhe */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+                {/* Links: Titel + Fahrzeuganzahl */}
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+                    Fahrzeugsuche
+                  </h1>
+                  {vehicles && (
+                    <p className="text-muted-foreground">
+                      {filteredAndSortedVehicles.length} {filteredAndSortedVehicles.length === 1 ? "Fahrzeug" : "Fahrzeuge"} gefunden
+                      {activeFilterCount > 0 && (
+                        <button
+                          onClick={clearAllFilters}
+                          className="ml-2 text-primary hover:underline"
                         >
-                          <ChevronLeft className="w-4 h-4 mr-1" />
-                          Zurück
-                        </Button>
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            let pageNum: number;
-                            if (totalPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (currentPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i;
-                            } else {
-                              pageNum = currentPage - 2 + i;
-                            }
-                            return (
-                              <Button
-                                key={pageNum}
-                                variant={currentPage === pageNum ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => setCurrentPage(pageNum)}
-                                className="min-w-[40px]"
-                              >
-                                {pageNum}
-                              </Button>
-                            );
-                          })}
-                        </div>
+                          Filter zurücksetzen
+                        </button>
+                      )}
+                    </p>
+                  )}
+                </div>
+
+                {/* Mitte: Pagination (Seitenauswahl) */}
+                {filteredAndSortedVehicles.length > 0 && totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Zurück
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum: number;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={currentPage === pageNum ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(pageNum)}
+                              className="min-w-[40px]"
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Weiter
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                )}
+
+                {/* Rechts: Sortierung + Items per Page + Mobile Filter */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Sheet open={isMobileFiltersOpen} onOpenChange={setIsMobileFiltersOpen}>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="lg:hidden w-full sm:w-auto flex items-center justify-center gap-2"
+                      >
+                        <Filter className="w-4 h-4" />
+                        Filtern
+                        {activeFilterCount > 0 && (
+                          <span className="ml-1 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-bold rounded-full">
+                            {activeFilterCount}
+                          </span>
+                        )}
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="w-full sm:w-[400px] overflow-y-auto">
+                      <SheetHeader>
+                        <SheetTitle>Filter</SheetTitle>
+                      </SheetHeader>
+                      <div className="mt-6">
+                        <VehicleFilters
+                          filters={filters}
+                          setFilters={setFilters}
+                          filterOptions={filterOptions}
+                          vehicles={vehicles}
+                        />
+                      </div>
+                      <div className="mt-6 pt-6 border-t sticky bottom-0 bg-background">
                         <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                          disabled={currentPage === totalPages}
+                          onClick={() => setIsMobileFiltersOpen(false)}
+                          className="w-full"
+                          size="lg"
                         >
-                          Weiter
-                          <ChevronRight className="w-4 h-4 ml-1" />
+                          Speichern
                         </Button>
                       </div>
-                    )}
-                    <div className="text-center text-sm text-muted-foreground mb-4">
-                      Zeige {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedVehicles.length)} von {filteredAndSortedVehicles.length} Fahrzeugen
-                    </div>
+                    </SheetContent>
+                  </Sheet>
+
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="Sortieren nach" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="arrival-desc">Neueste Zugänge</SelectItem>
+                      <SelectItem value="price-desc">Preis: Höchste zuerst</SelectItem>
+                      <SelectItem value="price-asc">Preis: Niedrigste zuerst</SelectItem>
+                      <SelectItem value="year-desc">Jahr: Neueste zuerst</SelectItem>
+                      <SelectItem value="year-asc">Jahr: Älteste zuerst</SelectItem>
+                      <SelectItem value="mileage-asc">Kilometerstand: Niedrigste zuerst</SelectItem>
+                      <SelectItem value="mileage-desc">Kilometerstand: Höchste zuerst</SelectItem>
+                      <SelectItem value="power-desc">Leistung: Höchste zuerst</SelectItem>
+                      <SelectItem value="power-asc">Leistung: Niedrigste zuerst</SelectItem>
+                      <SelectItem value="brand-asc">Marke: A-Z</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={itemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      setItemsPerPage(Number(value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                      <SelectValue placeholder="Pro Seite" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 pro Seite</SelectItem>
+                      <SelectItem value="20">20 pro Seite</SelectItem>
+                      <SelectItem value="50">50 pro Seite</SelectItem>
+                      <SelectItem value="100">100 pro Seite</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex flex-col lg:flex-row gap-8">
+                {/* Filters Sidebar – Desktop only, startet auf gleicher Höhe wie erste Fahrzeugkarte */}
+                <aside className="hidden lg:block lg:w-72 flex-shrink-0">
+                  <VehicleFilters
+                    filters={filters}
+                    setFilters={setFilters}
+                    filterOptions={filterOptions}
+                    vehicles={vehicles}
+                  />
+                </aside>
+
+                {/* Vehicles List */}
+                <div className="flex-1">
+                  {filteredAndSortedVehicles.length > 0 ? (
+                    <>
                     <div className="space-y-4 mb-8">
                       {paginatedVehicles.map((vehicle, index) => (
                         <div key={vehicle.id} className="h-full">
@@ -841,6 +871,7 @@ const VehiclesPage = () => {
                     )}
                   </div>
                 )}
+              </div>
               </div>
             </div>
           )}

@@ -69,8 +69,9 @@ vehiclesRouter.get("/", async (req, res) => {
 
 /**
  * GET /api/vehicles/:id/expose
- * Redirect (302) zur Exposé-PDF-URL. Laut Carzilla V6-Doku gibt es keine „GetExposé PDF“-Methode;
- * wir nutzen GetVehicle(vehicleId) für Oid und bauen die Händler-URL (Expose.pdf?oid=…&ourl=…).
+ * Redirect (302) zur Exposé-PDF-URL. Die Carzilla V6-Doku beschreibt keinen Exposé-PDF-Download
+ * (nur Image-Service mit vid/bid und TemplateInfo.Links mit DetailsPage vid={Vehicle.VehicleId}).
+ * Das Exposé wird vom Händlerserver bereitgestellt; wir bauen die URL mit vid=VehicleId oder oid=UUID.
  */
 vehiclesRouter.get("/:id/expose", async (req, res) => {
   try {

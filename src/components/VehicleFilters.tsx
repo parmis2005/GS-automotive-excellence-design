@@ -234,7 +234,7 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
       </div>
       <div className="p-6">
 
-      {/* Search */}
+      {/* Suche (oben) */}
       <div className="mb-6">
         <Label htmlFor="search" className="mb-2 block">
           Suche
@@ -249,6 +249,26 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
             className="pl-9"
           />
         </div>
+      </div>
+
+      {/* Kennnummer (3-stellig) */}
+      <div className="mb-6">
+        <Label htmlFor="internalNumber" className="mb-2 block">
+          Kennnummer (3-stellig)
+        </Label>
+        <Input
+          id="internalNumber"
+          type="text"
+          inputMode="numeric"
+          placeholder="z. B. 597"
+          maxLength={3}
+          value={filters.internalNumber}
+          onChange={(e) => {
+            const v = e.target.value.replace(/\D/g, "").slice(0, 3);
+            updateFilters({ internalNumber: v });
+          }}
+          className="font-mono"
+        />
       </div>
 
       <Separator className="mb-6" />

@@ -96,6 +96,14 @@ $$ language 'plpgsql';
 DROP TRIGGER IF EXISTS update_vehicles_updated_at ON vehicles;
 CREATE TRIGGER update_vehicles_updated_at BEFORE UPDATE ON vehicles
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Purchase inquiries (Ankauf-Anfragen)
+CREATE TABLE IF NOT EXISTS purchase_inquiries (
+  id SERIAL PRIMARY KEY,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_purchase_inquiries_created_at ON purchase_inquiries(created_at DESC);
 `;
 
 /**
@@ -423,6 +431,48 @@ export async function getLastSyncTimestamp(): Promise<Date | null> {
   } catch (error) {
     console.error("❌ Error getting last sync timestamp:", error);
     return null;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Holt alle Ankauf-Anfragen aus der Datenbank (neueste zuerst)
+ */
+export async function getPurchaseInquiries(limit = 100): Promise<Array<{ id: number; payload: Record<string, unknown>; createdAt: string }>> {
+  const client = await getClient();
+  try {
+    const result = await client.query(
+      `SELECT id, payload, created_at FROM purchase_inquiries ORDER BY created_at DESC LIMIT $1`,
+      [limit]
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      payload: row.payload as Record<string, unknown>,
+      createdAt: row.created_at as string,
+    }));
+  } catch (error) {
+    console.error("❌ Error fetching purchase inquiries:", error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Speichert eine Ankauf-Anfrage in der Datenbank
+ */
+export async function insertPurchaseInquiry(payload: Record<string, unknown>): Promise<number> {
+  const client = await getClient();
+  try {
+    const result = await client.query(
+      `INSERT INTO purchase_inquiries (payload) VALUES ($1) RETURNING id`,
+      [JSON.stringify(payload)]
+    );
+    return result.rows[0].id;
+  } catch (error) {
+    console.error("❌ Error inserting purchase inquiry:", error);
+    throw error;
   } finally {
     client.release();
   }
