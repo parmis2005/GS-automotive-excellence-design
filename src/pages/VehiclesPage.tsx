@@ -582,7 +582,7 @@ const VehiclesPage = () => {
       <SEO data={seoData} breadcrumbs={[{ name: "Startseite", url: "/" }, { name: "Fahrzeugsuche", url: "/fahrzeuge" }]} />
       <Navbar />
       <main className="pt-8 pb-20">
-        <div className="max-w-[1560px] mx-auto px-6 lg:px-8">
+        <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
           {/* Header – nur Titel, wenn (noch) keine Fahrzeuge geladen */}
           {(!vehicles || isLoading) && (
             <div className="mb-6">
@@ -623,7 +623,7 @@ const VehiclesPage = () => {
               )}
 
               {/* Titel | Pagination | Sortierung – alle auf gleicher Höhe */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
                 {/* Links: Titel + Fahrzeuganzahl */}
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
@@ -699,7 +699,7 @@ const VehiclesPage = () => {
                     <SheetTrigger asChild>
                       <Button
                         variant="outline"
-                        className="lg:hidden w-full sm:w-auto flex items-center justify-center gap-2"
+                        className="xl:hidden w-full sm:w-auto flex items-center justify-center gap-2"
                       >
                         <Filter className="w-4 h-4" />
                         Filtern
@@ -772,9 +772,9 @@ const VehiclesPage = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col lg:flex-row gap-8">
-                {/* Filters Sidebar – Desktop only, startet auf gleicher Höhe wie erste Fahrzeugkarte */}
-                <aside className="hidden lg:block lg:w-72 flex-shrink-0">
+              <div className="flex flex-col xl:flex-row gap-8 min-w-0">
+                {/* Filters Sidebar – erst ab xl (1280px), darunter Mobile-Sheet damit nichts abgeschnitten wird */}
+                <aside className="hidden xl:block xl:w-72 flex-shrink-0">
                   <VehicleFilters
                     filters={filters}
                     setFilters={setFilters}
@@ -783,8 +783,8 @@ const VehiclesPage = () => {
                   />
                 </aside>
 
-                {/* Vehicles List */}
-                <div className="flex-1">
+                {/* Vehicles List – min-w-0 damit Karten nicht abschneiden bei schmalem Viewport */}
+                <div className="flex-1 min-w-0">
                   {filteredAndSortedVehicles.length > 0 ? (
                     <>
                     <div className="space-y-4 mb-8">

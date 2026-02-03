@@ -122,12 +122,12 @@ const VehicleListItem = ({
   const isPlaceholderDisplay = imageError || usePlaceholder;
   
   return (
-    <div className="group bg-background border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 h-full flex flex-col min-h-[400px]">
-      <div className="flex flex-col md:flex-row flex-1 min-h-full">
-        {/* Image - Left Side (klickbar zur Detailansicht) */}
+    <div className="group bg-background border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 h-full flex flex-col min-h-[400px] min-w-0">
+      <div className="flex flex-col xl:flex-row flex-1 min-h-full min-w-0">
+        {/* Image – erst ab xl nebeneinander, darunter gestapelt damit nichts abgeschnitten wird */}
         <Link
           to={`/fahrzeuge/${id}`}
-          className="relative w-full md:w-96 lg:w-[32rem] flex-shrink-0 bg-secondary overflow-hidden block group/image"
+          className="relative w-full xl:w-96 2xl:w-[32rem] flex-shrink-0 bg-secondary overflow-hidden block group/image"
         >
           <div className="relative w-full aspect-[4/3] p-1 bg-secondary">
             <img
@@ -146,9 +146,9 @@ const VehicleListItem = ({
         </Link>
 
         {/* Content - Right Side */}
-        <div className="flex-1 p-6 flex flex-col min-h-full">
+        <div className="flex-1 p-6 flex flex-col min-h-full min-w-0">
           {/* Header Row */}
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+          <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap text-sm text-muted-foreground">
                 {internalNumber && (
@@ -199,7 +199,7 @@ const VehicleListItem = ({
 
           {/* Specifications Grid - Premium Box */}
           <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
               {year && (
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-primary flex-shrink-0" />

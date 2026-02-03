@@ -302,6 +302,7 @@ const VehicleDetailPage = () => {
           </Button>
         </div>
 
+        {/* Wie in main: 2 Spalten – links Bilder, Ähnliche, Ausstattung; rechts Preis, Kaufanfrage. Mobile: linke Spalte zuerst, dann rechte. */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
           {/* Left Column - Images, Similar, Ausstattung */}
           <div className="flex flex-col gap-4 min-h-0">
@@ -511,7 +512,7 @@ const VehicleDetailPage = () => {
               </div>
             )}
 
-            {/* Ausstattung – unter Ähnlichen Angeboten, scrollbar, endet wo Kaufanfrage endet */}
+            {/* Ausstattung – unter Ähnlichen Angeboten */}
             {vehicle.equipment && vehicle.equipment.length > 0 ? (
               <div className="mt-6 flex-1 min-h-0 flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                 <div className="bg-[#0f2439] px-5 py-4 flex items-center gap-2 shrink-0">
@@ -564,25 +565,20 @@ const VehicleDetailPage = () => {
           <div className="flex flex-col gap-6 min-h-0">
             {/* Premium Box - Header, Price, Quick Specs, CTA Buttons */}
             <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-6 md:p-8 space-y-6">
-              {/* Header */}
               <div>
               <div className="mb-2">
-                {(() => {
-                  return (
-                    <VehicleTitle
-                      brand={vehicle.brand}
-                      model={vehicle.model}
-                      productionSeries={vehicle.productionSeries}
-                      modelVariant={vehicle.modelVariant}
-                      fallbackTitle={vehicle.brand + " " + vehicle.model}
-                      className="text-3xl md:text-4xl font-display font-bold text-foreground"
-                      as="h1"
-                    />
-                  );
-                })()}
+                {(() => (
+                  <VehicleTitle
+                    brand={vehicle.brand}
+                    model={vehicle.model}
+                    productionSeries={vehicle.productionSeries}
+                    modelVariant={vehicle.modelVariant}
+                    fallbackTitle={vehicle.brand + " " + vehicle.model}
+                    className="text-3xl md:text-4xl font-display font-bold text-foreground"
+                    as="h1"
+                  />
+                ))()}
               </div>
-              
-              {/* Internal Number */}
               {vehicle.internalNumber && (
                 <div className="mb-4">
                   <Badge variant="secondary" className="rounded-full px-3 py-1 font-medium">
@@ -590,8 +586,6 @@ const VehicleDetailPage = () => {
                   </Badge>
                 </div>
               )}
-              
-              {/* Price with Action Buttons */}
               <div className="mb-6">
                 <div className="space-y-4">
                   <div>
@@ -605,8 +599,6 @@ const VehicleDetailPage = () => {
                       </div>
                     )}
                   </div>
-                  
-                  {/* Premium Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       size="default"
@@ -635,10 +627,7 @@ const VehicleDetailPage = () => {
                 </div>
               </div>
             </div>
-
             <Separator />
-
-            {/* Quick Specs - Box with subtle darker background */}
             <div className="bg-gray-100/60 border border-gray-300/50 rounded-lg p-4">
               <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-3">
@@ -650,7 +639,6 @@ const VehicleDetailPage = () => {
                   <div className="font-semibold">{vehicle.year}</div>
                 </div>
               </div>
-
               {vehicle.mileage > 0 && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -662,7 +650,6 @@ const VehicleDetailPage = () => {
                   </div>
                 </div>
               )}
-
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Fuel className="w-5 h-5 text-primary" />
@@ -672,7 +659,6 @@ const VehicleDetailPage = () => {
                   <div className="font-semibold">{vehicle.fuel}</div>
                 </div>
               </div>
-
               {vehicle.transmission && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -684,7 +670,6 @@ const VehicleDetailPage = () => {
                   </div>
                 </div>
               )}
-
               {vehicle.power && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -699,7 +684,6 @@ const VehicleDetailPage = () => {
                   </div>
                 </div>
               )}
-
               {(vehicle.exteriorColorFull || vehicle.exteriorColor) && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -711,7 +695,6 @@ const VehicleDetailPage = () => {
                   </div>
                 </div>
               )}
-
               {vehicle.productionSeries && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -723,7 +706,6 @@ const VehicleDetailPage = () => {
                   </div>
                 </div>
               )}
-
               {vehicle.previousOwners !== undefined && vehicle.previousOwners > 0 && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -735,7 +717,6 @@ const VehicleDetailPage = () => {
                   </div>
                 </div>
               )}
-
               {vehicle.cubicCapacity && vehicle.cubicCapacity > 0 && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -743,13 +724,10 @@ const VehicleDetailPage = () => {
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground">Hubraum</div>
-                    <div className="font-semibold">
-                      {vehicle.cubicCapacity.toLocaleString("de-DE")} cm³
-                    </div>
+                    <div className="font-semibold">{vehicle.cubicCapacity.toLocaleString("de-DE")} cm³</div>
                   </div>
                 </div>
               )}
-
               {vehicle.cylinders && vehicle.cylinders > 0 && (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -763,26 +741,13 @@ const VehicleDetailPage = () => {
               )}
               </div>
             </div>
-
             <Separator />
-
-            {/* CTA Buttons – Ende der Schnellinfos-Box */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                size="default"
-                variant="outline"
-                className="flex-1"
-                onClick={() => window.location.href = "tel:021519422262"}
-              >
+              <Button size="default" variant="outline" className="flex-1" onClick={() => window.location.href = "tel:021519422262"}>
                 <Phone className="w-4 h-4 mr-2" />
                 Jetzt anrufen
               </Button>
-              <Button
-                size="default"
-                variant="outline"
-                className="flex-1"
-                onClick={() => window.location.href = "mailto:info@gsauto.de?subject=Anfrage zu " + encodeURIComponent(getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries))}
-              >
+              <Button size="default" variant="outline" className="flex-1" onClick={() => window.location.href = "mailto:info@gsauto.de?subject=Anfrage zu " + encodeURIComponent(getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries))}>
                 <Mail className="w-4 h-4 mr-2" />
                 Nachricht senden
               </Button>
@@ -804,6 +769,7 @@ const VehicleDetailPage = () => {
                 Exposé PDF
               </Button>
             </div>
+          </div>
 
             {/* Kaufanfrage – unter Schnellinfos */}
             <div id="kaufanfrage" className="mt-6 bg-card border border-border rounded-2xl shadow-sm overflow-hidden scroll-mt-20 shrink-0">
@@ -1098,7 +1064,6 @@ const VehicleDetailPage = () => {
               </div>
             </div>
           </div>
-        </div>
         </div>
 
       </main>

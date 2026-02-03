@@ -85,100 +85,101 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Main Navbar */}
+      {/* Main Navbar – eine Zeile, Hamburger ganz rechts, volle Höhe für Button + Hamburger */}
       <nav
         className={`sticky top-0 z-50 transition-all duration-300 navbar-scalable overflow-x-hidden ${
           isScrolled
-            ? "bg-gray-200/95 backdrop-blur-md shadow-md py-3"
-            : "bg-gray-100 py-4"
+            ? "bg-gray-200/95 backdrop-blur-md shadow-md"
+            : "bg-gray-100"
         }`}
       >
-        <div className="w-full min-w-0 mx-auto px-3 sm:px-4 lg:px-6 max-w-7xl lg:ml-[30px]">
-          <div className="flex items-center justify-between lg:justify-start min-w-0 gap-2">
-            {/* Logo - Mobile: links, Desktop: normal */}
-            <Link 
-              to="/"
-              className="flex items-center transition-transform hover:scale-105 duration-200 flex-shrink-0 min-w-0 lg:mr-0"
-            >
-              <img 
-                src="/logo.png" 
-                alt="GS Automobile Rheinland" 
-                className="h-10 sm:h-12 lg:h-14 md:h-16 w-auto max-w-[120px] sm:max-w-none"
-              />
-            </Link>
+        <div className="flex items-stretch w-full min-h-[80px] sm:min-h-[88px]">
+          <div className="flex-1 min-w-0 flex items-center">
+            <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 lg:ml-[30px] flex items-center justify-between lg:justify-start min-w-0 gap-2 sm:gap-3">
+              {/* Logo – vertikales Padding nur am Logo */}
+              <Link 
+                to="/"
+                className={`flex items-center transition-transform hover:scale-105 duration-200 flex-shrink-0 min-w-[100px] sm:min-w-0 lg:mr-0 ${isScrolled ? "py-3" : "py-4"}`}
+              >
+                <img 
+                  src="/logo.png" 
+                  alt="GS Automobile Rheinland" 
+                  className="h-12 sm:h-16 lg:h-[72px] xl:h-20 w-auto max-w-[155px] sm:max-w-[200px] lg:max-w-none object-contain"
+                />
+              </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden xl:flex items-center gap-4 flex-1 justify-center mx-14" style={{ marginLeft: "clamp(64px, 8vw, 260px)" }}>
-              {navLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  to={link.to}
-                  onClick={link.label === "STARTSEITE" 
-                    ? handleHomeClick 
-                    : link.label === "FAHRZEUGANKAUF"
-                    ? handleAnkaufClick
-                    : link.isHash 
-                    ? (e) => handleHashNavClick(e, link.hash!) 
-                    : undefined}
-                  className={`px-4 py-2 text-base font-display font-bold tracking-wide transition-colors relative group ${
-                    link.label === "STARTSEITE"
-                      ? "text-primary hover:text-primary/80"
-                      : "text-foreground/80 hover:text-primary"
-                  }`}
-                >
-                  {link.label}
-                  <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-3/4" />
+              {/* Desktop Navigation – erst ab 2xl (1536px) */}
+              <div className="hidden 2xl:flex items-center gap-4 flex-1 justify-center mx-14" style={{ marginLeft: "clamp(64px, 8vw, 260px)" }}>
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.label}
+                    to={link.to}
+                    onClick={link.label === "STARTSEITE" 
+                      ? handleHomeClick 
+                      : link.label === "FAHRZEUGANKAUF"
+                      ? handleAnkaufClick
+                      : link.isHash 
+                      ? (e) => handleHashNavClick(e, link.hash!) 
+                      : undefined}
+                    className={`px-4 py-2 text-base font-display font-bold tracking-wide transition-colors relative group ${
+                      link.label === "STARTSEITE"
+                        ? "text-primary hover:text-primary/80"
+                        : "text-foreground/80 hover:text-primary"
+                    }`}
+                  >
+                    {link.label}
+                    <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-3/4" />
+                  </Link>
+                ))}
+              </div>
+
+              {/* Mobile/Tablet: Fahrzeugsuche-Button mittig, volle Navbar-Höhe, größer und abgerundet */}
+              <div className="2xl:hidden flex-1 flex justify-center items-center min-w-0 pr-2">
+                <Link to="/fahrzeuge" className="h-full flex items-center">
+                  <Button 
+                    variant="default"
+                    size="default"
+                    className="font-display font-semibold tracking-wide text-sm sm:text-base bg-primary hover:bg-primary/90 text-white shadow-md transition-all h-full min-h-[44px] rounded-xl px-5 sm:px-6 py-3 sm:py-4 whitespace-nowrap"
+                  >
+                    Fahrzeugsuche
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 inline" />
+                  </Button>
                 </Link>
-              ))}
-            </div>
+              </div>
 
-            {/* Mobile: Fahrzeug suchen Button in der Mitte */}
-            <div className="flex-1 flex justify-center xl:hidden mx-2 min-w-0 shrink">
-              <Link to="/fahrzeuge" className="min-w-0">
-                <Button 
-                  variant="default"
-                  size="sm"
-                  className="font-display font-semibold tracking-wide text-xs sm:text-sm bg-primary hover:bg-primary/90 text-white shadow-md transition-all px-2 sm:px-4 py-1.5 sm:py-2 h-auto whitespace-nowrap"
-                >
-                  <span className="hidden sm:inline">Fahrzeug suchen</span>
-                  <span className="sm:hidden">Suche</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1 sm:ml-1.5 inline" />
-                </Button>
-              </Link>
+              {/* CTA Button - Desktop (nur ab 2xl) */}
+              <div className="hidden 2xl:flex items-center gap-3 flex-shrink-0 ml-auto lg:mr-8">
+                <Link to="/fahrzeuge">
+                  <Button 
+                    variant="default" 
+                    size="lg"
+                    className="font-display font-semibold tracking-wide text-base bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all"
+                  >
+                    Fahrzeugsuche
+                    <ArrowRight className="w-5 h-5 ml-1.5" />
+                  </Button>
+                </Link>
+              </div>
             </div>
-
-            {/* CTA Button - Desktop */}
-            <div className="hidden xl:flex items-center gap-3 flex-shrink-0 ml-auto lg:mr-8">
-              <Link to="/fahrzeuge">
-                <Button 
-                  variant="default" 
-                  size="lg"
-                  className="font-display font-semibold tracking-wide text-base bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all"
-                >
-                  Fahrzeugsuche
-                  <ArrowRight className="w-5 h-5 ml-1.5" />
-                </Button>
-              </Link>
-            </div>
-
-            {/* Mobile Menu Button - ganz rechts, immer sichtbar */}
-            <button
-              className="xl:hidden p-2 text-foreground hover:bg-secondary rounded-lg transition-colors ml-auto flex-shrink-0 min-w-[44px]"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label="Menu"
-            >
-              {isMobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
           </div>
+
+          {/* Hamburger immer am rechten Rand, volle Navbar-Höhe */}
+          <button
+            className="2xl:hidden flex-shrink-0 w-14 min-w-[56px] self-stretch text-foreground hover:bg-gray-300/80 active:bg-gray-300 transition-colors flex items-center justify-center border-l border-gray-300/50"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Menu"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
+          </button>
         </div>
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="xl:hidden border-t border-border bg-gray-100">
+          <div className="2xl:hidden border-t border-border bg-gray-100">
             <div className="container mx-auto px-6 py-4">
               <div className="flex flex-col gap-1">
                 {navLinks.map((link) => (

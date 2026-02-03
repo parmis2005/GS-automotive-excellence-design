@@ -76,13 +76,6 @@ const allowedUploadTypes = [
   "application/pdf",
 ];
 
-/** Safari auf macOS (MacBook) – dort friert der File-Upload ein. Safari auf iPhone funktioniert. */
-const isSafariOnMac = () =>
-  typeof navigator !== "undefined" &&
-  /^((?!chrome|chromium|crios|fxios|edg).)*safari/i.test(navigator.userAgent) &&
-  /Macintosh|Mac OS X/i.test(navigator.userAgent) &&
-  !/iPhone|iPad|iPod/i.test(navigator.userAgent);
-
 const defaultTopBrands = [
   "Volkswagen",
   "Mercedes-Benz",
@@ -1543,14 +1536,6 @@ const VehiclePurchaseForm = ({
                   <p className="mt-1 text-xs text-muted-foreground">
                     Hier können Sie Fotos oder Gutachten zum Unfallschaden einfügen.
                   </p>
-                  {isSafariOnMac() ? (
-                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-4 py-4 text-sm">
-                      <p className="text-amber-800 dark:text-amber-200">
-                        Safari: Bitte nutzen Sie Chrome/Firefox oder senden Sie Dokumente per E-Mail an{" "}
-                        <a href="mailto:info@gsauto.de" className="underline font-medium">info@gsauto.de</a>.
-                      </p>
-                    </div>
-                  ) : (
                   <div
                     className="mt-3 rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground"
                     onDragOver={(event) => event.preventDefault()}
@@ -1595,7 +1580,6 @@ const VehiclePurchaseForm = ({
                       </label>
                     </div>
                   </div>
-                  )}
                   {accidentError && (
                     <p className="mt-2 text-xs text-destructive">{accidentError}</p>
                   )}
@@ -1667,24 +1651,6 @@ const VehiclePurchaseForm = ({
         isValid: () => true,
         render: () => (
           <div className="space-y-4">
-            {isSafariOnMac() ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-5 py-6 text-center">
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-100 mb-2">
-                  Safari: Foto-Upload aktuell nicht verfügbar
-                </p>
-                <p className="text-sm text-amber-800 dark:text-amber-200/90 mb-4">
-                  Bitte nutzen Sie <strong>Chrome</strong> oder <strong>Firefox</strong> für den Upload, 
-                  oder senden Sie Fotos nach dem Absenden per E-Mail an{" "}
-                  <a href="mailto:info@gsauto.de" className="underline font-medium hover:text-primary">
-                    info@gsauto.de
-                  </a>
-                  .
-                </p>
-                <p className="text-xs text-amber-700 dark:text-amber-300/80">
-                  Sie können das Formular ohne Fotos absenden – wir melden uns bei Ihnen.
-                </p>
-              </div>
-            ) : (
             <div
               className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground"
               onDragOver={(event) => event.preventDefault()}
@@ -1729,7 +1695,6 @@ const VehiclePurchaseForm = ({
                 </label>
               </div>
             </div>
-            )}
             {photoError && (
               <p className="mt-2 text-xs text-destructive">{photoError}</p>
             )}

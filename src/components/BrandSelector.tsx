@@ -3,11 +3,33 @@ import { Link } from "react-router-dom";
 import { useVehicles } from "@/hooks/useVehicles";
 import { brandLogos } from "@/lib/brandLogos";
 
+/** Einmal aktivieren, um die Logo-Leiste mit allen verfügbaren Logos zu testen. Danach wieder auf false setzen. */
+const SHOW_ALL_LOGOS_FOR_TEST = false;
+
 const BrandSelector = () => {
   const { data: vehicles, isLoading } = useVehicles();
 
-  // Extract unique brands from vehicles with count, only if logo is available
+  // Im Testmodus: alle Logos aus der Map anzeigen (jedes Logo einmal). Sonst: nur Marken aus dem Bestand.
   const brandsWithLogo = useMemo(() => {
+    if (SHOW_ALL_LOGOS_FOR_TEST) {
+      const commonOrder = ["BMW", "Mercedes-Benz", "Audi", "Volkswagen", "Ford", "Opel", "Citroën", "Mini", "Nissan", "Jeep", "Fiat", "Polestar", "Hyundai", "Kia"];
+      const byComponent = new Map<React.ComponentType, string>();
+      for (const key of Object.keys(brandLogos)) {
+        const comp = brandLogos[key];
+        if (!byComponent.has(comp)) byComponent.set(comp, key);
+      }
+      return Array.from(byComponent.entries())
+        .map(([, logoKey]) => ({ brand: logoKey, logoKey, count: 0 }))
+        .sort((a, b) => {
+          const aIndex = commonOrder.indexOf(a.brand);
+          const bIndex = commonOrder.indexOf(b.brand);
+          if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+          if (aIndex !== -1) return -1;
+          if (bIndex !== -1) return 1;
+          return a.brand.localeCompare(b.brand);
+        });
+    }
+
     if (!vehicles || vehicles.length === 0) return [];
 
     const brandCounts = new Map<string, number>();
@@ -23,7 +45,7 @@ const BrandSelector = () => {
         const normalizedBrand = brand.trim();
         // Try different variations to find matching logo
         let logoKey: string | null = null;
-        
+
         if (brandLogos[normalizedBrand]) {
           logoKey = normalizedBrand;
         } else if (brandLogos[normalizedBrand.replace(/-/g, " ")]) {
@@ -40,10 +62,10 @@ const BrandSelector = () => {
             }
           }
         }
-        
+
         // Only include if logo was found
         if (!logoKey) return null;
-        
+
         return {
           brand: normalizedBrand,
           logoKey,
@@ -56,7 +78,7 @@ const BrandSelector = () => {
         const commonBrands = ["BMW", "Mercedes-Benz", "Audi", "Volkswagen", "Ford"];
         const aIndex = commonBrands.indexOf(a.brand);
         const bIndex = commonBrands.indexOf(b.brand);
-        
+
         if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
         if (aIndex !== -1) return -1;
         if (bIndex !== -1) return 1;
@@ -78,7 +100,7 @@ const BrandSelector = () => {
     return duplicated;
   }, [brandsWithLogo]);
 
-  if (isLoading || !brandsWithLogo || brandsWithLogo.length === 0) {
+  if (!SHOW_ALL_LOGOS_FOR_TEST && (isLoading || !brandsWithLogo || brandsWithLogo.length === 0)) {
     return null;
   }
 

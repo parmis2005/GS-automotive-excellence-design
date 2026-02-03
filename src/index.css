@@ -267,3 +267,5 @@
     margin-left: calc(32px * var(--navbar-scale)) !important;
   }
 }
+
+/* Fahrzeugdetail-Grid liegt in VehicleDetailPage.tsx (inline <style> mit #vehicle-detail-layout) */
