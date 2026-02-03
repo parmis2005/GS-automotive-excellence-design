@@ -302,7 +302,7 @@ const VehicleDetailPage = () => {
           </Button>
         </div>
 
-        {/* Wie in main: 2 Spalten – links Bilder, Ähnliche, Ausstattung; rechts Preis, Kaufanfrage. Mobile: linke Spalte zuerst, dann rechte. */}
+        {/* Wie in main: 2 Spalten – links Bilder, Ähnliche, Ausstattung; rechts Preis, Kaufanfrage. */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
           {/* Left Column - Images, Similar, Ausstattung */}
           <div className="flex flex-col gap-4 min-h-0">
@@ -626,7 +626,6 @@ const VehicleDetailPage = () => {
                   </div>
                 </div>
               </div>
-            </div>
             <Separator />
             <div className="bg-gray-100/60 border border-gray-300/50 rounded-lg p-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1064,6 +1063,7 @@ const VehicleDetailPage = () => {
               </div>
             </div>
           </div>
+        </div>
         </div>
 
       </main>
