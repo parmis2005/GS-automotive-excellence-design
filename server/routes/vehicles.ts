@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { Readable } from "node:stream";
 import { getAllVehicles, getVehicleById } from "../db/database.js";
 import {
   isCargateApiConfigured,
@@ -8,6 +9,36 @@ import {
 } from "../services/cargateApi.js";
 
 export const vehiclesRouter = Router();
+
+async function resolveExposeUrlForVehicle(id: string): Promise<{ exposeUrl: string | null; vehicleExists: boolean }> {
+  let vehicle;
+  if (isCargateApiConfigured()) {
+    try {
+      const vehicles = await getVehiclesFromCargateCached();
+      vehicle = vehicles.find((v) => v.id === id) ?? null;
+    } catch {
+      vehicle = await getVehicleById(id);
+    }
+  } else {
+    vehicle = await getVehicleById(id);
+  }
+
+  if (!vehicle) {
+    return { exposeUrl: null, vehicleExists: false };
+  }
+
+  let exposeUrl = vehicle.exposeUrl?.trim();
+  if ((!exposeUrl || (!exposeUrl.startsWith("http://") && !exposeUrl.startsWith("https://"))) && isCargateApiConfigured()) {
+    const raw = await getVehicleFromCarzillaApi(id);
+    if (raw) exposeUrl = buildExposeUrlFromCarzillaVehicle(raw, id) ?? undefined;
+  }
+
+  if (!exposeUrl || (!exposeUrl.startsWith("http://") && !exposeUrl.startsWith("https://"))) {
+    return { exposeUrl: null, vehicleExists: true };
+  }
+
+  return { exposeUrl, vehicleExists: true };
+}
 
 /**
  * GET /api/vehicles
@@ -76,32 +107,16 @@ vehiclesRouter.get("/", async (req, res) => {
 vehiclesRouter.get("/:id/expose", async (req, res) => {
   try {
     const id = req.params.id;
-    let vehicle;
-    if (isCargateApiConfigured()) {
-      try {
-        const vehicles = await getVehiclesFromCargateCached();
-        vehicle = vehicles.find((v) => v.id === id) ?? null;
-      } catch {
-        vehicle = await getVehicleById(id);
-      }
-    } else {
-      vehicle = await getVehicleById(id);
-    }
+    const { exposeUrl, vehicleExists } = await resolveExposeUrlForVehicle(id);
 
-    if (!vehicle) {
+    if (!vehicleExists) {
       return res.status(404).json({
         success: false,
         error: "Vehicle not found",
       });
     }
 
-    let exposeUrl = vehicle.exposeUrl?.trim();
-    if ((!exposeUrl || (!exposeUrl.startsWith("http://") && !exposeUrl.startsWith("https://"))) && isCargateApiConfigured()) {
-      const raw = await getVehicleFromCarzillaApi(id);
-      if (raw) exposeUrl = buildExposeUrlFromCarzillaVehicle(raw, id) ?? undefined;
-    }
-
-    if (!exposeUrl || (!exposeUrl.startsWith("http://") && !exposeUrl.startsWith("https://"))) {
+    if (!exposeUrl) {
       return res.status(404).json({
         success: false,
         error: "Exposé nicht verfügbar",
@@ -117,6 +132,86 @@ vehiclesRouter.get("/:id/expose", async (req, res) => {
       error: "Failed to resolve expose URL",
       message: error instanceof Error ? error.message : "Unknown error",
     });
+  }
+});
+
+vehiclesRouter.get("/:id/expose/view", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const forceDownload = req.query.download === "1" || req.query.download === "true";
+    const { exposeUrl, vehicleExists } = await resolveExposeUrlForVehicle(id);
+
+    if (!vehicleExists) {
+      return res.status(404).json({
+        success: false,
+        error: "Vehicle not found",
+      });
+    }
+
+    if (!exposeUrl) {
+      return res.status(404).json({
+        success: false,
+        error: "Exposé nicht verfügbar",
+        message: "Für dieses Fahrzeug ist keine Exposé-URL hinterlegt.",
+      });
+    }
+
+    const response = await fetch(exposeUrl);
+    if (!response.ok || !response.body) {
+      return res.status(502).json({
+        success: false,
+        error: "Exposé nicht abrufbar",
+        message: `Exposé konnte nicht geladen werden (Status ${response.status}).`,
+      });
+    }
+
+    const contentType = response.headers.get("content-type") ?? "application/pdf";
+    res.setHeader("Content-Type", contentType);
+
+    const contentLength = response.headers.get("content-length");
+    if (contentLength) {
+      res.setHeader("Content-Length", contentLength);
+    }
+
+    const lastModified = response.headers.get("last-modified");
+    if (lastModified) {
+      res.setHeader("Last-Modified", lastModified);
+    }
+
+    const sourceDisposition = response.headers.get("content-disposition");
+    if (forceDownload) {
+      res.setHeader("Content-Disposition", "attachment; filename=\"Expose.pdf\"");
+    } else if (sourceDisposition) {
+      res.setHeader("Content-Disposition", sourceDisposition.includes("inline") ? sourceDisposition : sourceDisposition);
+    } else {
+      res.setHeader("Content-Disposition", "inline; filename=\"Expose.pdf\"");
+    }
+
+    res.setHeader("Cache-Control", "public, max-age=300, s-maxage=300");
+
+    const body = response.body;
+    const stream = Readable.fromWeb(body as unknown as ReadableStream);
+    stream.on("error", (streamError) => {
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: "Fehler beim Streamen des Exposés",
+          message: streamError instanceof Error ? streamError.message : "Unknown error",
+        });
+      } else {
+        res.destroy(streamError as Error);
+      }
+    });
+    stream.pipe(res);
+  } catch (error) {
+    console.error("Error streaming expose PDF:", error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: "Failed to stream expose PDF",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
 });
 

@@ -4,6 +4,7 @@ import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
+import { ExposeViewerDialog } from "@/components/ExposeViewerDialog";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
 import { formatFuelType, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
@@ -44,6 +45,7 @@ const VehicleCard = ({
   // State for image error handling and placeholder detection
   const [imageError, setImageError] = useState(false);
   const [usePlaceholder, setUsePlaceholder] = useState(!image || !image.trim());
+  const [showExpose, setShowExpose] = useState(false);
   
   // Check if the image is a placeholder (only one image exists AND it's a placeholder)
   useEffect(() => {
@@ -270,13 +272,7 @@ const VehicleCard = ({
             className="w-full"
             onClick={(e) => {
               e.stopPropagation();
-              const url = exposeUrl?.trim();
-              if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
-                window.open(url, "_blank");
-              } else {
-                const exposeRedirectUrl = `${import.meta.env.VITE_API_URL || ""}/api/vehicles/${id}/expose`;
-                window.open(exposeRedirectUrl.startsWith("http") ? exposeRedirectUrl : `/api/vehicles/${id}/expose`, "_blank");
-              }
+              setShowExpose(true);
             }}
           >
             <Download className="w-4 h-4 mr-2" />
@@ -284,6 +280,15 @@ const VehicleCard = ({
           </Button>
         </div>
       </div>
+
+      <ExposeViewerDialog
+        open={showExpose}
+        onOpenChange={setShowExpose}
+        exposeUrl={exposeUrl}
+        offerUrl={offerUrl}
+        vehicleId={id}
+        vehicleName={getVehicleDisplayName(brand, model, productionSeries, title)}
+      />
     </div>
   );
 };

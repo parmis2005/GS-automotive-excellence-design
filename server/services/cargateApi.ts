@@ -1000,7 +1000,16 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     if (b != null && typeof b === "object" && "branchId" in b) return String((b as { branchId: unknown }).branchId);
     return getBranchId();
   })();
-  const offerUrl = getStr(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link");
+  const exposeTemplate = process.env.CARGATE_EXPOSE_URL_TEMPLATE?.trim();
+  const exposeBaseUrl = (process.env.CARGATE_EXPOSE_BASE_URL || "https://fahrzeuge.gs-automobile-rheinland.de").replace(/\/+$/, "");
+  const useVidParam = (process.env.CARGATE_EXPOSE_USE_VID || "").toLowerCase() === "true";
+
+  let offerUrl =
+    normalizeDealerUrlForExpose(
+      getStr(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link") ||
+        getStrFromMatchingKeys(raw, "offer", "detail", "fahrzeugsuche", "fahrzeugdetail", "link"),
+      exposeBaseUrl
+    ) || "";
   const description = getStr(raw, "Description", "description", "comment", "Beschreibung");
   // Außenfarbe (Allgemeinfarbe für Suche/Filter)
   let exteriorColor =
@@ -1041,9 +1050,6 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     for (const k of exposeKeys) sample[k] = raw[k];
     if (exposeKeys.length > 0) console.warn("Carzilla: Exposé-URL nicht gefunden. Rohdaten (expose/pdf/url-Keys):", JSON.stringify(sample, null, 2).slice(0, 800));
   }
-  const exposeTemplate = process.env.CARGATE_EXPOSE_URL_TEMPLATE?.trim();
-  const exposeBaseUrl = (process.env.CARGATE_EXPOSE_BASE_URL || "https://fahrzeuge.gs-automobile-rheinland.de").replace(/\/+$/, "");
-  const useVidParam = (process.env.CARGATE_EXPOSE_USE_VID || "").toLowerCase() === "true";
   if (!exposeUrl && id) {
     let oidForExpose = getStr(raw, "Oid", "oid", "OfferId", "OfferGuid", "VehicleGuid", "Uuid", "Guid") || getUrlFromRaw(raw, "Oid", "oid", "OfferId");
     if (!oidForExpose && offerUrl) oidForExpose = extractOidFromOfferUrl(offerUrl) || "";
@@ -1411,6 +1417,30 @@ function extractOidFromOfferUrl(offerUrl: string): string | null {
   return null;
 }
 
+function normalizeDealerUrlForExpose(url?: string | null, base?: string): string | null {
+  if (!url) return null;
+  let normalized = url.trim();
+  if (!normalized) return null;
+
+  normalized = normalized
+    .replace(/^httpss:\/\//i, "https://")
+    .replace(/^http:\/\/https:\/\//i, "https://")
+    .replace(/^https:\/\/https:\/\//i, "https://");
+
+  if (normalized.startsWith("//")) normalized = `https:${normalized}`;
+
+  if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+    return normalized;
+  }
+
+  const baseUrl = (base || process.env.CARGATE_EXPOSE_BASE_URL || "https://fahrzeuge.gs-automobile-rheinland.de").replace(/\/+$/, "");
+  if (normalized.startsWith("/")) {
+    return `${baseUrl}${normalized}`;
+  }
+
+  return `${baseUrl}/${normalized.replace(/^\/+/, "")}`;
+}
+
 /**
  * Prüft, ob der String eine gültige UUID (32 Hex-Zeichen, mit oder ohne Bindestriche) ist.
  */
@@ -1433,7 +1463,11 @@ function isUuidLike(s: string): boolean {
 export function buildExposeUrlFromCarzillaVehicle(raw: Record<string, unknown>, vehicleId: string): string | null {
   const base = (process.env.CARGATE_EXPOSE_BASE_URL || "https://fahrzeuge.gs-automobile-rheinland.de").replace(/\/+$/, "");
   let oid = getStrFromRaw(raw, "Oid", "oid", "OfferId", "OfferGuid", "VehicleGuid", "Uuid", "Guid");
-  const offerUrl = getStr(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link") || getStrFromRaw(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link");
+  const offerUrl =
+    normalizeDealerUrlForExpose(
+      getStr(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link") || getStrFromRaw(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link"),
+      base
+    ) || "";
   if (!oid && offerUrl) oid = extractOidFromOfferUrl(offerUrl) || "";
   const hasRealOid = oid && isUuidLike(oid);
   const detailUrl = offerUrl && (offerUrl.startsWith("http") || offerUrl.startsWith("/")) ? offerUrl : `${base}/Fahrzeugsuche/Details?vid=${vehicleId}`;

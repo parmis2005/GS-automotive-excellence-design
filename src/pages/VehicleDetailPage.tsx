@@ -24,7 +24,7 @@ import {
   X,
   ZoomIn,
   ZoomOut,
-  Calculator,
+  FileText,
   ArrowRight,
   ArrowLeftRight,
   Shield,
@@ -52,6 +52,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { getPlaceholderImage, getVehicleImageWithFallback } from "@/lib/vehicleImage";
+import { ExposeViewerDialog } from "@/components/ExposeViewerDialog";
 import { getBaseModelName, getVehicleDisplayName, groupEquipmentByCategory } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 
@@ -74,6 +75,7 @@ const VehicleDetailPage = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [showExpose, setShowExpose] = useState(false);
 
   // Reset image index when vehicle ID changes
   useEffect(() => {
@@ -603,9 +605,13 @@ const VehicleDetailPage = () => {
                     <Button
                       size="default"
                       className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all group"
+                      onClick={() => {
+                        document.getElementById("kaufanfrage")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        window.history.replaceState(null, "", "#kaufanfrage");
+                      }}
                     >
-                      <Calculator className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                      Finanzierung berechnen
+                      <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                      Kaufanfrage
                     </Button>
                     <Button
                       size="default"
@@ -754,15 +760,7 @@ const VehicleDetailPage = () => {
                 size="default"
                 variant="outline"
                 className="flex-1"
-                onClick={() => {
-                  const url = vehicle.exposeUrl?.trim();
-                  if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
-                    window.open(url, "_blank");
-                  } else {
-                    const exposeRedirectUrl = `${import.meta.env.VITE_API_URL || ""}/api/vehicles/${vehicle.id}/expose`;
-                    window.open(exposeRedirectUrl.startsWith("http") ? exposeRedirectUrl : `/api/vehicles/${vehicle.id}/expose`, "_blank");
-                  }
-                }}
+                onClick={() => setShowExpose(true)}
               >
                 <Download className="w-4 h-4 mr-2" />
                 Exposé PDF
@@ -1123,6 +1121,17 @@ const VehicleDetailPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {vehicle && (
+        <ExposeViewerDialog
+          open={showExpose}
+          onOpenChange={setShowExpose}
+          exposeUrl={vehicle.exposeUrl}
+          offerUrl={vehicle.offerUrl}
+          vehicleId={vehicle.id}
+          vehicleName={getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)}
+        />
+      )}
     </div>
   );
 };

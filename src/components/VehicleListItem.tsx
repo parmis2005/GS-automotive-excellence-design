@@ -4,6 +4,7 @@ import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap, Phone, Mail, Car, Rou
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
+import { ExposeViewerDialog } from "@/components/ExposeViewerDialog";
 import { getVehicleType, formatFuelType, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
@@ -40,6 +41,7 @@ const VehicleListItem = ({
   isFirst = false,
 }: VehicleListItemProps) => {
   const displayTitle = getVehicleDisplayName(brand, model, productionSeries, title);
+  const [showExpose, setShowExpose] = useState(false);
 
   // Get image URL with fallback to placeholder
   const initialImageUrl = getVehicleImageWithFallback(image, id);
@@ -300,13 +302,7 @@ const VehicleListItem = ({
               className="flex-shrink-0"
               onClick={(e) => {
                 e.stopPropagation();
-                const url = exposeUrl?.trim();
-                if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
-                  window.open(url, "_blank");
-                } else {
-                  const exposeRedirectUrl = `${import.meta.env.VITE_API_URL || ""}/api/vehicles/${id}/expose`;
-                  window.open(exposeRedirectUrl.startsWith("http") ? exposeRedirectUrl : `/api/vehicles/${id}/expose`, "_blank");
-                }
+                setShowExpose(true);
               }}
             >
               <Download className="w-4 h-4 mr-2" />
@@ -337,6 +333,15 @@ const VehicleListItem = ({
           </div>
         </div>
       </div>
+
+      <ExposeViewerDialog
+        open={showExpose}
+        onOpenChange={setShowExpose}
+        exposeUrl={exposeUrl}
+        offerUrl={offerUrl}
+        vehicleId={id}
+        vehicleName={displayTitle}
+      />
     </div>
   );
 };
