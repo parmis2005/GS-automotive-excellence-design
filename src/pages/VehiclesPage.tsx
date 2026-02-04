@@ -644,9 +644,9 @@ const VehiclesPage = () => {
                   )}
                 </div>
 
-                {/* Mitte: Pagination (Seitenauswahl) */}
+                {/* Mitte: Pagination (Seitenauswahl) – nur Desktop, mobil nur unten */}
                 {filteredAndSortedVehicles.length > 0 && totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="hidden md:flex items-center justify-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"

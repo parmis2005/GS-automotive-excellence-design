@@ -113,10 +113,45 @@ function determineVehicleCategory(brand: string, model: string, power?: number, 
 }
 
 /**
- * Parses a vehicle title to extract brand and model
- * Example: "BMW i4 eDrive40 GC M-SPORT-PRO" -> { brand: "BMW", model: "i4 eDrive40 GC M-SPORT-PRO" }
+ * Splits model string into model and modelVariant (Modellzusatz), wie bei CarGate.
+ * z.B. "420 Gran Coupe M-SPORT ACC AHK" -> { model: "420 Gran Coupe", modelVariant: "M-SPORT ACC AHK" }
  */
-function parseVehicleTitle(title: string): { brand: string; model: string } {
+function splitModelAndVariant(modelPart: string): { model: string; modelVariant?: string } {
+  const s = modelPart.trim();
+  if (!s) return { model: "" };
+
+  // Bekannte Varianten-/Ausstattungsmarker – Split davor (Marker gehört zum Zusatz)
+  const variantMarkers = [
+    /\b(M-SPORT|M-Sport|M Sport)\b/i,
+    /\b(AMG)\b/i,
+    /\b(S-Line|S-LINE|S Line)\b/i,
+    /\b(GT-Line|GT Line|GT-LINE)\b/i,
+    /\b(R-Line|R-LINE|R Line)\b/i,
+    /\b(Design|DESIGN)\s+(Selection|SELECTION)\b/i,
+    /\b(Executive|EXECUTIVE)\b/i,
+    /\b(Innovation|INNOVATION)\b/i,
+    /\b(Pro|PRO)\b/i,
+  ];
+
+  for (const re of variantMarkers) {
+    const match = s.match(re);
+    if (match && match.index !== undefined && match.index > 0) {
+      const before = s.slice(0, match.index).trim();
+      const after = s.slice(match.index).trim();
+      if (before.length >= 2 && after.length >= 2) {
+        return { model: before, modelVariant: after };
+      }
+    }
+  }
+
+  return { model: s };
+}
+
+/**
+ * Parses a vehicle title to extract brand and model
+ * Example: "BMW i4 eDrive40 GC M-SPORT-PRO" -> { brand: "BMW", model: "i4 eDrive40 GC", modelVariant: "M-SPORT-PRO" }
+ */
+function parseVehicleTitle(title: string): { brand: string; model: string; modelVariant?: string } {
   // Common German car brands
   const brands = [
     "BMW", "Mercedes-Benz", "Audi", "Volkswagen", "Porsche", "Opel",
@@ -128,18 +163,20 @@ function parseVehicleTitle(title: string): { brand: string; model: string } {
   
   for (const brand of brands) {
     if (title.startsWith(brand)) {
-      return {
-        brand,
-        model: title.substring(brand.length).trim(),
-      };
+      const modelPart = title.substring(brand.length).trim();
+      const { model, modelVariant } = splitModelAndVariant(modelPart);
+      return { brand, model: model || modelPart, modelVariant };
     }
   }
-  
+
   // Fallback: Take first word as brand
   const parts = title.split(" ");
+  const modelPart = parts.slice(1).join(" ") || title;
+  const { model, modelVariant } = splitModelAndVariant(modelPart);
   return {
     brand: parts[0] || "Unbekannt",
-    model: parts.slice(1).join(" ") || title,
+    model: model || modelPart,
+    modelVariant,
   };
 }
 
@@ -152,15 +189,16 @@ function extractVehicleDetails(
   title: string,
   price: number
 ): Partial<Vehicle> {
-  const { brand, model } = parseVehicleTitle(title);
-  
+  const { brand, model, modelVariant } = parseVehicleTitle(title);
+
   // Try to extract year from title (e.g., "2023" or "EZ 2023")
   const yearMatch = title.match(/\b(19|20)\d{2}\b/);
   const year = yearMatch ? parseInt(yearMatch[0], 10) : new Date().getFullYear() - 1;
-  
+
   return {
     brand,
     model,
+    modelVariant,
     year,
     price,
     mileage: 0, // Will be extracted from detail page if needed
@@ -877,6 +915,7 @@ export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
         
         const brand = details.brand || "Unbekannt";
         const model = details.model || title;
+        const modelVariant = details.modelVariant;
         const power = details.power;
         const mileage = details.mileage || 0;
         
@@ -885,6 +924,7 @@ export async function fetchVehiclesFromWebsite(): Promise<Vehicle[]> {
           image,
           brand,
           model,
+          ...(modelVariant && { modelVariant }),
           price,
           year: details.year || new Date().getFullYear() - 1,
           mileage,
