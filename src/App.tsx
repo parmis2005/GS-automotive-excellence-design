@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import VehiclesPage from "./pages/VehiclesPage";
 import VehicleDetailPage from "./pages/VehicleDetailPage";
 import VehiclePurchasePage from "./pages/VehiclePurchasePage";
+import ImpressumPage from "./pages/ImpressumPage";
+import DatenschutzPage from "./pages/DatenschutzPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -38,6 +40,8 @@ const App = () => (
               <Route path="/fahrzeuge" element={<VehiclesPage />} />
               <Route path="/fahrzeuge/:id" element={<VehicleDetailPage />} />
               <Route path="/fahrzeugankauf" element={<VehiclePurchasePage />} />
+              <Route path="/impressum" element={<ImpressumPage />} />
+              <Route path="/datenschutz" element={<DatenschutzPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

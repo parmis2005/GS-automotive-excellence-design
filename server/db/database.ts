@@ -104,6 +104,13 @@ CREATE TABLE IF NOT EXISTS purchase_inquiries (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_purchase_inquiries_created_at ON purchase_inquiries(created_at DESC);
+
+-- Active visitors (anonym, nur session_id + last_seen für "X Besucher gerade online")
+CREATE TABLE IF NOT EXISTS active_visitors (
+  session_id VARCHAR(64) PRIMARY KEY,
+  last_seen TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_active_visitors_last_seen ON active_visitors(last_seen);
 `;
 
 /**
@@ -473,6 +480,37 @@ export async function insertPurchaseInquiry(payload: Record<string, unknown>): P
   } catch (error) {
     console.error("❌ Error inserting purchase inquiry:", error);
     throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/** Aktivität eines Besuchers erfassen (anonym, nur Session-ID). Für "X Besucher gerade online". */
+export async function recordActiveVisit(sessionId: string): Promise<void> {
+  if (!sessionId || sessionId.length > 64) return;
+  const client = await getClient();
+  try {
+    await client.query(
+      `INSERT INTO active_visitors (session_id, last_seen) VALUES ($1, CURRENT_TIMESTAMP)
+       ON CONFLICT (session_id) DO UPDATE SET last_seen = CURRENT_TIMESTAMP`,
+      [sessionId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+/** Anzahl Besucher, die in den letzten 5 Minuten aktiv waren. Entfernt veraltete Einträge. */
+export async function getActiveVisitorCount(): Promise<number> {
+  const client = await getClient();
+  try {
+    await client.query(
+      `DELETE FROM active_visitors WHERE last_seen < NOW() - INTERVAL '5 minutes'`
+    );
+    const result = await client.query(
+      `SELECT COUNT(*)::int AS count FROM active_visitors`
+    );
+    return result.rows[0]?.count ?? 0;
   } finally {
     client.release();
   }

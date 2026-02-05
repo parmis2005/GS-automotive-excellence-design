@@ -1,8 +1,40 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin } from "lucide-react";
+import { recordVisit, fetchActiveVisitorCount } from "@/lib/api/stats";
+
+const VISITOR_SESSION_KEY = "ae_visitor_session";
+const POLL_INTERVAL_MS = 60_000;
+
+function getOrCreateSessionId(): string {
+  try {
+    let id = sessionStorage.getItem(VISITOR_SESSION_KEY);
+    if (!id) {
+      id = crypto.randomUUID?.() ?? `s${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+      sessionStorage.setItem(VISITOR_SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    return `s${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  }
+}
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const [activeVisitors, setActiveVisitors] = useState<number | null>(null);
+  const isProd = import.meta.env.PROD;
+
+  useEffect(() => {
+    if (!isProd) return;
+    const sessionId = getOrCreateSessionId();
+    const tick = () => {
+      recordVisit(sessionId).catch(() => {});
+      fetchActiveVisitorCount().then(setActiveVisitors).catch(() => setActiveVisitors(0));
+    };
+    tick();
+    const t = setInterval(tick, POLL_INTERVAL_MS);
+    return () => clearInterval(t);
+  }, [isProd]);
 
   const services = [
     { label: "Finanzierung", href: "#services" },
@@ -104,16 +136,23 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="mt-10 pt-6 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-gray-500">
-            © {currentYear} GS Automobile Rheinland GmbH. Alle Rechte vorbehalten.
-          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <p className="text-xs text-gray-500">
+              © {currentYear} GS Automobile Rheinland GmbH. Alle Rechte vorbehalten.
+            </p>
+            {isProd && activeVisitors !== null && (
+              <span className="text-xs text-gray-500" aria-live="polite">
+                {activeVisitors} Besucher gerade online
+              </span>
+            )}
+          </div>
           <div className="flex gap-6 text-xs">
-            <a href="/impressum" className="text-gray-500 hover:text-gray-300 transition-colors">
+            <Link to="/impressum" className="text-gray-500 hover:text-gray-300 transition-colors">
               Impressum
-            </a>
-            <a href="/datenschutz" className="text-gray-500 hover:text-gray-300 transition-colors">
+            </Link>
+            <Link to="/datenschutz" className="text-gray-500 hover:text-gray-300 transition-colors">
               Datenschutz
-            </a>
+            </Link>
             <a href="/haftungsausschluss" className="text-gray-500 hover:text-gray-300 transition-colors">
               Haftungsausschluss
             </a>
