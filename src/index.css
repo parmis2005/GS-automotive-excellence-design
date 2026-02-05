@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+/* Lokal gehostete Fonts (kein Kontakt zu Google, DSGVO-konform) */
+@import '@fontsource-variable/montserrat';
+@import '@fontsource-variable/open-sans';
 
 @tailwind base;
 @tailwind components;
@@ -96,12 +98,12 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Open Sans', sans-serif;
+    font-family: 'Open Sans Variable', sans-serif;
     max-width: 100vw;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Montserrat', sans-serif;
+    font-family: 'Montserrat Variable', sans-serif;
     font-weight: 700;
   }
 }

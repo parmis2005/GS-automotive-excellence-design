@@ -153,9 +153,9 @@ const Footer = () => {
             <Link to="/datenschutz" className="text-gray-500 hover:text-gray-300 transition-colors">
               Datenschutz
             </Link>
-            <a href="/haftungsausschluss" className="text-gray-500 hover:text-gray-300 transition-colors">
+            <Link to="/haftungsausschluss" className="text-gray-500 hover:text-gray-300 transition-colors">
               Haftungsausschluss
-            </a>
+            </Link>
           </div>
         </div>
       </div>

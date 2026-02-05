@@ -396,25 +396,6 @@ const DatenschutzPage = () => {
                 </p>
               </div>
               <div>
-                <p className="font-medium text-foreground">Google Fonts</p>
-                <p>
-                  Diese Website bindet Schriftarten von Google Fonts ein (Google Ireland Limited,
-                  Irland). Dabei wird eine Verbindung zu Servern von Google hergestellt; dabei können
-                  u. a. Ihre IP-Adresse und technische Daten übermittelt werden. Die Nutzung dient
-                  der einheitlichen Darstellung der Schriftarten (berechtigtes Interesse, Art. 6
-                  Abs. 1 lit. f DSGVO). Weitere Informationen:{" "}
-                  <a
-                    href="https://policies.google.com/privacy?hl=de"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    Datenschutz Google
-                  </a>
-                  .
-                </p>
-              </div>
-              <div>
                 <p className="font-medium text-foreground">Fahrzeugbilder (externe Dienste)</p>
                 <p>
                   Fahrzeugfotos werden von externen Diensten (z. B. CarGate/Carzilla) eingebunden.

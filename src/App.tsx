@@ -11,6 +11,7 @@ import VehicleDetailPage from "./pages/VehicleDetailPage";
 import VehiclePurchasePage from "./pages/VehiclePurchasePage";
 import ImpressumPage from "./pages/ImpressumPage";
 import DatenschutzPage from "./pages/DatenschutzPage";
+import HaftungsausschlussPage from "./pages/HaftungsausschlussPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/fahrzeugankauf" element={<VehiclePurchasePage />} />
               <Route path="/impressum" element={<ImpressumPage />} />
               <Route path="/datenschutz" element={<DatenschutzPage />} />
+              <Route path="/haftungsausschluss" element={<HaftungsausschlussPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
