@@ -345,6 +345,17 @@ const DatenschutzPage = () => {
                 </p>
               </div>
               <div>
+                <p className="font-medium text-foreground">Besucherstatistik (anonym)</p>
+                <p>
+                  Zur Anzeige „X Besucher gerade online“ im Footer speichern wir eine zufällige, im
+                  Browser erzeugte Kennung (Session-ID) und den Zeitpunkt der letzten Aktivität. Es
+                  werden keine IP-Adressen oder sonstigen personenbezogenen Daten verarbeitet. Die
+                  Daten werden nach ca. 5 Minuten Inaktivität automatisch gelöscht. Rechtsgrundlage:
+                  Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Transparenz für Nutzer). Die
+                  Speicherung erfolgt in unserer Datenbank (Neon).
+                </p>
+              </div>
+              <div>
                 <p className="font-medium text-foreground">Kaufanfrage- und Kontaktformulare</p>
                 <p>
                   Wenn Sie uns über das Kaufanfrage- oder ein Kontaktformular Anfragen zukommen
