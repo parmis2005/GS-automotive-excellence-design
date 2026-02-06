@@ -75,6 +75,9 @@ ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS exterior_color_full VARCHAR(150);
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS cubic_capacity INTEGER;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS cylinders INTEGER;
 
+-- Bildanzahl (> 4 = echte Fotos, 4 = Platzhalter wenn keine Fotos)
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS image_count INTEGER;
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_vehicles_brand ON vehicles(brand);
 CREATE INDEX IF NOT EXISTS idx_vehicles_category ON vehicles(category);
@@ -167,7 +170,8 @@ export async function getAllVehicles(): Promise<Vehicle[]> {
         model_variant as "modelVariant",
         exterior_color_full as "exteriorColorFull",
         cubic_capacity as "cubicCapacity",
-        cylinders
+        cylinders,
+        image_count as "imageCount"
       FROM vehicles
       ORDER BY updated_at DESC
     `);
@@ -228,7 +232,8 @@ export async function getVehicleById(id: string): Promise<Vehicle | null> {
         model_variant as "modelVariant",
         exterior_color_full as "exteriorColorFull",
         cubic_capacity as "cubicCapacity",
-        cylinders
+        cylinders,
+        image_count as "imageCount"
       FROM vehicles
       WHERE id = $1
     `,
@@ -303,9 +308,9 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           is_new, description, power, power_kw, exterior_color, exterior_color_full, interior_color,
           equipment, expose_url, offer_url, internal_number, arrival_date,
           category, vat_displayable, vehicle_type, previous_owners, production_series, model_variant,
-          cubic_capacity, cylinders, last_synced_at
+          cubic_capacity, cylinders, image_count, last_synced_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
         ON CONFLICT (id) DO UPDATE SET
           image = EXCLUDED.image,
           brand = EXCLUDED.brand,
@@ -335,7 +340,8 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           exterior_color_full = EXCLUDED.exterior_color_full,
           cubic_capacity = EXCLUDED.cubic_capacity,
           cylinders = EXCLUDED.cylinders,
-          last_synced_at = $30
+          image_count = EXCLUDED.image_count,
+          last_synced_at = $31
         `,
         [
           id,
@@ -367,6 +373,7 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           truncate(vehicle.modelVariant, MAX_LEN.model_variant),
           vehicle.cubicCapacity || null,
           vehicle.cylinders || null,
+          vehicle.imageCount ?? null,
           now,
         ]
       );

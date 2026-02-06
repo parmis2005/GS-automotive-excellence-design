@@ -3,7 +3,8 @@ import {
   isCargateApiConfigured,
   fetchVehiclesFromCargateApi,
 } from "./cargateApi.js";
-import { upsertVehicles, getLastSyncTimestamp, deleteOldVehicles } from "../db/database.js";
+import { upsertVehicles, deleteOldVehicles } from "../db/database.js";
+import { getVehicleImageCount } from "../lib/imageCount.js";
 import type { Vehicle } from "../types/vehicle.js";
 
 let syncInterval: NodeJS.Timeout | null = null;
@@ -49,6 +50,31 @@ export async function syncVehicles(): Promise<{ success: boolean; count: number;
     }
 
     console.log(`✅ Fetched ${vehicles.length} vehicles`);
+
+    // Bildanzahl ermitteln (für "Sofort verfügbar" – nur Autos mit > 4 Fotos)
+    const BATCH_SIZE = 8;
+    const hasValidImage = (v: Vehicle) =>
+      v.image && v.image.trim() !== "" && !v.image.includes("placeholder") &&
+      (v.image.startsWith("http://") || v.image.startsWith("https://"));
+    for (let i = 0; i < vehicles.length; i += BATCH_SIZE) {
+      const batch = vehicles.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map(async (v) => {
+          if (!hasValidImage(v)) {
+            v.imageCount = 0;
+            return;
+          }
+          try {
+            v.imageCount = await getVehicleImageCount(v.id, v.image, 8);
+          } catch {
+            v.imageCount = 0;
+          }
+        })
+      );
+      if (i + BATCH_SIZE < vehicles.length) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    }
 
     // Update database with new vehicles
     await upsertVehicles(vehicles);

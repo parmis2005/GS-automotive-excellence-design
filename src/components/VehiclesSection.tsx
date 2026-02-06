@@ -1,4 +1,5 @@
 import VehicleCard from "./VehicleCard";
+import { getPlaceholderImage } from "@/lib/vehicleImage";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader2, AlertCircle, CheckCircle2, Shield, BadgeCheck } from "lucide-react";
 import { useVehicles } from "@/hooks/useVehicles";
@@ -17,15 +18,16 @@ const VehiclesSection = () => {
   const featuredVehicles = useMemo(() => {
     if (!vehicles) return [];
     
-    // Prefer vehicles with photos (image URL exists and is valid)
-    const vehiclesWithPhotos = vehicles.filter(v => 
-      v.image &&
-      v.image.trim() !== '' &&
-      !v.image.includes('placeholder') &&
-      (v.image.startsWith('http://') || v.image.startsWith('https://'))
-    );
-    // Fallback: alle Fahrzeuge nutzen, wenn keins mit Foto (damit Startseite wieder Autos zeigt)
-    const pool = vehiclesWithPhotos.length > 0 ? vehiclesWithPhotos : vehicles;
+    // Keine Fahrzeuge, die als erstes Bild das Platzhalter-Bild haben
+    const placeholderUrl = getPlaceholderImage();
+    const vehiclesWithPhotos = vehicles.filter(v => {
+      if (!v.image || !v.image.trim()) return false;
+      if (v.image.includes('placeholder')) return false;
+      if (v.image === placeholderUrl || v.image.trim() === placeholderUrl) return false;
+      if (!v.image.startsWith('http://') && !v.image.startsWith('https://')) return false;
+      return true;
+    });
+    const pool = vehiclesWithPhotos;
     
     if (pool.length === 0) return [];
     
@@ -225,8 +227,8 @@ const VehiclesSection = () => {
         });
       },
       {
-        threshold: 0.3, // Trigger when 30% of the section is visible
-        rootMargin: "0px 0px -200px 0px", // Trigger later - need to scroll deeper
+        threshold: 0.1, // Trigger when 10% of the section is visible
+        rootMargin: "0px 0px 80px 0px", // Etwas früher auslösen beim Runterscrollen
       }
     );
 

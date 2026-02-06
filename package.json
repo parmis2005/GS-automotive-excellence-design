@@ -11,6 +11,7 @@
     "build:dev": "vite build --mode development",
     "build:server": "tsc -p server/tsconfig.json",
     "start:server": "node server/dist/index.js",
+    "sync:db": "tsx server/scripts/sync-db.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },

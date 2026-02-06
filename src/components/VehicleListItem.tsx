@@ -122,6 +122,26 @@ const VehicleListItem = ({
   
   const displayImageUrl = (imageError || usePlaceholder) ? placeholderImageUrl : initialImageUrl;
   const isPlaceholderDisplay = imageError || usePlaceholder;
+
+  // "Neu eingetroffen" Badge – gleiche Logik wie VehicleCard
+  const isNew = (() => {
+    if (arrivalDate) {
+      try {
+        const arrival = new Date(arrivalDate);
+        if (!isNaN(arrival.getTime())) {
+          const daysSinceArrival = Math.floor((new Date().getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysSinceArrival >= 0 && daysSinceArrival < 30) return true;
+        }
+      } catch {
+        // continue
+      }
+    }
+    const currentYear = new Date().getFullYear();
+    const isVeryNewYear = year >= currentYear - 1;
+    const isVeryLowMileage = mileage < 1000;
+    const isLowMileage = mileage < 5000;
+    return (isVeryNewYear && isLowMileage) || isVeryLowMileage;
+  })();
   
   return (
     <div className="group bg-background border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 h-full flex flex-col min-h-[400px] min-w-0">
@@ -133,6 +153,11 @@ const VehicleListItem = ({
           className="relative w-full lg:w-80 xl:w-96 2xl:w-[32rem] flex-shrink-0 bg-secondary overflow-hidden block group/image"
         >
           <div className="relative w-full aspect-[4/3] p-1 bg-secondary">
+            {isNew && (
+              <div className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide">
+                Neu eingetroffen
+              </div>
+            )}
             <img
               src={displayImageUrl}
               alt={displayTitle}

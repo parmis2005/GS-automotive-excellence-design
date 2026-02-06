@@ -31,4 +31,5 @@ export interface Vehicle {
   modelVariant?: string; // Modellzusatz (z. B. eDrive40 GC M-SPORT-PRO) – von CarGate Version/Variant
   cubicCapacity?: number; // Hubraum in ccm
   cylinders?: number; // Anzahl Zylinder
+  imageCount?: number; // Anzahl Bilder (> 4 = echte Fotos)
 }

@@ -151,8 +151,8 @@ const VehicleCard = ({
   })();
   return (
     <div className="group relative bg-background rounded-lg overflow-hidden hover-lift border border-border shadow-soft h-full flex flex-col">
-      {/* Image Container */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
+      {/* Image Container - klickbar zur Detailseite */}
+      <Link to={`/fahrzeuge/${id}`} className="relative block aspect-[4/3] overflow-hidden bg-secondary cursor-pointer">
         <img
           src={displayImageUrl}
           alt={getVehicleDisplayName(brand, model, productionSeries, title)}
@@ -188,7 +188,7 @@ const VehicleCard = ({
             Neu eingetroffen
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Content */}
       <div className="p-5">

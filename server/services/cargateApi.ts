@@ -15,6 +15,7 @@
 
 import NodeCache from "node-cache";
 import type { Vehicle } from "../types/vehicle.js";
+import { getVehicleImageCount, hasOnlyPlaceholderImage } from "../lib/imageCount.js";
 
 const cache = new NodeCache({
   stdTTL: 24 * 60 * 60,
@@ -1078,6 +1079,8 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
   }
   const previousOwners = typeof raw.PreviousOwners === "number" ? raw.PreviousOwners : typeof raw.previousOwners === "number" ? raw.previousOwners : getNum(raw, "PreviousOwners", "previousOwners", "numberOfPreviousOwners");
   const vatDisplayable = raw.HasVat ?? raw.vatDisplayable ?? raw.vat_displayable;
+  // Bildanzahl aus API (RealImageCount = echte Fotos, ImageCount/CountImages = Alternativen)
+  const imageCountFromApi = getNum(raw, "RealImageCount", "realImageCount", "ImageCount", "imageCount", "CountImages", "countImages", "ImageSetSize", "imageSetSize");
 
   // Modellzusatz (VersionAdditional) – Ausstattungszeile wie "M-SPORT ACC AHK 360° HEAD-UP"
   let modelVariantFromApi = getVersionAdditionalFromRaw(raw);
@@ -1274,6 +1277,7 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     vatDisplayable: typeof vatDisplayable === "boolean" ? vatDisplayable : undefined,
     cubicCapacity: cubicCapacity > 0 ? cubicCapacity : undefined,
     cylinders: cylinders > 0 ? cylinders : undefined,
+    imageCount: imageCountFromApi > 0 ? imageCountFromApi : undefined,
   };
 }
 
@@ -1794,6 +1798,28 @@ export async function fetchVehiclesFromCargateApi(): Promise<Vehicle[]> {
   }
 
   if (vehicles.length > 0) {
+    // Platzhalter-Filter: Wenn Bild 2 nicht existiert = nur "Bald verfügbar" Platzhalter → image leeren
+    const hasCarGateImage = (v: Vehicle) =>
+      v.image && v.image.trim() !== "" &&
+      (v.image.includes("cargate360") || v.image.includes("carzilla-services.com"));
+    const BATCH = 10;
+    for (let i = 0; i < vehicles.length; i += BATCH) {
+      const batch = vehicles.slice(i, i + BATCH);
+      await Promise.all(
+        batch.map(async (v) => {
+          if (!hasCarGateImage(v)) return;
+          try {
+            const onlyPlaceholder = await hasOnlyPlaceholderImage(v.id, v.image);
+            if (onlyPlaceholder) {
+              v.image = "";
+            }
+          } catch {
+            v.image = "";
+          }
+        })
+      );
+      if (i + BATCH < vehicles.length) await new Promise((r) => setTimeout(r, 30));
+    }
     cache.set(cacheKey, vehicles);
     console.log(`✅ Carzilla API: ${vehicles.length} Fahrzeuge geladen`);
   }
