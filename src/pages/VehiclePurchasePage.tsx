@@ -52,8 +52,19 @@ const VehiclePurchasePage = () => {
     const wantsForm = hash === "#vehicle-purchase-form" || hash === `#${formElementId}` || kennnr;
     if (wantsForm) {
       const timer = setTimeout(() => {
-        document.getElementById(formElementId)?.scrollIntoView({ behavior: "smooth" });
-      }, 50);
+        const block = document.getElementById(`${formElementId}-block`);
+        if (block) {
+          const navbarHeight = window.matchMedia("(min-width: 1024px)").matches ? 135 : 88;
+          const rect = block.getBoundingClientRect();
+          const currentScrollY = window.scrollY ?? document.documentElement.scrollTop;
+          const targetScrollY = currentScrollY + rect.top - navbarHeight;
+          window.dispatchEvent(new CustomEvent("programmatic-scroll-start"));
+          window.scrollTo({ top: Math.max(0, targetScrollY), behavior: "smooth" });
+        } else {
+          window.dispatchEvent(new CustomEvent("programmatic-scroll-start"));
+          document.getElementById(formElementId)?.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 100);
       return () => clearTimeout(timer);
     }
     window.scrollTo({ top: 0, behavior: "smooth" });

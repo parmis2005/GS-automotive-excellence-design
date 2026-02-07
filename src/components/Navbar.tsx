@@ -1,19 +1,55 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Phone, Mail, Menu, X, ArrowRight } from "lucide-react";
 
+const SCROLL_THRESHOLD = 80;
+const PROGRAMMATIC_SCROLL_IGNORE_MS = 600;
+const BOTTOM_ZONE_PX = 80; // Am Seitenende: Navbar nicht anzeigen bei Bounce-Scroll
+
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [navbarVisible, setNavbarVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const ignoreShowUntil = useRef(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+    const getScrollY = () =>
+      window.scrollY ?? document.documentElement.scrollTop ?? 0;
+
+    const handleProgrammaticScroll = () => {
+      ignoreShowUntil.current = Date.now() + PROGRAMMATIC_SCROLL_IGNORE_MS;
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    const handleScroll = () => {
+      const y = getScrollY();
+      setIsScrolled(y > 20);
+      const prev = lastScrollY.current;
+      const isProgrammaticScroll = Date.now() < ignoreShowUntil.current;
+      const isNearBottom =
+        y + window.innerHeight >= document.documentElement.scrollHeight - BOTTOM_ZONE_PX;
+      // Navbar einblenden nur bei echtem User-Scroll; nicht bei System-Scroll oder Bounce am Seitenende
+      if (y < 50) {
+        if (!isProgrammaticScroll) setNavbarVisible(true);
+      } else if (y > prev && y > SCROLL_THRESHOLD) {
+        setNavbarVisible(false);
+      } else if (y < prev) {
+        if (!isProgrammaticScroll && !isNearBottom) setNavbarVisible(true);
+      }
+      lastScrollY.current = y;
+    };
+
+    lastScrollY.current = getScrollY();
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("programmatic-scroll-start", handleProgrammaticScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("programmatic-scroll-start", handleProgrammaticScroll);
+    };
   }, []);
 
   // Handle click for hash links
@@ -61,38 +97,44 @@ const Navbar = () => {
 
   return (
     <>
-      {/* Top Bar */}
-      <div className="hidden lg:block bg-gray-950 border-b border-gray-800">
-        <div className="container mx-auto px-6 py-2.5">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-6 text-sm text-gray-100">
-              <a 
-                href="tel:021519422262" 
-                className="flex items-center gap-2 hover:text-white transition-colors font-medium"
-              >
-                <Phone className="w-4 h-4" />
-                02151 94 222 62
-              </a>
-              <a 
-                href="mailto:info@gsauto.de" 
-                className="flex items-center gap-2 hover:text-white transition-colors font-medium"
-              >
-                <Mail className="w-4 h-4" />
-                info@gsauto.de
-              </a>
+      {/* Fixierter Header, gleitet beim Runterscrollen nach oben (Desktop + Mobile) */}
+      <div
+        className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-out ${
+          !navbarVisible ? "-translate-y-full" : ""
+        }`}
+      >
+        {/* Top Bar – nur Desktop */}
+        <div className="hidden lg:block bg-gray-950 border-b border-gray-800">
+          <div className="container mx-auto px-6 py-2.5">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-6 text-sm text-gray-100">
+                <a 
+                  href="tel:021519422262" 
+                  className="flex items-center gap-2 hover:text-white transition-colors font-medium"
+                >
+                  <Phone className="w-4 h-4" />
+                  02151 94 222 62
+                </a>
+                <a 
+                  href="mailto:info@gsauto.de" 
+                  className="flex items-center gap-2 hover:text-white transition-colors font-medium"
+                >
+                  <Mail className="w-4 h-4" />
+                  info@gsauto.de
+                </a>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Navbar – eine Zeile, Hamburger ganz rechts, volle Höhe für Button + Hamburger */}
-      <nav
-        className={`sticky top-0 z-50 transition-all duration-300 navbar-scalable overflow-x-hidden ${
-          isScrolled
-            ? "bg-gray-200/95 backdrop-blur-md shadow-md"
-            : "bg-gray-100"
-        }`}
-      >
+        {/* Main Navbar – sticky auf Mobile, in fixiertem Container auf Desktop */}
+        <nav
+          className={`sticky top-0 transition-all duration-300 navbar-scalable overflow-x-hidden ${
+            isScrolled
+              ? "bg-gray-200/95 backdrop-blur-md shadow-md"
+              : "bg-gray-100"
+          }`}
+        >
         <div className="flex items-stretch w-full min-h-[80px] sm:min-h-[88px]">
           <div className="flex-1 min-w-0 flex items-center">
             <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 lg:ml-[30px] flex items-center justify-between lg:justify-start min-w-0 gap-2 sm:gap-3">
@@ -245,6 +287,14 @@ const Navbar = () => {
           </div>
         )}
       </nav>
+      </div>
+
+      {/* Spacer für fixierten Header – kollabiert beim Ausblenden (Mobile: nur Nav ~88px, Desktop: Top Bar + Nav ~135px) */}
+      <div
+        className={`transition-all duration-300 ${
+          navbarVisible ? "h-[88px] lg:h-[135px]" : "h-0"
+        }`}
+      />
     </>
   );
 };

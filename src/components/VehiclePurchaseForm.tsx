@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
@@ -21,6 +21,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectGroup,
+  SelectLabel,
+} from "@/components/ui/select";
 import {
   SportwagenIcon,
   LimousineIcon,
@@ -417,6 +426,7 @@ const VehiclePurchaseForm = ({
 }: VehiclePurchaseFormProps) => {
   const mergedLabels = { ...defaultLabels, ...labels };
   const [currentStep, setCurrentStep] = useState(0);
+  const isInitialMount = useRef(true);
   const [mileageInput, setMileageInput] = useState("");
   const [mileageFocus, setMileageFocus] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -827,29 +837,31 @@ const VehiclePurchaseForm = ({
             ) : (
               <div>
                 <p className="text-lg font-bold text-foreground">Marke</p>
-                <select
-                  value={formData.make}
-                  onChange={(event) => updateField("make", event.target.value)}
-                  className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Marke auswählen</option>
-                  {topBrandList.length > 0 && (
-                    <optgroup label="Beliebte Marken">
-                      {topBrandList.map((brand) => (
-                        <option key={`top-${brand}`} value={brand}>
+                <Select value={formData.make} onValueChange={(v) => updateField("make", v)}>
+                  <SelectTrigger className="mt-2 h-11">
+                    <SelectValue placeholder="Marke auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {topBrandList.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>Beliebte Marken</SelectLabel>
+                        {topBrandList.map((brand) => (
+                          <SelectItem key={`top-${brand}`} value={brand}>
+                            {brand}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    <SelectGroup>
+                      <SelectLabel>Alle Marken (A-Z)</SelectLabel>
+                      {brandOptions.map((brand) => (
+                        <SelectItem key={`all-${brand}`} value={brand}>
                           {brand}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </optgroup>
-                  )}
-                  <optgroup label="Alle Marken (A-Z)">
-                    {brandOptions.map((brand) => (
-                      <option key={`all-${brand}`} value={brand}>
-                        {brand}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
@@ -992,33 +1004,33 @@ const VehiclePurchaseForm = ({
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="text-lg font-bold text-foreground">Monat</label>
-              <select
-                value={formData.firstRegistrationMonth}
-                onChange={(event) => updateField("firstRegistrationMonth", event.target.value)}
-                className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Monat auswählen</option>
-                {months.map((month) => (
-                  <option key={month} value={month}>
-                    {month}
-                  </option>
-                ))}
-              </select>
+              <Select value={formData.firstRegistrationMonth} onValueChange={(v) => updateField("firstRegistrationMonth", v)}>
+                <SelectTrigger className="mt-2 h-11">
+                  <SelectValue placeholder="Monat auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-lg font-bold text-foreground">Jahr</label>
-              <select
-                value={formData.firstRegistrationYear}
-                onChange={(event) => updateField("firstRegistrationYear", event.target.value)}
-                className="mt-2 h-11 w-full rounded-md border border-border bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Jahr auswählen</option>
-                {years.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+              <Select value={formData.firstRegistrationYear} onValueChange={(v) => updateField("firstRegistrationYear", v)}>
+                <SelectTrigger className="mt-2 h-11">
+                  <SelectValue placeholder="Jahr auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="mt-2 text-xs text-muted-foreground">Nicht in der Zukunft.</p>
             </div>
           </div>
@@ -1123,29 +1135,31 @@ const VehiclePurchaseForm = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground">Monat</label>
-                  <select
-                    value={formData.lastServiceMonth}
-                    onChange={(event) => updateField("lastServiceMonth", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">–</option>
-                    {months.map((month) => (
-                      <option key={month} value={month}>{month}</option>
-                    ))}
-                  </select>
+                  <Select value={formData.lastServiceMonth || "__none__"} onValueChange={(v) => updateField("lastServiceMonth", v === "__none__" ? "" : v)}>
+                    <SelectTrigger className="mt-1 h-10">
+                      <SelectValue placeholder="–" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">–</SelectItem>
+                      {months.map((month) => (
+                        <SelectItem key={month} value={month}>{month}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">Jahr</label>
-                  <select
-                    value={formData.lastServiceYear}
-                    onChange={(event) => updateField("lastServiceYear", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">–</option>
-                    {serviceYears.map((year) => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
+                  <Select value={formData.lastServiceYear || "__none__"} onValueChange={(v) => updateField("lastServiceYear", v === "__none__" ? "" : v)}>
+                    <SelectTrigger className="mt-1 h-10">
+                      <SelectValue placeholder="–" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">–</SelectItem>
+                      {serviceYears.map((year) => (
+                        <SelectItem key={year} value={year}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -1191,31 +1205,31 @@ const VehiclePurchaseForm = ({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs text-muted-foreground">Monat</label>
-                  <select
-                    value={formData.huMonth}
-                    onChange={(event) => updateField("huMonth", event.target.value)}
-                    disabled={formData.huExpired}
-                    className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">–</option>
-                    {months.map((month) => (
-                      <option key={month} value={month}>{month}</option>
-                    ))}
-                  </select>
+                  <Select value={formData.huMonth || "__none__"} onValueChange={(v) => updateField("huMonth", v === "__none__" ? "" : v)} disabled={formData.huExpired}>
+                    <SelectTrigger className="mt-1 h-9">
+                      <SelectValue placeholder="–" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">–</SelectItem>
+                      {months.map((month) => (
+                        <SelectItem key={month} value={month}>{month}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">Jahr</label>
-                  <select
-                    value={formData.huYear}
-                    onChange={(event) => updateField("huYear", event.target.value)}
-                    disabled={formData.huExpired}
-                    className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">–</option>
-                    {huYears.map((year) => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
+                  <Select value={formData.huYear || "__none__"} onValueChange={(v) => updateField("huYear", v === "__none__" ? "" : v)} disabled={formData.huExpired}>
+                    <SelectTrigger className="mt-1 h-9">
+                      <SelectValue placeholder="–" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">–</SelectItem>
+                      {huYears.map((year) => (
+                        <SelectItem key={year} value={year}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -1839,6 +1853,28 @@ const VehiclePurchaseForm = ({
     }
   }, [currentStep, steps.length]);
 
+  // Beim Schrittwechsel zum oberen Rand des Formular-Blocks scrollen – nur wenn nötig, stets zum Block (nicht zum Titel)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      const el = document.getElementById(`${containerId}-block`);
+      if (!el) return;
+      const navbarHeight = window.matchMedia("(min-width: 1024px)").matches ? 135 : 88;
+      const rect = el.getBoundingClientRect();
+      const currentScrollY = window.scrollY ?? document.documentElement.scrollTop;
+      const targetScrollY = currentScrollY + rect.top - navbarHeight;
+      // Nur scrollen wenn der Block nicht bereits am richtigen Ort ist (Toleranz 30px)
+      if (Math.abs(rect.top - navbarHeight) > 30) {
+        window.dispatchEvent(new CustomEvent("programmatic-scroll-start"));
+        window.scrollTo({ top: Math.max(0, targetScrollY), behavior: "smooth" });
+      }
+    }, 50);
+    return () => clearTimeout(t);
+  }, [currentStep, containerId]);
+
   const goNext = () => {
     if (!canGoNext) return;
     if (!isLastStep) {
@@ -1976,7 +2012,7 @@ const VehiclePurchaseForm = ({
   };
 
   return (
-    <section id={containerId} className="py-20 bg-secondary/40">
+    <section id={containerId} className="py-20 bg-secondary/40 scroll-mt-[88px] lg:scroll-mt-[135px]">
       <div className="container mx-auto px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
@@ -1989,7 +2025,10 @@ const VehiclePurchaseForm = ({
             <p className="text-muted-foreground">{mergedLabels.subtitle}</p>
           </div>
 
-          <div className={`rounded-2xl border border-border bg-background shadow-soft overflow-hidden ${currentStep === 0 ? "md:p-10 p-6" : "p-6 md:p-8"}`}>
+          <div
+            id={`${containerId}-block`}
+            className={`rounded-2xl border border-border bg-background shadow-soft overflow-hidden scroll-mt-[88px] lg:scroll-mt-[135px] ${currentStep === 0 ? "md:p-10 p-6" : "p-6 md:p-8"}`}
+          >
             {currentStep === 0 ? (
               /* Titelslide – dunkler Header, modern & clean */
               <>
