@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
@@ -5,6 +6,10 @@ import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin, Building2, Scale, ExternalLink } from "lucide-react";
 
 const ImpressumPage = () => {
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
+
   const seoData = {
     title: "Impressum | GS Automobile Rheinland",
     description:
