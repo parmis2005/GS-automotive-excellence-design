@@ -52,9 +52,13 @@ const Index = () => {
       <SEO data={seoData} />
       <Navbar />
       <main>
-        <Hero />
+        <section className="relative">
+          <Hero />
+          <div className="relative md:absolute md:bottom-6 md:left-0 md:right-0 md:z-20 md:flex md:justify-center md:px-4">
+            <QuickSearch />
+          </div>
+        </section>
         <BrandSelector />
-        <QuickSearch />
         <VehiclesSection />
         <VehicleTypeSelector />
         <ServicesSection />
