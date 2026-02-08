@@ -59,7 +59,7 @@ const Hero = () => {
             textShadow: '0 1px 4px rgba(0, 0, 0, 0.4)'
           }}
         >
-          Premium Jahres- & Gebrauchtwagen
+          Jahreswagen & junge Gebrauchtwagen
         </p>
         </div>
       </div>
