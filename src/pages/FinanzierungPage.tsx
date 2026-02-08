@@ -63,7 +63,7 @@ const FinanzierungPage = () => {
             <img
               src={heroImageUrl}
               alt="Fahrzeugfinanzierung bei GS Automobile Rheinland"
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover blur-[2px] scale-[1.02] transform-gpu"
               loading="eager"
               fetchPriority="high"
             />
