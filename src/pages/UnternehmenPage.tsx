@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
@@ -6,11 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { BadgeCheck, CheckCircle2, Shield, Users } from "lucide-react";
 import { generateTitle } from "@/utils/seo";
+import { useVehicles } from "@/hooks/useVehicles";
+import { brandLogos } from "@/lib/brandLogos";
 
 const heroImageUrl =
   "https://cagteuhomtoqniqpirly.supabase.co/storage/v1/object/public/Gs-Auto/ChatGPT%20Image%20Feb%208,%202026,%2002_18_40%20AM.png";
 
 const UnternehmenPage = () => {
+  const { data: vehicles } = useVehicles();
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
@@ -48,6 +52,70 @@ const UnternehmenPage = () => {
     "Transparente Kalkulation mit dauerhaft attraktiven Marktpreisen",
     "Aktueller Fahrzeugbestand ohne versteckte Aufschläge",
   ];
+
+  const brandsWithLogo = useMemo(() => {
+    if (!vehicles || vehicles.length === 0) return [];
+
+    const brandCounts = new Map<string, number>();
+    vehicles.forEach((vehicle) => {
+      if (vehicle.brand) {
+        brandCounts.set(vehicle.brand, (brandCounts.get(vehicle.brand) || 0) + 1);
+      }
+    });
+
+    const commonOrder = [
+      "BMW",
+      "Mercedes-Benz",
+      "Audi",
+      "Volkswagen",
+      "Ford",
+      "Opel",
+      "Citroën",
+      "Mini",
+      "Nissan",
+      "Jeep",
+      "Fiat",
+      "Polestar",
+      "Hyundai",
+      "Kia",
+    ];
+
+    return Array.from(brandCounts.entries())
+      .map(([brand]) => {
+        const normalizedBrand = brand.trim();
+        let logoKey: string | null = null;
+
+        if (brandLogos[normalizedBrand]) logoKey = normalizedBrand;
+        else if (brandLogos[normalizedBrand.replace(/-/g, " ")]) logoKey = normalizedBrand.replace(/-/g, " ");
+        else if (brandLogos[normalizedBrand.replace(/\s+/g, "-")]) logoKey = normalizedBrand.replace(/\s+/g, "-");
+        else {
+          const lowerBrand = normalizedBrand.toLowerCase();
+          for (const key in brandLogos) {
+            if (key.toLowerCase() === lowerBrand) {
+              logoKey = key;
+              break;
+            }
+          }
+        }
+
+        if (!logoKey) return null;
+
+        return {
+          brand: normalizedBrand,
+          logoKey,
+          count: brandCounts.get(brand) || 0,
+        };
+      })
+      .filter((item): item is { brand: string; logoKey: string; count: number } => item !== null)
+      .sort((a, b) => {
+        const aIndex = commonOrder.indexOf(a.brand);
+        const bIndex = commonOrder.indexOf(b.brand);
+        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        return a.brand.localeCompare(b.brand);
+      });
+  }, [vehicles]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -121,47 +189,47 @@ const UnternehmenPage = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-10 md:p-12 shadow-sm border border-border/50 mb-16">
-              <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 items-start">
+            <div className="bg-white rounded-3xl p-10 md:p-14 shadow-lg border border-primary/10 mb-20 lg:mx-[-2rem]">
+              <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-12 items-start">
                 <div>
-                  <p className="text-sm tracking-[0.4em] uppercase text-primary/80 mb-4">
+                  <p className="text-base tracking-[0.35em] uppercase text-primary/80 mb-4">
                     Zahlen & Fakten
                   </p>
-                  <h3 className="font-display text-3xl md:text-4xl font-semibold mb-4">
+                  <h3 className="font-display text-3xl md:text-4xl lg:text-5xl font-semibold mb-5">
                     GS Automobile Rheinland: Kennzahlen
                   </h3>
-                  <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-8">
+                  <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-10 max-w-2xl">
                     Erfahrung, Vertrauen und ein stetig aktualisierter Bestand – klar, greifbar,
                     nachvollziehbar.
                   </p>
-                  <Button asChild size="lg" className="bg-primary text-white hover:bg-primary/90">
+                  <Button asChild size="lg" className="bg-primary text-white hover:bg-primary/90 px-8">
                     <Link to="/fahrzeuge">Zum Fahrzeugbestand</Link>
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                  <div className="border-t border-border/70 pt-6">
-                    <div className="text-4xl md:text-5xl font-semibold text-foreground">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
+                  <div className="border-t-2 border-border/70 pt-7">
+                    <div className="text-5xl md:text-6xl font-semibold text-foreground">
                       15<span className="text-primary">+</span>
                     </div>
-                    <p className="text-base text-muted-foreground mt-3">Jahre Erfahrung</p>
+                    <p className="text-base md:text-lg text-muted-foreground mt-3">Jahre Erfahrung</p>
                   </div>
-                  <div className="border-t border-border/70 pt-6">
-                    <div className="text-4xl md:text-5xl font-semibold text-foreground">
+                  <div className="border-t-2 border-border/70 pt-7">
+                    <div className="text-5xl md:text-6xl font-semibold text-foreground">
                       600<span className="text-primary">+</span>
                     </div>
-                    <p className="text-base text-muted-foreground mt-3">Kunden pro Jahr beraten</p>
+                    <p className="text-base md:text-lg text-muted-foreground mt-3">Kunden pro Jahr beraten</p>
                   </div>
-                  <div className="border-t border-border/70 pt-6">
-                    <div className="text-4xl md:text-5xl font-semibold text-foreground">
+                  <div className="border-t-2 border-border/70 pt-7">
+                    <div className="text-5xl md:text-6xl font-semibold text-foreground">
                       5000<span className="text-primary">+</span>
                     </div>
-                    <p className="text-base text-muted-foreground mt-3">verkaufte Fahrzeuge</p>
+                    <p className="text-base md:text-lg text-muted-foreground mt-3">verkaufte Fahrzeuge</p>
                   </div>
-                  <div className="border-t border-border/70 pt-6">
-                    <div className="text-4xl md:text-5xl font-semibold text-foreground">
+                  <div className="border-t-2 border-border/70 pt-7">
+                    <div className="text-5xl md:text-6xl font-semibold text-foreground">
                       100<span className="text-primary">%</span>
                     </div>
-                    <p className="text-base text-muted-foreground mt-3">geprüfte Fahrzeuge</p>
+                    <p className="text-base md:text-lg text-muted-foreground mt-3">geprüfte Fahrzeuge</p>
                   </div>
                 </div>
               </div>
@@ -193,9 +261,23 @@ const UnternehmenPage = () => {
               <h3 className="font-display text-2xl md:text-3xl font-semibold mb-4">
                 Attraktive Auswahl führender Hersteller
               </h3>
-              <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-6">
-                BMW · Mini · Mercedes · Volkswagen · Opel · Ford · Fiat und viele weitere.
-              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 mb-8">
+                {brandsWithLogo.map(({ brand, logoKey }) => {
+                  const LogoComponent = brandLogos[logoKey] || brandLogos[brand];
+                  if (!LogoComponent) return null;
+                  return (
+                    <Link
+                      key={brand}
+                      to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
+                      className="group bg-white rounded-xl border border-border/60 p-4 flex items-center justify-center h-24 shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+                    >
+                      <div className="text-muted-foreground group-hover:text-primary transition-colors w-full h-full flex items-center justify-center">
+                        <LogoComponent />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 <BadgeCheck className="h-4 w-4" />
                 Professionell aufbereitet & kurzfristig verfügbar
@@ -218,6 +300,7 @@ const UnternehmenPage = () => {
                 </div>
               </div>
             </div>
+
           </div>
         </section>
 

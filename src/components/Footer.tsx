@@ -45,6 +45,11 @@ const Footer = () => {
     { label: "Zulassungsdienst", to: "/zulassung" },
   ];
 
+  const handleOpenCookieSettings = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    window.dispatchEvent(new Event("open-cookie-settings"));
+  };
+
   return (
     <footer className="bg-gray-900 text-gray-100">
       <div className="container mx-auto px-6 py-12">
@@ -147,6 +152,13 @@ const Footer = () => {
             )}
           </div>
           <div className="flex gap-6 text-xs">
+            <a
+              href="#cookies"
+              onClick={handleOpenCookieSettings}
+              className="text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Cookies
+            </a>
             <Link to="/impressum" className="text-gray-500 hover:text-gray-300 transition-colors">
               Impressum
             </Link>
