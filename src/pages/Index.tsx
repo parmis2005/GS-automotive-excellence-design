@@ -53,8 +53,8 @@ const Index = () => {
       <Navbar />
       <main>
         <Hero />
-        <QuickSearch />
         <BrandSelector />
+        <QuickSearch />
         <VehiclesSection />
         <VehicleTypeSelector />
         <ServicesSection />

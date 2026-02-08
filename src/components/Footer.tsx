@@ -37,12 +37,12 @@ const Footer = () => {
   }, [isProd]);
 
   const services = [
-    { label: "Finanzierung", href: "#services" },
-    { label: "DEKRA & TÜV", href: "#services" },
-    { label: "Garantie", href: "#services" },
+    { label: "Finanzierung", to: "/finanzierung" },
+    { label: "DEKRA & TÜV", to: "/dekra-tuev" },
+    { label: "Garantie", to: "/garantie" },
     { label: "Fahrzeugankauf", to: "/fahrzeugankauf" },
-    { label: "Ölwechsel", href: "#services" },
-    { label: "Zulassungsdienst", href: "#services" },
+    { label: "Ölwechsel", to: "/oelwechsel" },
+    { label: "Zulassungsdienst", to: "/zulassung" },
   ];
 
   return (

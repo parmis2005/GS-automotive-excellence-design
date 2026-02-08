@@ -91,6 +91,7 @@ purchaseInquiryRouter.post("/", async (req, res) => {
           <tbody>
             ${formatRow("Marke", payload.make)}
             ${formatRow("Modell", payload.model)}
+            ${formatRow("Ausstattungslinie", payload.trimLine)}
             ${formatRow("Karosserieform", payload.bodyType)}
             ${formatRow("Kraftstoff", payload.fuelType)}
             ${formatRow("Erstzulassung", payload.firstRegistration)}
@@ -172,6 +173,7 @@ purchaseInquiryRouter.post("/", async (req, res) => {
       "Neue Ankauf-Anfrage",
       `Marke: ${payload.make || "-"}`,
       `Modell: ${payload.model || "-"}`,
+      `Ausstattungslinie: ${payload.trimLine || "-"}`,
       `Erstzulassung: ${payload.firstRegistration || "-"}`,
       `Kilometerstand: ${payload.mileage || "-"}`,
       `Halteranzahl: ${payload.ownersCount || "-"}`,

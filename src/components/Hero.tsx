@@ -25,7 +25,10 @@ const Hero = () => {
           loading="eager"
           fetchPriority="high"
         />
-        
+        {/* Nebel/Übergang – weicher Übergang zum Content darunter */}
+        <div className="absolute inset-x-0 bottom-0 h-40 md:h-56 bg-gradient-to-b from-transparent via-background/20 to-background" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-background/50" />
+
         {/* Text-Block (center-top) - positioned relative to image, scales with image */}
         <div 
           className="absolute z-10 left-1/2 transform -translate-x-1/2 text-center"

@@ -96,6 +96,10 @@ const defaultTopBrands = [
   "Toyota",
   "Hyundai",
   "Renault",
+  "Lynk & Co",
+  "Seat",
+  "Cupra",
+  "Mazda",
 ];
 
 const allowedBrands = [
@@ -129,6 +133,7 @@ const allowedBrands = [
   "Land Rover",
   "Lexus",
   "Lotus",
+  "Lynk & Co",
   "Maserati",
   "Mazda",
   "McLaren",
@@ -186,6 +191,7 @@ const popularModelsByMake: Record<string, string[]> = {
   "Land Rover": ["Range Rover", "Discovery", "Defender", "Range Rover Evoque"],
   "Lexus": ["IS", "ES", "RX", "NX", "UX"],
   "Lotus": ["Emira", "Elise", "Evora", "Exige"],
+  "Lynk & Co": ["01", "02", "03", "05", "06"],
   "Maserati": ["Ghibli", "Levante", "Quattroporte", "Grecale"],
   "Mazda": ["Mazda3", "Mazda6", "CX-3", "CX-5", "MX-5"],
   "McLaren": ["570S", "720S", "GT", "Artura"],
@@ -308,6 +314,7 @@ const stepInstructions: Record<string, { title: string; text: string }> = {
 type FormData = {
   make: string;
   model: string;
+  trimLine: string; // z.B. M Sport, AMG Line, S Line – optional
   bodyType: string;
   fuelType: string;
   power: number | null;
@@ -360,12 +367,36 @@ type VehiclePurchaseFormProps = {
 };
 
 const defaultLabels: Labels = {
-  title: "Fahrzeugankauf mit Premium-Flow",
+  title: "Fahrzeugankauf mit aktueller Marktbewertung",
   subtitle: "Geführt, klar und ohne Umwege. Nur relevante Fragen je Schritt.",
   next: "Weiter",
   back: "Zurück",
   submit: "Anfrage absenden",
   start: "Starten",
+};
+
+/** Marken-spezifische Ausstattungslinien – nur relevante Vorschläge pro Hersteller */
+const TRIM_LINES_BY_MAKE: Record<string, string[]> = {
+  BMW: ["M Sport", "M Performance", "M Package", "Luxury Line", "Sport Line", "Individual"],
+  Mercedes: ["AMG Line", "AMG", "AMG Sport", "Elegance", "Avantgarde", "Exclusive"],
+  Audi: ["S Line", "S", "RS", "Sport", "Design", "Black Edition"],
+  Volkswagen: ["R-Line", "R", "GTI", "GTD", "GTE", "Highline", "Comfortline", "Trendline"],
+  "Mercedes-Benz": ["AMG Line", "AMG", "AMG Sport", "Elegance", "Avantgarde", "Exclusive"],
+  Opel: ["GSI", "OPC", "Line", "Elegance", "Sport"],
+  Ford: ["ST-Line", "ST", "RS", "Titanium", "Trend", "Vignale"],
+  Skoda: ["Sportline", "Style", "Ambition", "Active"],
+  Seat: ["FR", "FR Sport", "Xcellence", "Style"],
+  Hyundai: ["N-Line", "N", "Premium", "Business"],
+  Kia: ["GT-Line", "GT", "Premium", "Sport"],
+  Mazda: ["Sport", "Homura", "Exclusive", "Centenary"],
+  Toyota: ["GR Sport", "GR", "Style", "Advance"],
+  Honda: ["Sport", "Elegance", "Executive"],
+  Nissan: ["N-Connecta", "Tekna", "Acenta", "Visia"],
+  Peugeot: ["GT Line", "GT", "Allure", "Active"],
+  Renault: ["R.S. Line", "GT", "Zen", "Intens"],
+  Volvo: ["R-Design", "Inscription", "Momentum"],
+  Porsche: ["Sport Chrono", "Sport Design", "Exclusive"],
+  Mini: ["Cooper S", "John Cooper Works", "Sport", "Exclusive"],
 };
 
 const formatNumber = (value: number) =>
@@ -441,6 +472,7 @@ const VehiclePurchaseForm = ({
   const [formData, setFormData] = useState<FormData>({
     make: "",
     model: "",
+    trimLine: "",
     bodyType: "",
     fuelType: "",
     power: null,
@@ -854,11 +886,13 @@ const VehiclePurchaseForm = ({
                     )}
                     <SelectGroup>
                       <SelectLabel>Alle Marken (A-Z)</SelectLabel>
-                      {brandOptions.map((brand) => (
-                        <SelectItem key={`all-${brand}`} value={brand}>
-                          {brand}
-                        </SelectItem>
-                      ))}
+                      {brandOptions
+                        .filter((brand) => !topBrandList.includes(brand))
+                        .map((brand) => (
+                          <SelectItem key={`all-${brand}`} value={brand}>
+                            {brand}
+                          </SelectItem>
+                        ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -906,6 +940,43 @@ const VehiclePurchaseForm = ({
                   </div>
                 </div>
               )}
+
+            <div>
+              <label className="text-lg font-bold text-foreground">Ausstattungslinie (optional)</label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Zusätzliche Info zur besonderen Ausstattungslinie. Vorschläge abhängig von der Marke, oder manuell eingeben.
+              </p>
+              {(() => {
+                const trimOptions = (normalizedMake && TRIM_LINES_BY_MAKE[normalizedMake]) || [];
+                const selectValue = formData.trimLine === "" ? "__none__" : (trimOptions.includes(formData.trimLine) ? formData.trimLine : "__none__");
+                return (
+                  <>
+                    <Select
+                      value={selectValue}
+                      onValueChange={(v) => updateField("trimLine", v === "__none__" ? "" : v)}
+                    >
+                      <SelectTrigger className="mt-2 h-11">
+                        <SelectValue placeholder="Vorschlag wählen (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Keine / nicht angegeben</SelectItem>
+                        {trimOptions.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      value={formData.trimLine}
+                      onChange={(e) => updateField("trimLine", e.target.value)}
+                      placeholder="oder manuell eingeben (z.B. M Performance, Edition …)"
+                      className="mt-2"
+                    />
+                  </>
+                );
+              })()}
+            </div>
             </div>
           </div>
         ),
@@ -1900,6 +1971,7 @@ const VehiclePurchaseForm = ({
 
     ensureInput("make", data.make);
     ensureInput("model", data.model);
+    ensureInput("trimLine", data.trimLine);
     ensureInput("bodyType", data.bodyType);
     ensureInput("fuelType", data.fuelType);
     ensureInput("power", data.power !== null ? String(data.power) : "");
@@ -1942,6 +2014,7 @@ const VehiclePurchaseForm = ({
     const payload = {
       make: formData.make,
       model: formData.model,
+      trimLine: formData.trimLine || "",
       bodyType: formData.bodyType,
       fuelType: formData.fuelType,
       power: formData.power !== null ? String(formData.power) : "",

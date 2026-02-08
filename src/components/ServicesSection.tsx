@@ -26,6 +26,7 @@ const services = [
     description: "Prüfung direkt vor Ort. Ohne Wartezeit, ohne Stress – damit Sie sofort Klarheit haben.",
     cta: "Termin vereinbaren",
     trustMarkers: ["Zertifizierte Prüfung", "Vor Ort Service"],
+    href: "/dekra-tuev",
     isPrimary: false,
   },
   {
@@ -51,6 +52,7 @@ const services = [
     description: "Hochwertige Öle nach Herstellerfreigabe. Optimale Motorleistung und maximale Langlebigkeit.",
     cta: "Service buchen",
     trustMarkers: ["Herstellerfreigabe", "Premium Öle"],
+    href: "/oelwechsel",
     isPrimary: false,
   },
   {
@@ -59,6 +61,7 @@ const services = [
     description: "Komplette Abwicklung der Zulassung. Einfach, schnell und ohne bürokratischen Aufwand.",
     cta: "Zulassung anfragen",
     trustMarkers: ["Komplettservice", "Schnelle Abwicklung"],
+    href: "/zulassung",
     isPrimary: false,
   },
 ];

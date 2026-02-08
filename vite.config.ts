@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    open: true, // Öffnet den Browser automatisch
     proxy: {
       "/api": {
         target: "http://localhost:3001",

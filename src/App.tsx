@@ -12,6 +12,11 @@ import VehiclePurchasePage from "./pages/VehiclePurchasePage";
 import ImpressumPage from "./pages/ImpressumPage";
 import DatenschutzPage from "./pages/DatenschutzPage";
 import HaftungsausschlussPage from "./pages/HaftungsausschlussPage";
+import FinanzierungPage from "./pages/FinanzierungPage";
+import GarantiePage from "./pages/GarantiePage";
+import ZulassungPage from "./pages/ZulassungPage";
+import DekraTuvPage from "./pages/DekraTuvPage";
+import OelwechselPage from "./pages/OelwechselPage";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -46,6 +51,11 @@ const App = () => (
               <Route path="/impressum" element={<ImpressumPage />} />
               <Route path="/datenschutz" element={<DatenschutzPage />} />
               <Route path="/haftungsausschluss" element={<HaftungsausschlussPage />} />
+              <Route path="/finanzierung" element={<FinanzierungPage />} />
+              <Route path="/garantie" element={<GarantiePage />} />
+              <Route path="/zulassung" element={<ZulassungPage />} />
+              <Route path="/dekra-tuev" element={<DekraTuvPage />} />
+              <Route path="/oelwechsel" element={<OelwechselPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
