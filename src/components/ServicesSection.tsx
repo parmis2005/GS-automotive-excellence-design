@@ -18,6 +18,7 @@ const services = [
     description: "Attraktive Raten und flexible Laufzeiten. Berechnen Sie Ihre Rate in wenigen Minuten.",
     cta: "Finanzierung berechnen",
     trustMarkers: ["BMW Bank Partner", "Sofort-Zusage möglich"],
+    href: "/finanzierung",
     isPrimary: true, // Primärer Umsatztreiber
   },
   {
@@ -35,6 +36,7 @@ const services = [
     description: "Umfassender Schutz für Ihr Fahrzeug. Sicherheit nach dem Kauf, transparent und fair.",
     cta: "Garantie ansehen",
     trustMarkers: ["Variable Laufzeiten", "Transparente Bedingungen"],
+    href: "/garantie",
     isPrimary: false,
   },
   {
@@ -86,40 +88,82 @@ const ServicesSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 lg:gap-16 mb-20">
           {services.map((service, index) => {
             const Icon = service.icon;
+            const isLinked = Boolean(service.href);
             return (
               <div
                 key={index}
-                className="group flex flex-col transition-transform duration-300 hover:scale-[1.02]"
+                className={`group flex flex-col transition-transform duration-300 hover:scale-[1.02] ${
+                  isLinked ? "cursor-pointer" : ""
+                }`}
               >
-                {/* Icon */}
-                <div className="mb-6 flex justify-center">
-                  <div className="w-20 h-20 flex items-center justify-center">
-                    <Icon 
-                      className="w-20 h-20 text-muted-foreground/80 group-hover:text-primary transition-colors duration-300" 
-                      strokeWidth={1.5} 
-                    />
-                  </div>
-                </div>
-
-                {/* Title */}
-                <h3 className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors mb-4 text-center">
-                  {service.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-muted-foreground group-hover:text-primary/80 mb-6 leading-relaxed flex-grow transition-colors text-center">
-                  {service.description}
-                </p>
-
-                {/* Trust Markers */}
-                <div className="mb-6 space-y-2 flex flex-col items-center">
-                  {service.trustMarkers.map((marker, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground group-hover:text-primary/70 transition-colors">
-                      <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>{marker}</span>
+                {isLinked ? (
+                  <Link
+                    to={service.href as string}
+                    className="flex flex-col flex-grow rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-muted/30"
+                  >
+                    {/* Icon */}
+                    <div className="mb-6 flex justify-center">
+                      <div className="w-20 h-20 flex items-center justify-center">
+                        <Icon
+                          className="w-20 h-20 text-muted-foreground/80 group-hover:text-primary transition-colors duration-300"
+                          strokeWidth={1.5}
+                        />
+                      </div>
                     </div>
-                  ))}
-                </div>
+
+                    {/* Title */}
+                    <h3 className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors mb-4 text-center">
+                      {service.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-muted-foreground group-hover:text-primary/80 mb-6 leading-relaxed flex-grow transition-colors text-center">
+                      {service.description}
+                    </p>
+
+                    {/* Trust Markers */}
+                    <div className="mb-6 space-y-2 flex flex-col items-center">
+                      {service.trustMarkers.map((marker, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground group-hover:text-primary/70 transition-colors">
+                          <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                          <span>{marker}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </Link>
+                ) : (
+                  <>
+                    {/* Icon */}
+                    <div className="mb-6 flex justify-center">
+                      <div className="w-20 h-20 flex items-center justify-center">
+                        <Icon
+                          className="w-20 h-20 text-muted-foreground/80 group-hover:text-primary transition-colors duration-300"
+                          strokeWidth={1.5}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors mb-4 text-center">
+                      {service.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-muted-foreground group-hover:text-primary/80 mb-6 leading-relaxed flex-grow transition-colors text-center">
+                      {service.description}
+                    </p>
+
+                    {/* Trust Markers */}
+                    <div className="mb-6 space-y-2 flex flex-col items-center">
+                      {service.trustMarkers.map((marker, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground group-hover:text-primary/70 transition-colors">
+                          <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                          <span>{marker}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
 
                 {/* CTA Button */}
                 <Button

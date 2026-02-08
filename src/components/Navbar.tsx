@@ -103,7 +103,7 @@ const Navbar = () => {
       ],
     },
     { label: "FAHRZEUGANKAUF", to: "/fahrzeugankauf", isHash: false },
-    { label: "UNTERNEHMEN", to: "/#about", isHash: true, hash: "#about" },
+    { label: "UNTERNEHMEN", to: "/unternehmen", isHash: false },
     { label: "KONTAKT", to: "/#contact", isHash: true, hash: "#contact" },
   ];
 
