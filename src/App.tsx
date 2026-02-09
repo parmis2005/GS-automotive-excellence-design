@@ -20,6 +20,7 @@ import OelwechselPage from "./pages/OelwechselPage";
 import UnternehmenPage from "./pages/UnternehmenPage";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
+import CookieBanner from "./components/CookieBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +45,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <ScrollToTop />
+            <CookieBanner />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/fahrzeuge" element={<VehiclesPage />} />

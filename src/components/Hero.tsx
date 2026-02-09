@@ -29,11 +29,11 @@ const Hero = () => {
         <div className="absolute inset-x-0 bottom-0 h-40 md:h-56 bg-gradient-to-b from-transparent via-background/20 to-background" />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-background/50" />
 
-        {/* Text-Block (center-top) - positioned relative to image, scales with image */}
+        {/* Text-Block – tiefer gesetzt, näher an der Schnellsuche */}
         <div 
           className="absolute z-10 left-1/2 transform -translate-x-1/2 text-center"
           style={{
-            top: '18%',
+            top: '32%',
             maxWidth: '90%',
             padding: '0 clamp(16px, 2vw, 24px)',
             width: '100%'

@@ -205,11 +205,11 @@ const QuickSearch = () => {
   }
 
   return (
-    <section className="py-8 md:py-4 mb-8 md:mb-0">
+    <section className="py-8 lg:py-4 mb-8 lg:mb-0">
       <div className="container mx-auto px-4 md:px-6">
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-lg shadow-2xl border-2 border-primary/20 p-4 md:p-6" style={{ boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05)' }}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-end">
               {/* Hersteller Select */}
               <div className="space-y-2">
                 <Label htmlFor="quick-search-brand-select" className="text-sm font-medium text-foreground">

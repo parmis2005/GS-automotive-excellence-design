@@ -54,7 +54,8 @@ const Index = () => {
       <main>
         <section className="relative">
           <Hero />
-          <div className="relative md:absolute md:bottom-6 md:left-0 md:right-0 md:z-20 md:flex md:justify-center md:px-4">
+          {/* Ab lg (1024px): Schnellsuche im Hero; darunter mobile Version unter dem Bild */}
+          <div className="relative lg:absolute lg:bottom-6 lg:left-0 lg:right-0 lg:z-20 lg:flex lg:justify-center lg:px-4">
             <QuickSearch />
           </div>
         </section>

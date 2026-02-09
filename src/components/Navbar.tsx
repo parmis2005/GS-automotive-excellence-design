@@ -6,12 +6,12 @@ import { Phone, Mail, Menu, X, ArrowRight, ChevronDown } from "lucide-react";
 const SCROLL_THRESHOLD = 80;
 const PROGRAMMATIC_SCROLL_IGNORE_MS = 600;
 const BOTTOM_ZONE_PX = 80; // Am Seitenende: Navbar nicht anzeigen bei Bounce-Scroll
-
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [navbarVisible, setNavbarVisible] = useState(true);
   const lastScrollY = useRef(0);
   const ignoreShowUntil = useRef(0);
+  const rafId = useRef<number | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -23,14 +23,13 @@ const Navbar = () => {
       ignoreShowUntil.current = Date.now() + PROGRAMMATIC_SCROLL_IGNORE_MS;
     };
 
-    const handleScroll = () => {
+    const applyScrollState = () => {
       const y = getScrollY();
       setIsScrolled(y > 20);
       const prev = lastScrollY.current;
       const isProgrammaticScroll = Date.now() < ignoreShowUntil.current;
       const isNearBottom =
         y + window.innerHeight >= document.documentElement.scrollHeight - BOTTOM_ZONE_PX;
-      // Navbar einblenden nur bei echtem User-Scroll; nicht bei System-Scroll oder Bounce am Seitenende
       if (y < 50) {
         if (!isProgrammaticScroll) setNavbarVisible(true);
       } else if (y > prev && y > SCROLL_THRESHOLD) {
@@ -39,14 +38,23 @@ const Navbar = () => {
         if (!isProgrammaticScroll && !isNearBottom) setNavbarVisible(true);
       }
       lastScrollY.current = y;
+      rafId.current = null;
+    };
+
+    const handleScroll = () => {
+      if (rafId.current !== null) return;
+      rafId.current = requestAnimationFrame(() => {
+        applyScrollState();
+      });
     };
 
     lastScrollY.current = getScrollY();
-    handleScroll();
+    applyScrollState();
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("programmatic-scroll-start", handleProgrammaticScroll);
     return () => {
+      if (rafId.current !== null) cancelAnimationFrame(rafId.current);
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("programmatic-scroll-start", handleProgrammaticScroll);
     };
@@ -114,6 +122,7 @@ const Navbar = () => {
         className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-out overflow-visible ${
           !navbarVisible ? "-translate-y-full" : ""
         }`}
+        style={{ willChange: "transform" }}
       >
         {/* Top Bar – nur Desktop */}
         <div className="hidden lg:block bg-gray-950 border-b border-gray-800">
@@ -162,7 +171,7 @@ const Navbar = () => {
                 />
               </Link>
 
-              {/* Desktop Navigation – erst ab 2xl (1536px) */}
+              {/* Desktop Navigation inkl. SERVICE-Dropdown – ab 2xl (1536px) */}
               <div className="hidden 2xl:flex items-center gap-4 flex-1 justify-center mx-14 overflow-visible" style={{ marginLeft: "clamp(64px, 8vw, 260px)" }}>
                 {navLinks.map((link) => {
                   const hasSubItems = "subItems" in link && link.subItems && link.subItems.length > 0;
@@ -219,7 +228,7 @@ const Navbar = () => {
                 })}
               </div>
 
-              {/* Mobile/Tablet: Fahrzeugsuche-Button mittig, volle Navbar-Höhe, größer und abgerundet */}
+              {/* Mobile/Tablet: Fahrzeugsuche-Button mittig – bis 2xl */}
               <div className="2xl:hidden flex-1 flex justify-center items-center min-w-0 pr-2">
                 <Link to="/fahrzeuge" className="h-full flex items-center">
                   <Button 
@@ -233,7 +242,7 @@ const Navbar = () => {
                 </Link>
               </div>
 
-              {/* CTA Button - Desktop (nur ab 2xl) */}
+              {/* CTA Button - Desktop (ab 2xl) */}
               <div className="hidden 2xl:flex items-center gap-3 flex-shrink-0 ml-auto lg:mr-8">
                 <Link to="/fahrzeuge">
                   <Button 
@@ -249,7 +258,7 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* Hamburger immer am rechten Rand, volle Navbar-Höhe */}
+          {/* Hamburger – bis 2xl */}
           <button
             className="2xl:hidden flex-shrink-0 w-14 min-w-[56px] self-stretch text-foreground hover:bg-gray-300/80 active:bg-gray-300 transition-colors flex items-center justify-center border-l border-gray-300/50"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -263,7 +272,7 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile/Tablet Menu (bis 2xl) */}
         {isMobileMenuOpen && (
           <div className="2xl:hidden border-t border-border bg-gray-100">
             <div className="container mx-auto px-6 py-4">
@@ -361,12 +370,8 @@ const Navbar = () => {
       </nav>
       </div>
 
-      {/* Spacer für fixierten Header – kollabiert beim Ausblenden (Mobile: nur Nav ~88px, Desktop: Top Bar + Nav ~135px) */}
-      <div
-        className={`transition-all duration-300 ${
-          navbarVisible ? "h-[88px] lg:h-[135px]" : "h-0"
-        }`}
-      />
+      {/* Spacer für fixierten Header – Höhe immer gleich, damit kein Layout-Sprung/Bounce beim Ein-/Ausblenden */}
+      <div className="h-[88px] lg:h-[135px]" />
     </>
   );
 };
