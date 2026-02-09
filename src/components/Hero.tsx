@@ -25,9 +25,11 @@ const Hero = () => {
           loading="eager"
           fetchPriority="high"
         />
-        {/* Nebel/Übergang – weicher Übergang zum Content darunter */}
-        <div className="absolute inset-x-0 bottom-0 h-40 md:h-56 bg-gradient-to-b from-transparent via-background/20 to-background" />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-background/50" />
+        {/* Leichter Übergang – Mobile: weniger, ab md: etwas mehr */}
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent via-background/0 to-background/40 md:hidden" />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-background/15 md:hidden" />
+        <div className="absolute inset-x-0 bottom-0 h-40 md:h-56 bg-gradient-to-b from-transparent via-background/5 to-background/70 hidden md:block" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-background/25 hidden md:block" />
 
         {/* Text-Block – tiefer gesetzt, näher an der Schnellsuche */}
         <div 
