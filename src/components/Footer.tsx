@@ -73,14 +73,20 @@ const Footer = () => {
           <div>
             <h4 className="font-display text-lg mb-4">Navigation</h4>
             <ul className="space-y-2 text-sm">
-              {["Startseite", "Fahrzeuge", "Service", "Unternehmen", "Kontakt"].map((link) => (
-                <li key={link}>
-                  <a
-                    href={`#${link.toLowerCase()}`}
+              {[
+                { label: "Startseite", to: "/" },
+                { label: "Fahrzeuge", to: "/fahrzeuge" },
+                { label: "Service", to: "/#services" },
+                { label: "Unternehmen", to: "/unternehmen" },
+                { label: "Kontakt", to: "/#contact" },
+              ].map((link) => (
+                <li key={link.label}>
+                  <Link
+                    to={link.to}
                     className="text-gray-400 hover:text-gray-100 transition-colors"
                   >
-                    {link}
-                  </a>
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
