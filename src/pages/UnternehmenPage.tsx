@@ -209,19 +209,19 @@ const UnternehmenPage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
                   <div className="border-t-2 border-border/70 pt-7">
                     <div className="text-5xl md:text-6xl font-semibold text-foreground">
-                      15<span className="text-primary">+</span>
+                      25<span className="text-primary">+</span>
                     </div>
                     <p className="text-base md:text-lg text-muted-foreground mt-3">Jahre Erfahrung</p>
                   </div>
                   <div className="border-t-2 border-border/70 pt-7">
                     <div className="text-5xl md:text-6xl font-semibold text-foreground">
-                      600<span className="text-primary">+</span>
+                      450<span className="text-primary">+</span>
                     </div>
-                    <p className="text-base md:text-lg text-muted-foreground mt-3">Kunden pro Jahr beraten</p>
+                    <p className="text-base md:text-lg text-muted-foreground mt-3">verkaufte Autos pro Jahr</p>
                   </div>
                   <div className="border-t-2 border-border/70 pt-7">
                     <div className="text-5xl md:text-6xl font-semibold text-foreground">
-                      5000<span className="text-primary">+</span>
+                      10.000<span className="text-primary">+</span>
                     </div>
                     <p className="text-base md:text-lg text-muted-foreground mt-3">verkaufte Fahrzeuge</p>
                   </div>

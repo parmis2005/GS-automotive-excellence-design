@@ -21,7 +21,7 @@ const GarantiePage = () => {
   const seoData = {
     title: generateTitle("Garantie"),
     description:
-      "Gebrauchtwagengarantie bis 12 Monate kostenfrei – GS Automobile Rheinland. Umfassender Schutz für zentrale Fahrzeugkomponenten in Krefeld.",
+      "Gebrauchtwagengarantie mit 12–24 Monaten Laufzeit – GS Automobile Rheinland. Umfassender Schutz für zentrale Fahrzeugkomponenten in Krefeld.",
     image: heroImageUrl,
     url: "https://www.gs-automobile-rheinland.de/garantie",
     type: "website" as const,
@@ -38,9 +38,21 @@ const GarantiePage = () => {
   ];
 
   const benefits = [
-    { icon: Shield, title: "Mindestens 12 Monate Garantie", text: "Auf nahezu alle Bauteile – Herstellergarantie oder kostenfreie Gebrauchtwagengarantie." },
-    { icon: Wrench, title: "Volle Kostenkontrolle", text: "Bei unerwarteten Reparaturen – keine bösen Überraschungen." },
-    { icon: CheckCircle2, title: "Rundum abgesichert", text: "Ganz ohne Zusatzkosten* – Ihr Vorteil beim Fahrzeugkauf." },
+    {
+      icon: Shield,
+      title: "12–24 Monate Garantie",
+      text: "Auf nahezu alle Bauteile – Herstellergarantie oder optionale Gebrauchtwagengarantie mit 12–24 Monaten Laufzeit.",
+    },
+    {
+      icon: Wrench,
+      title: "Volle Kostenkontrolle",
+      text: "Bei unerwarteten Reparaturen – transparente Garantiepakete statt böser Überraschungen.",
+    },
+    {
+      icon: CheckCircle2,
+      title: "Rundum abgesichert",
+      text: "Individuelle Garantievarianten – passend zu Ihrem Fahrzeug und Ihrem Nutzungsprofil.",
+    },
   ];
 
   return (
@@ -102,7 +114,8 @@ const GarantiePage = () => {
               Ihr Schutz beim <span className="text-primary">Fahrzeugkauf</span>
             </h2>
             <p className="text-base md:text-lg text-muted-foreground text-center mb-8 max-w-3xl mx-auto leading-relaxed">
-              Beim Fahrzeugkauf steht Ihre Sicherheit und Zufriedenheit für uns an erster Stelle. Deshalb bieten wir Ihnen für jedes Fahrzeug entweder die bestehende Herstellergarantie oder (falls diese bereits abgelaufen ist) kostenfrei eine Gebrauchtwagengarantie mit einer Laufzeit von 12 Monaten.*
+              Beim Fahrzeugkauf steht Ihre Sicherheit und Zufriedenheit für uns an erster Stelle. Deshalb bieten wir Ihnen für jedes Fahrzeug entweder die bestehende Herstellergarantie oder – falls diese bereits abgelaufen ist – eine optionale
+              Gebrauchtwagengarantie mit einer Laufzeit von 12 bis 24&nbsp;Monaten.*
             </p>
             <p className="text-base md:text-lg text-muted-foreground text-center mb-12 max-w-3xl mx-auto leading-relaxed font-medium">
               So sind Sie auch nach dem Kauf zuverlässig geschützt vor unerwarteten Reparaturkosten.
