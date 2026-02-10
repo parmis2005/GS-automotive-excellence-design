@@ -41,7 +41,7 @@ const services = [
   },
   {
     icon: Car,
-    title: "Fahrzeugankauf",
+    title: "Inzahlungnahme",
     description: "Schnelle Bewertung und sofortige Auszahlung. Verkaufen Sie unkompliziert und ohne Stress.",
     cta: "Fahrzeug bewerten",
     trustMarkers: ["Sofortbewertung", "Faire Preise"],

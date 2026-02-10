@@ -40,7 +40,7 @@ const Footer = () => {
     { label: "Finanzierung", to: "/finanzierung" },
     { label: "DEKRA & TÜV", to: "/dekra-tuev" },
     { label: "Garantie", to: "/garantie" },
-    { label: "Fahrzeugankauf", to: "/fahrzeugankauf" },
+    { label: "Inzahlungnahme", to: "/fahrzeugankauf" },
     { label: "Ölwechsel", to: "/oelwechsel" },
     { label: "Zulassungsdienst", to: "/zulassung" },
   ];
