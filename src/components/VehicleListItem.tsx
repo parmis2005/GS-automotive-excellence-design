@@ -210,11 +210,9 @@ const VehicleListItem = ({
                   <div className="font-display text-3xl sm:text-4xl font-bold text-primary leading-none">
                     {price.toLocaleString("de-DE")} €
                   </div>
-                  {vatDisplayable !== undefined && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
-                    </div>
-                  )}
+                  <div className="text-[10px] text-primary mt-1">
+                    {vatDisplayable === false ? "MwSt. nicht ausweisbar" : "inkl. MwSt."}
+                  </div>
                 </div>
               </div>
             </div>
@@ -224,11 +222,9 @@ const VehicleListItem = ({
               <div className="font-display text-3xl md:text-4xl font-bold text-primary">
                 {price.toLocaleString("de-DE")} €
               </div>
-              {vatDisplayable !== undefined && (
-                <div className="text-sm text-muted-foreground mt-1">
-                  {vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
-                </div>
-              )}
+              <div className="text-xs text-primary mt-1">
+                {vatDisplayable === false ? "MwSt. nicht ausweisbar" : "inkl. MwSt."}
+              </div>
               <Link to={`/fahrzeuge/${id}#kaufanfrage`} className="mt-3 inline-block">
                 <Button
                   variant="default"

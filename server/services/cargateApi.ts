@@ -506,6 +506,33 @@ function getStrFromMatchingKeysExcluding(
   return "";
 }
 
+function parseVatDisplayable(raw: Record<string, unknown>): boolean | undefined {
+  const direct =
+    raw.HasVat ??
+    raw.hasVat ??
+    raw.HasVAT ??
+    raw.vatDisplayable ??
+    raw.VatDisplayable ??
+    raw.vat_displayable ??
+    raw.IsVatDisplayable ??
+    raw.isVatDisplayable;
+
+  if (typeof direct === "boolean") return direct;
+  if (typeof direct === "number") return direct > 0;
+  if (typeof direct === "string") {
+    const s = direct.trim().toLowerCase();
+    if (["true", "1", "yes", "ja", "y"].includes(s)) return true;
+    if (["false", "0", "no", "nein", "n"].includes(s)) return false;
+  }
+
+  const vatText = getStrFromMatchingKeys(raw, "mwst", "vat");
+  if (!vatText) return undefined;
+  const t = vatText.toLowerCase();
+  if (t.includes("nicht") || t.includes("no") || t.includes("ohne")) return false;
+  if (t.includes("ausweisbar") || t.includes("inkl") || t.includes("mit mwst")) return true;
+  return undefined;
+}
+
 function getNum(obj: Record<string, unknown>, ...keys: string[]): number {
   for (const k of keys) {
     const v = obj[k];
@@ -1078,7 +1105,7 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     if (!exposeUrl.startsWith("http") && !exposeUrl.startsWith("/")) exposeUrl = "";
   }
   const previousOwners = typeof raw.PreviousOwners === "number" ? raw.PreviousOwners : typeof raw.previousOwners === "number" ? raw.previousOwners : getNum(raw, "PreviousOwners", "previousOwners", "numberOfPreviousOwners");
-  const vatDisplayable = raw.HasVat ?? raw.vatDisplayable ?? raw.vat_displayable;
+  const vatDisplayable = parseVatDisplayable(raw);
   // Bildanzahl aus API (RealImageCount = echte Fotos, ImageCount/CountImages = Alternativen)
   const imageCountFromApi = getNum(raw, "RealImageCount", "realImageCount", "ImageCount", "imageCount", "CountImages", "countImages", "ImageSetSize", "imageSetSize");
 
