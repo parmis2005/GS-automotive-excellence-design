@@ -728,7 +728,7 @@ const VehiclesPage = () => {
                           className="w-full"
                           size="lg"
                         >
-                          Speichern
+                          Suchen ({filteredAndSortedVehicles.length})
                         </Button>
                       </div>
                     </SheetContent>
