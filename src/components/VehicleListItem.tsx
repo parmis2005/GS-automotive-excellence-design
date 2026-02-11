@@ -122,6 +122,10 @@ const VehicleListItem = ({
   
   const displayImageUrl = (imageError || usePlaceholder) ? placeholderImageUrl : initialImageUrl;
   const isPlaceholderDisplay = imageError || usePlaceholder;
+  const inzahlungnahmeLink = (() => {
+    const digits = (internalNumber || "").replace(/\D/g, "").slice(0, 3);
+    return digits ? `/fahrzeugankauf?kennnr=${encodeURIComponent(digits.padStart(3, "0"))}` : "/fahrzeugankauf";
+  })();
 
   // "Neu eingetroffen" Badge – gleiche Logik wie VehicleCard
   const isNew = (() => {
@@ -185,26 +189,38 @@ const VehicleListItem = ({
                   </span>
                 )}
               </div>
-              <div className="mb-2">
-                <VehicleTitle
-                  brand={brand}
-                  model={model}
-                  productionSeries={productionSeries}
-                  modelVariant={modelVariantProp}
-                  fallbackTitle={title}
-                  className="font-display text-2xl md:text-3xl font-bold text-foreground"
-                  as="h3"
-                />
-                <div className="mt-1">
-                  <span className="inline-block bg-gray-800 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded">
-                    GEBRAUCHTWAGEN
-                  </span>
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <VehicleTitle
+                    brand={brand}
+                    model={model}
+                    productionSeries={productionSeries}
+                    modelVariant={modelVariantProp}
+                    fallbackTitle={title}
+                    className="font-display text-2xl md:text-3xl font-bold text-foreground"
+                    as="h3"
+                  />
+                  <div className="mt-1">
+                    <span className="inline-block bg-gray-800 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded">
+                      GEBRAUCHTWAGEN
+                    </span>
+                  </div>
+                </div>
+                <div className="lg:hidden text-right shrink-0">
+                  <div className="font-display text-3xl sm:text-4xl font-bold text-primary leading-none">
+                    {price.toLocaleString("de-DE")} €
+                  </div>
+                  {vatDisplayable !== undefined && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
             
             {/* Price */}
-            <div className="text-right">
+            <div className="hidden lg:block text-right">
               <div className="font-display text-3xl md:text-4xl font-bold text-primary">
                 {price.toLocaleString("de-DE")} €
               </div>
@@ -316,7 +332,21 @@ const VehicleListItem = ({
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 mt-auto pt-4 border-t border-border">
+          <div className="flex flex-col gap-3 mt-auto pt-4 border-t border-border lg:hidden">
+            <div className="grid grid-cols-2 gap-2">
+              <Link to={`/fahrzeuge/${id}#kaufanfrage`} className="w-full">
+                <Button variant="default" size="sm" className="w-full bg-primary hover:bg-primary/90 text-white">
+                  Kaufanfrage
+                </Button>
+              </Link>
+              <Link to={inzahlungnahmeLink} className="w-full">
+                <Button variant="outline" size="sm" className="w-full">
+                  Inzahlungnahme
+                </Button>
+              </Link>
+            </div>
+          </div>
+          <div className="hidden lg:flex flex-col sm:flex-row gap-3 mt-auto pt-4 border-t border-border">
             <Link to={`/fahrzeuge/${id}`} className="flex-1">
               <Button variant="outline" className="w-full">
                 Details ansehen
