@@ -145,7 +145,7 @@ const BrandSelector = () => {
       {/* Legal Disclaimer */}
       <div className="text-center mt-6 px-4">
         <p className="text-xs text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-          <span className="font-medium">Rechtlicher Hinweis:</span>
+          <span className="font-medium">Rechtlicher Hinweis:</span>{" "}
           Alle genannten Marken und Logos sind Eigentum der jeweiligen Hersteller.
           Wir sind kein Vertragshändler und stehen in keiner wirtschaftlichen Verbindung zu den genannten Marken.
           Die Logos dienen ausschließlich zur Filterung und Markenidentifikation.
