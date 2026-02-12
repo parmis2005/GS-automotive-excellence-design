@@ -110,7 +110,7 @@ const Navbar = () => {
         { label: "Ölwechsel", to: "/oelwechsel" },
       ],
     },
-    { label: "INZAHLUNGSNAHME", to: "/fahrzeugankauf", isHash: false },
+    { label: "INZAHLUNGNAHME", to: "/fahrzeugankauf", isHash: false },
     { label: "UNTERNEHMEN", to: "/unternehmen", isHash: false },
     { label: "KONTAKT", to: "/#contact", isHash: true, hash: "#contact" },
   ];
