@@ -69,6 +69,9 @@ export default function SEO({ data, structuredData, breadcrumbs }: SEOProps) {
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
       {fullImageUrl && <meta name="twitter:image" content={fullImageUrl} />}
+
+      {/* Preload hero image for faster first paint */}
+      {fullImageUrl && <link rel="preload" as="image" href={fullImageUrl} />}
       
       {/* Structured Data (JSON-LD) */}
       {allStructuredData.map((schema, index) => (
