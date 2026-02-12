@@ -626,7 +626,7 @@ const VehicleDetailPage = () => {
                         })()}
                       >
                         <ArrowLeftRight className="w-4 h-4 mr-2 text-primary group-hover:scale-110 transition-transform" />
-                        Inzahlungsnahme
+                        Inzahlungnahme
                       </Link>
                     </Button>
                   </div>

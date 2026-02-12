@@ -295,7 +295,7 @@ const stepInstructions: Record<string, { title: string; text: string }> = {
   },
   titleSlide: {
     title: "Start",
-    text: "Vor dem Start: Fahrgestellnummer bereithalten. Optional: Fahrzeug für Inzahlungsnahme auswählen.",
+    text: "Vor dem Start: Fahrgestellnummer bereithalten. Optional: Fahrzeug für Inzahlungnahme auswählen.",
   },
   interest: {
     title: "Interessensnummer",
@@ -362,7 +362,7 @@ type VehiclePurchaseFormProps = {
   topBrands?: string[];
   labels?: Partial<Labels>;
   onSubmit?: (data: FormData) => void;
-  /** 3-stellige Kennnummer für Inzahlungsnahme (z. B. aus Detailansicht) */
+  /** 3-stellige Kennnummer für Inzahlungnahme (z. B. aus Detailansicht) */
   initialInterestNumber?: string;
 };
 
@@ -763,10 +763,10 @@ const VehiclePurchaseForm = ({
               </p>
             </div>
 
-            {/* Kennnummer – Inzahlungsnahme, optional */}
+            {/* Kennnummer – Inzahlungnahme, optional */}
             <div className="w-full max-w-sm mx-auto">
               <h4 className="text-sm font-semibold text-foreground mb-1">
-                Fahrzeug für Inzahlungsnahme auswählen
+                Fahrzeug für Inzahlungnahme auswählen
               </h4>
               <p className="text-sm text-muted-foreground mb-4">
                 Geben Sie die 3-stellige Kennnummer des gewünschten Fahrzeugs ein – Sie finden sie in unserer Fahrzeugsuche.
@@ -2061,10 +2061,16 @@ const VehiclePurchaseForm = ({
     setSubmitError("");
     setSubmitSuccess(false);
 
+    const formDataToSend = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      formDataToSend.append(key, value ?? "");
+    });
+    photoFiles.forEach((file) => formDataToSend.append("photoFiles", file, file.name));
+    accidentFiles.forEach((file) => formDataToSend.append("accidentFiles", file, file.name));
+
     fetch("/api/purchase-inquiry", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: formDataToSend,
     })
       .then((response) => {
         if (!response.ok) {
