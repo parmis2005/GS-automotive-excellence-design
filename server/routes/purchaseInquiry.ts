@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import multer from "multer";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
@@ -15,6 +15,10 @@ const maybeUpload = (req: any, res: any, next: any) => {
     ])(req, res, next);
   }
   return next();
+};
+
+type MulterRequest = Request & {
+  files?: Record<string, Express.Multer.File[]>;
 };
 
 const supabaseUrl = process.env.SUPABASE_URL?.trim();
@@ -82,7 +86,7 @@ const formatPrice = (value?: string | null) => {
 purchaseInquiryRouter.post("/", maybeUpload, async (req, res) => {
   try {
     const payload = req.body || {};
-    const files = (req.files || {}) as {
+    const files = ((req as MulterRequest).files || {}) as {
       photoFiles?: Express.Multer.File[];
       accidentFiles?: Express.Multer.File[];
     };
