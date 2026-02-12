@@ -1,8 +1,31 @@
 import { Router } from "express";
+import multer from "multer";
+import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { insertPurchaseInquiry, getPurchaseInquiries } from "../db/database.js";
 
 export const purchaseInquiryRouter = Router();
+
+const upload = multer({ storage: multer.memoryStorage() });
+const maybeUpload = (req: any, res: any, next: any) => {
+  if (req.is("multipart/form-data")) {
+    return upload.fields([
+      { name: "photoFiles" },
+      { name: "accidentFiles" },
+    ])(req, res, next);
+  }
+  return next();
+};
+
+const supabaseUrl = process.env.SUPABASE_URL?.trim();
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+const supabaseBucket = process.env.SUPABASE_BUCKET_ANKAUF?.trim() || "ankauf-uploads";
+const signedUrlSeconds = 60 * 60 * 24 * 14;
+
+const supabase =
+  supabaseUrl && supabaseServiceRoleKey
+    ? createClient(supabaseUrl, supabaseServiceRoleKey)
+    : null;
 
 /** GET /api/purchase-inquiry – alle Ankauf-Anfragen abrufen (z.B. für Admin) */
 purchaseInquiryRouter.get("/", async (_req, res) => {
@@ -33,6 +56,18 @@ const formatRow = (label: string, value?: string | number | null) => {
   return `<tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;width:180px;">${label}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;color:#111827;">${safeValue}</td></tr>`;
 };
 
+const formatFileRows = (label: string, files: { name: string; url: string }[]) => {
+  if (!files.length) return formatRow(label, "-");
+  const items = files
+    .map((file) => {
+      const name = escapeHtml(file.name);
+      const url = escapeHtml(file.url);
+      return `<li style="margin:4px 0;"><a href="${url}" target="_blank" rel="noreferrer" style="color:#0f2439;text-decoration:underline;">${name}</a></li>`;
+    })
+    .join("");
+  return `<tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;width:180px;">${label}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;color:#111827;"><ul style="padding-left:18px;margin:0;">${items}</ul></td></tr>`;
+};
+
 const formatSection = (title: string, rows: string) =>
   `<div style="margin-bottom:24px;"><h3 style="margin:0 0 12px;padding:8px 0;font-size:14px;font-weight:700;color:#0f2439;text-transform:uppercase;letter-spacing:0.05em;border-bottom:2px solid #0f2439;">${escapeHtml(title)}</h3><table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}</table></div>`;
 
@@ -44,9 +79,55 @@ const formatPrice = (value?: string | null) => {
   return `${formatted} €`;
 };
 
-purchaseInquiryRouter.post("/", async (req, res) => {
+purchaseInquiryRouter.post("/", maybeUpload, async (req, res) => {
   try {
     const payload = req.body || {};
+    const files = (req.files || {}) as {
+      photoFiles?: Express.Multer.File[];
+      accidentFiles?: Express.Multer.File[];
+    };
+    const photoUploads = files.photoFiles ?? [];
+    const accidentUploads = files.accidentFiles ?? [];
+
+    const uploadFiles = async (uploads: Express.Multer.File[], prefix: string) => {
+      if (!supabase || uploads.length === 0) return [];
+      const now = new Date();
+      const folder = `${prefix}/${now.toISOString().slice(0, 10)}-${now.getTime()}`;
+      const results: { name: string; url: string }[] = [];
+
+      for (const file of uploads) {
+        const safeName = file.originalname.replace(/[^\w.\-]+/g, "_");
+        const path = `${folder}/${safeName}`;
+        const { error } = await supabase.storage.from(supabaseBucket).upload(path, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false,
+        });
+        if (error) {
+          console.error("Supabase upload error:", error);
+          continue;
+        }
+        const { data, error: urlError } = await supabase.storage
+          .from(supabaseBucket)
+          .createSignedUrl(path, signedUrlSeconds);
+        if (urlError || !data?.signedUrl) {
+          console.error("Supabase signed URL error:", urlError);
+          continue;
+        }
+        results.push({ name: file.originalname, url: data.signedUrl });
+      }
+
+      return results;
+    };
+
+    const photoLinks = await uploadFiles(photoUploads, "photos");
+    const accidentLinks = await uploadFiles(accidentUploads, "documents");
+
+    if (photoLinks.length) {
+      payload.photoFiles = photoLinks.map((file) => file.url).join(", ");
+    }
+    if (accidentLinks.length) {
+      payload.accidentFiles = accidentLinks.map((file) => file.url).join(", ");
+    }
 
     // Immer in der Datenbank speichern (landet sofort)
     try {
@@ -143,8 +224,8 @@ purchaseInquiryRouter.post("/", async (req, res) => {
             ${formatRow("Schadenshöhe", payload.accidentAmount)}
             ${formatRow("Interessensnummer (Inzahlungnahme)", payload.interestNumber)}
             ${formatRow("Fahrzeug aus Bestand", payload.interestVehicle)}
-            ${formatRow("Foto-Dateien", payload.photoFiles)}
-            ${formatRow("Gutachten-Dateien", payload.accidentFiles)}
+            ${formatFileRows("Foto-Dateien", photoLinks)}
+            ${formatFileRows("Gutachten-Dateien", accidentLinks)}
           </tbody>`
         )}
 

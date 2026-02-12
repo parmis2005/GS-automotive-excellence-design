@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
@@ -14,10 +14,42 @@ const heroImageUrl =
 
 const UnternehmenPage = () => {
   const { data: vehicles } = useVehicles();
+  const statsRef = useRef<HTMLDivElement | null>(null);
+  const hasAnimatedStats = useRef(false);
+  const statsTargets = [25, 450, 10000];
+  const [statsValues, setStatsValues] = useState([0, 0, 0]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
+
+  useEffect(() => {
+    if (!statsRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting || hasAnimatedStats.current) return;
+        hasAnimatedStats.current = true;
+        const start = performance.now();
+        const durationMs = 1200;
+
+        const tick = (now: number) => {
+          const progress = Math.min((now - start) / durationMs, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          setStatsValues(statsTargets.map((target) => Math.round(target * eased)));
+          if (progress < 1) requestAnimationFrame(tick);
+        };
+
+        requestAnimationFrame(tick);
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(statsRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const formatNumber = (value: number) => new Intl.NumberFormat("de-DE").format(value);
 
   const seoData = {
     title: generateTitle("Unternehmen"),
@@ -206,22 +238,22 @@ const UnternehmenPage = () => {
                     <Link to="/fahrzeuge">Zum Fahrzeugbestand</Link>
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-10" ref={statsRef}>
                   <div className="border-t-2 border-border/70 pt-7">
                     <div className="text-5xl md:text-6xl font-semibold text-foreground">
-                      25<span className="text-primary">+</span>
+                      {formatNumber(statsValues[0])}<span className="text-primary">+</span>
                     </div>
                     <p className="text-base md:text-lg text-muted-foreground mt-3">Jahre Erfahrung</p>
                   </div>
                   <div className="border-t-2 border-border/70 pt-7">
                     <div className="text-5xl md:text-6xl font-semibold text-foreground">
-                      450<span className="text-primary">+</span>
+                      {formatNumber(statsValues[1])}<span className="text-primary">+</span>
                     </div>
                     <p className="text-base md:text-lg text-muted-foreground mt-3">verkaufte Autos pro Jahr</p>
                   </div>
                   <div className="border-t-2 border-border/70 pt-7 sm:col-span-2 sm:justify-self-center sm:text-center">
                     <div className="text-5xl md:text-6xl font-semibold text-foreground">
-                      10.000<span className="text-primary">+</span>
+                      {formatNumber(statsValues[2])}<span className="text-primary">+</span>
                     </div>
                     <p className="text-base md:text-lg text-muted-foreground mt-3">verkaufte Autos</p>
                   </div>

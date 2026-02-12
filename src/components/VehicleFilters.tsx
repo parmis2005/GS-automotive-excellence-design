@@ -43,7 +43,7 @@ const EQUIPMENT_FILTER_CATEGORIES: { label: string; items: string[] }[] = [
   },
   {
     label: "Sicherheit & Fahrassistenz",
-    items: ["Einparkhilfe", "Rückfahrkamera", "360 Grad Kamera", "Totwinkelassistent", "Müdigkeitserkennung", "Fernlichtassistent", "ACC", "Tempomat"],
+    items: ["Einparkhilfe", "Rückfahrkamera", "360 Grad Kamera", "Totwinkelassistent", "Müdigkeitserkennung", "Fernlichtassistent", "ACC", "Abstandsregeltempomat", "Tempomat"],
   },
   {
     label: "Beleuchtung",
@@ -59,7 +59,7 @@ const EQUIPMENT_FILTER_CATEGORIES: { label: string; items: string[] }[] = [
   },
   {
     label: "Pakete & Sonstiges",
-    items: ["Alufelgen", "Sportpaket", "Garantie", "Regensensor"],
+    items: ["Alufelgen", "Anhängerkupplung", "Sportpaket", "Garantie", "Regensensor"],
   },
 ];
 

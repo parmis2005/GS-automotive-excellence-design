@@ -168,6 +168,18 @@ const ZulassungPage = () => {
               })}
             </div>
 
+            <div className="mb-16">
+              <div className="bg-primary/10 border border-primary/20 rounded-2xl p-8 md:p-10 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/40 animate-fade-up">
+                <h3 className="font-display text-2xl font-semibold text-primary mb-4">
+                  5-Tages-Kennzeichen Angebot
+                </h3>
+                <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+                  Zusätzlich bieten wir Ihnen ein 5-Tages-Kennzeichen Angebot – ideal für kurzfristige
+                  Überführungen oder Export. Schnell organisiert, unkompliziert und zuverlässig.
+                </p>
+              </div>
+            </div>
+
             {/* Leistungsumfang */}
             <div className="bg-white rounded-xl p-8 md:p-10 shadow-sm border border-border/50 mb-16">
               <h3 className="font-display text-2xl font-semibold text-primary mb-6 text-center">

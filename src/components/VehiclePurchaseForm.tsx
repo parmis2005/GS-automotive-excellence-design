@@ -748,85 +748,88 @@ const VehiclePurchaseForm = ({
         title: "Bereit zum Start",
         isValid: () => interestNumber.length === 3 && Boolean(interestVehicle),
         render: () => (
-          <div className="flex flex-col items-center text-center py-4">
-            {/* Fahrgestellnummer – mittig, reduziert */}
-            <div className="max-w-md mx-auto mb-8">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-                <Info className="h-5 w-5" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground mb-2">
-                Fahrgestellnummer bereithalten
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Bitte halten Sie die 17-stellige Fahrgestellnummer Ihres Fahrzeugs bereit. 
-                Wir benötigen sie für Ausstattung und Historie – wichtig für eine faire Preisbestimmung.
-              </p>
-            </div>
-
-            {/* Kennnummer – Inzahlungnahme, optional */}
-            <div className="w-full max-w-sm mx-auto">
-              <h4 className="text-sm font-semibold text-foreground mb-1">
-                Fahrzeug für Inzahlungnahme auswählen
-              </h4>
-              <p className="text-sm text-muted-foreground mb-4">
-                Geben Sie die 3-stellige Kennnummer des gewünschten Fahrzeugs ein – Sie finden sie in unserer Fahrzeugsuche.
-              </p>
-              <Input
-                value={interestNumber}
-                onChange={(event) => updateField("interestNumber", event.target.value)}
-                placeholder="3-stellige Kennnr."
-                inputMode="numeric"
-                className="text-center h-12"
-                maxLength={3}
-              />
-              {interestNumber.length === 3 && !interestVehicle && (
-                <p className="mt-2 text-xs text-destructive text-center">Nicht gefunden</p>
-              )}
-              {!interestVehicle && (
-                <div className="mt-4 text-center">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Noch kein Fahrzeug im Blick?
-                  </p>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to="/fahrzeuge" className="inline-flex items-center gap-2">
-                      <Search className="h-4 w-4" />
-                      Fahrzeuge durchsuchen
-                    </Link>
-                  </Button>
+          <div className="py-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
+              <div className="rounded-2xl border border-border bg-white/70 p-6 text-left shadow-sm">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                  <Info className="h-5 w-5" />
                 </div>
-              )}
-              {interestVehicle && (
-                <div className="mt-6 w-full max-w-md mx-auto rounded-xl border border-border bg-card overflow-hidden shadow-md">
-                  <div className="relative aspect-[16/9] w-full bg-muted">
-                    <img
-                      src={getVehicleImageWithFallback(
-                        interestVehicle.image,
-                        interestVehicle.id,
-                      )}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
+                <h3 className="text-base font-semibold text-foreground mb-2">
+                  Fahrgestellnummer bereithalten
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Bitte halten Sie die 17-stellige Fahrgestellnummer Ihres Fahrzeugs bereit.
+                  Wir benötigen sie für Ausstattung und Historie – wichtig für eine faire Preisbestimmung.
+                </p>
+                <div className="mt-5 rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">
+                  Tipp: Die Nummer finden Sie im Fahrzeugschein unter <span className="font-medium text-foreground">E</span>.
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+                <h4 className="text-sm font-semibold text-foreground mb-1">
+                  Fahrzeug für Inzahlungnahme auswählen
+                </h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Geben Sie die 3-stellige Kennnummer des gewünschten Fahrzeugs ein – Sie finden sie in unserer Fahrzeugsuche.
+                </p>
+                <Input
+                  value={interestNumber}
+                  onChange={(event) => updateField("interestNumber", event.target.value)}
+                  placeholder="3-stellige Kennnr."
+                  inputMode="numeric"
+                  className="text-center h-12"
+                  maxLength={3}
+                />
+                {interestNumber.length === 3 && !interestVehicle && (
+                  <p className="mt-2 text-xs text-destructive text-center">Nicht gefunden</p>
+                )}
+                {!interestVehicle && (
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Noch kein Fahrzeug im Blick?
+                    </p>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/fahrzeuge" className="inline-flex items-center gap-2">
+                        <Search className="h-4 w-4" />
+                        Fahrzeuge durchsuchen
+                      </Link>
+                    </Button>
                   </div>
-                  <div className="p-4 text-center">
-                    <VehicleTitle
-                      brand={interestVehicle.brand}
-                      model={interestVehicle.model}
-                      productionSeries={interestVehicle.productionSeries}
-                      modelVariant={interestVehicle.modelVariant}
-                      className="text-xl font-semibold text-foreground"
-                      as="h4"
-                    />
-                    <div className="flex flex-wrap justify-center gap-3 mt-2 text-sm text-muted-foreground">
-                      <span>{interestVehicle.year}</span>
-                      <span>·</span>
-                      <span>{formatNumber(interestVehicle.mileage)} km</span>
-                      <span>·</span>
-                      <span>{interestVehicle.fuel}</span>
+                )}
+                {interestVehicle && (
+                  <div className="mt-5 rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+                    <div className="relative aspect-[16/9] w-full bg-muted">
+                      <img
+                        src={getVehicleImageWithFallback(
+                          interestVehicle.image,
+                          interestVehicle.id,
+                        )}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="p-4 text-center">
+                      <VehicleTitle
+                        brand={interestVehicle.brand}
+                        model={interestVehicle.model}
+                        productionSeries={interestVehicle.productionSeries}
+                        modelVariant={interestVehicle.modelVariant}
+                        className="text-lg font-semibold text-foreground"
+                        as="h4"
+                      />
+                      <div className="flex flex-wrap justify-center gap-3 mt-2 text-xs text-muted-foreground">
+                        <span>{interestVehicle.year}</span>
+                        <span>·</span>
+                        <span>{formatNumber(interestVehicle.mileage)} km</span>
+                        <span>·</span>
+                        <span>{interestVehicle.fuel}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         ),

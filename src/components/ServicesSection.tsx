@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { 
   CreditCard, 
   Shield, 
@@ -69,11 +70,33 @@ const services = [
 ];
 
 const ServicesSection = () => {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+    observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section id="services" className="py-28 bg-muted/30">
+    <section id="services" className="py-28 bg-muted/30" ref={sectionRef}>
       <div className="container mx-auto px-6 max-w-7xl">
         {/* Section Header */}
-        <div className="mb-20 text-center">
+        <div
+          className={`mb-20 text-center transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+          }`}
+        >
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6">
             Unser Service für Sie
           </h2>
@@ -89,12 +112,14 @@ const ServicesSection = () => {
           {services.map((service, index) => {
             const Icon = service.icon;
             const isLinked = Boolean(service.href);
+            const baseDelay = index * 90;
             return (
               <div
                 key={index}
-                className={`group flex flex-col transition-transform duration-300 hover:scale-[1.02] ${
+                className={`group flex flex-col transition-all duration-700 ease-out hover:scale-[1.02] ${
                   isLinked ? "cursor-pointer" : ""
-                }`}
+                } ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                style={{ transitionDelay: `${baseDelay}ms` }}
               >
                 {isLinked ? (
                   <Link
@@ -102,7 +127,12 @@ const ServicesSection = () => {
                     className="flex flex-col flex-grow rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-muted/30"
                   >
                     {/* Icon */}
-                    <div className="mb-6 flex justify-center">
+                    <div
+                      className={`mb-6 flex justify-center transition-all duration-700 ${
+                        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                      }`}
+                      style={{ transitionDelay: `${baseDelay + 120}ms` }}
+                    >
                       <div className="w-20 h-20 flex items-center justify-center">
                         <Icon
                           className="w-20 h-20 text-muted-foreground/80 group-hover:text-primary transition-colors duration-300"
@@ -112,17 +142,32 @@ const ServicesSection = () => {
                     </div>
 
                     {/* Title */}
-                    <h3 className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors mb-4 text-center">
+                    <h3
+                      className={`text-2xl font-bold text-foreground group-hover:text-primary transition-colors mb-4 text-center transition-all duration-700 ${
+                        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                      }`}
+                      style={{ transitionDelay: `${baseDelay + 180}ms` }}
+                    >
                       {service.title}
                     </h3>
 
                     {/* Description */}
-                    <p className="text-muted-foreground group-hover:text-primary/80 mb-6 leading-relaxed flex-grow transition-colors text-center">
+                    <p
+                      className={`text-muted-foreground group-hover:text-primary/80 mb-6 leading-relaxed flex-grow transition-colors text-center transition-all duration-700 ${
+                        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                      }`}
+                      style={{ transitionDelay: `${baseDelay + 240}ms` }}
+                    >
                       {service.description}
                     </p>
 
                     {/* Trust Markers */}
-                    <div className="mb-6 space-y-2 flex flex-col items-center">
+                    <div
+                      className={`mb-6 space-y-2 flex flex-col items-center transition-all duration-700 ${
+                        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                      }`}
+                      style={{ transitionDelay: `${baseDelay + 300}ms` }}
+                    >
                       {service.trustMarkers.map((marker, idx) => (
                         <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground group-hover:text-primary/70 transition-colors">
                           <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />

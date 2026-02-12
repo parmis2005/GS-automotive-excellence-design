@@ -57,7 +57,7 @@ const VehiclePurchasePage = () => {
           const navbarHeight = window.matchMedia("(min-width: 1024px)").matches ? 135 : 88;
           const rect = block.getBoundingClientRect();
           const currentScrollY = window.scrollY ?? document.documentElement.scrollTop;
-          const targetScrollY = currentScrollY + rect.top - navbarHeight;
+          const targetScrollY = currentScrollY + rect.top - navbarHeight + 92;
           window.dispatchEvent(new CustomEvent("programmatic-scroll-start"));
           window.scrollTo({ top: Math.max(0, targetScrollY), behavior: "smooth" });
         } else {

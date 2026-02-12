@@ -225,12 +225,12 @@ const VehicleListItem = ({
               <div className="text-xs text-primary mt-1">
                 {vatDisplayable === false ? "MwSt. nicht ausweisbar" : "inkl. MwSt."}
               </div>
-              <Link to={`/fahrzeuge/${id}#kaufanfrage`} className="mt-3 inline-block">
+              <Link to={`/fahrzeuge/${id}`} className="mt-3 inline-block">
                 <Button
                   variant="default"
                   className="bg-primary hover:bg-primary/90 text-white font-semibold"
                 >
-                  Kaufanfrage
+                  Details ansehen
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
@@ -343,9 +343,9 @@ const VehicleListItem = ({
             </div>
           </div>
           <div className="hidden lg:flex flex-col sm:flex-row gap-3 mt-auto pt-4 border-t border-border">
-            <Link to={`/fahrzeuge/${id}`} className="flex-1">
+            <Link to={inzahlungnahmeLink} className="flex-1">
               <Button variant="outline" className="w-full">
-                Details ansehen
+                Inzahlungnahme
               </Button>
             </Link>
             <Button

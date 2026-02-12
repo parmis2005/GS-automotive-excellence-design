@@ -227,8 +227,8 @@ const VehiclesSection = () => {
         });
       },
       {
-        threshold: 0.1, // Trigger when 10% of the section is visible
-        rootMargin: "0px 0px 80px 0px", // Etwas früher auslösen beim Runterscrollen
+        threshold: 0.25,
+        rootMargin: "0px 0px -97px 0px",
       }
     );
 
@@ -245,11 +245,18 @@ const VehiclesSection = () => {
     <section ref={sectionRef} id="vehicles" className="py-20 bg-background">
       <div className="container mx-auto px-6">
         {/* Section Header */}
-        <div className="text-center mb-12 mt-12">
-          <h2 className="font-display text-3xl md:text-4xl text-primary mb-4">
-            Sofort verfügbare Fahrzeuge
-          </h2>
-          <div className="section-divider mb-4" />
+        <div
+          className={`group text-center mb-12 mt-12 transition-all duration-1000 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+          }`}
+          style={{ transitionDelay: "200ms", willChange: "opacity, transform" }}
+        >
+          <div className="inline-flex flex-col items-center">
+            <h2 className="font-display text-3xl md:text-4xl text-primary mb-4">
+              Sofort verfügbare Fahrzeuge
+            </h2>
+            <div className="section-divider mb-4 transition-all duration-500 group-hover:w-full" />
+          </div>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Geprüfte Gebrauchtwagen – direkt bei uns in Krefeld verfügbar
           </p>
@@ -284,11 +291,11 @@ const VehiclesSection = () => {
                   key={vehicle.id} 
                   className={`h-full transition-all duration-1000 ease-out ${
                     isVisible 
-                      ? 'opacity-100 translate-y-0' 
-                      : 'opacity-0 translate-y-8'
+                      ? 'opacity-100 translate-y-0 scale-100' 
+                      : 'opacity-0 translate-y-10 scale-[0.98]'
                   }`}
                   style={{ 
-                    transitionDelay: `${index * 200}ms`,
+                    transitionDelay: `${200 + index * 200}ms`,
                     willChange: 'opacity, transform'
                   }}
                 >
@@ -304,11 +311,11 @@ const VehiclesSection = () => {
                   key={vehicle.id} 
                   className={`h-full transition-all duration-1000 ease-out ${
                     isVisible 
-                      ? 'opacity-100 translate-y-0' 
-                      : 'opacity-0 translate-y-8'
+                      ? 'opacity-100 translate-y-0 scale-100' 
+                      : 'opacity-0 translate-y-10 scale-[0.98]'
                   }`}
                   style={{ 
-                    transitionDelay: `${index * 200}ms`,
+                    transitionDelay: `${200 + index * 200}ms`,
                     willChange: 'opacity, transform'
                   }}
                 >
@@ -325,11 +332,11 @@ const VehiclesSection = () => {
                     key={vehicle.id} 
                     className={`h-full transition-all duration-700 ease-out ${
                       isVisible 
-                        ? 'opacity-100 translate-y-0' 
-                        : 'opacity-0 translate-y-8'
+                        ? 'opacity-100 translate-y-0 scale-100' 
+                        : 'opacity-0 translate-y-10 scale-[0.98]'
                     }`}
                     style={{ 
-                      transitionDelay: `${(index + 3) * 150}ms`,
+                      transitionDelay: `${200 + (index + 3) * 150}ms`,
                       willChange: 'opacity, transform'
                     }}
                   >

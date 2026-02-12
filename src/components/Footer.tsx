@@ -65,7 +65,7 @@ const Footer = () => {
               </div>
             </div>
             <p className="text-sm text-gray-400 mb-4">
-              Ihr Partner für Premium-Gebrauchtwagen und Jahreswagen in Krefeld.
+              Ihr Partner für Gebrauchtwagen und Jahreswagen in Krefeld.
             </p>
           </div>
 
