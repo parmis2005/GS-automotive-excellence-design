@@ -192,6 +192,16 @@ const VehicleDetailPage = () => {
     };
   }, [vehicle]);
 
+  useEffect(() => {
+    if (availableImages.length <= 1) return;
+    const prefetchTargets = availableImages.slice(1, Math.min(availableImages.length, 4));
+    prefetchTargets.forEach((url) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+    });
+  }, [availableImages]);
+
   // Scroll to top of page when vehicle loads (if no hash)
   useEffect(() => {
     if (!isLoading && vehicle && !location.hash) {

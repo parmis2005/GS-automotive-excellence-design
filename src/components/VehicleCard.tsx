@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
-import { getVehicleImageWithFallback, getPlaceholderImage } from "@/lib/vehicleImage";
+import { getVehicleListImageWithFallback, getPlaceholderImage, getVehiclePrefetchUrls, prefetchImages } from "@/lib/vehicleImage";
 import { ExposeViewerDialog } from "@/components/ExposeViewerDialog";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
 import { formatFuelType, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
@@ -16,6 +16,7 @@ interface VehicleCardProps extends Vehicle {
 const VehicleCard = ({
   id,
   image,
+  imageCount,
   brand,
   model,
   title,
@@ -39,8 +40,9 @@ const VehicleCard = ({
   showCategory = false, // Default: don't show category (only on homepage)
 }: VehicleCardProps) => {
   // Get image URL with fallback to placeholder
-  const initialImageUrl = getVehicleImageWithFallback(image, id);
+  const initialImageUrl = getVehicleListImageWithFallback(image, id);
   const placeholderImageUrl = getPlaceholderImage();
+  const hasPrefetchedRef = useRef(false);
   
   // State for image error handling and placeholder detection
   const [imageError, setImageError] = useState(false);
@@ -63,7 +65,7 @@ const VehicleCard = ({
         const bid = image?.match(/[?&]bid=([^&]+)/)?.[1] || '1790';
         const image2Url = isCarzillaImage
           ? `https://img.carzilla-services.com/Images.ashx?vid=${id}&bid=${bid}&format=l&ino=2&app=carzilla`
-          : `https://img.cargate360.de/default.aspx?vid=${id}&bid=1790&format=xl&ino=2&app=Kiste-Default`;
+          : `https://img.cargate360.de/default.aspx?vid=${id}&bid=1790&format=l&ino=2&app=Kiste-Default`;
         const controller2 = new AbortController();
         const timeout2 = setTimeout(() => controller2.abort(), 2000);
         
@@ -115,6 +117,15 @@ const VehicleCard = ({
     
     checkImages();
   }, [image, id, initialImageUrl]);
+
+  const handlePrefetch = () => {
+    if (hasPrefetchedRef.current) return;
+    const urls = getVehiclePrefetchUrls(image, id, imageCount, 3);
+    if (urls.length > 0) {
+      prefetchImages(urls);
+      hasPrefetchedRef.current = true;
+    }
+  };
   
   const displayImageUrl = (imageError || usePlaceholder) ? placeholderImageUrl : initialImageUrl;
   const isPlaceholderDisplay = imageError || usePlaceholder;
@@ -152,7 +163,13 @@ const VehicleCard = ({
   return (
     <div className="group relative bg-background rounded-lg overflow-hidden hover-lift border border-border shadow-soft h-full flex flex-col">
       {/* Image Container - klickbar zur Detailseite */}
-      <Link to={`/fahrzeuge/${id}`} className="relative block aspect-[4/3] overflow-hidden bg-secondary cursor-pointer">
+      <Link
+        to={`/fahrzeuge/${id}`}
+        className="relative block aspect-[4/3] overflow-hidden bg-secondary cursor-pointer"
+        onMouseEnter={handlePrefetch}
+        onFocus={handlePrefetch}
+        onTouchStart={handlePrefetch}
+      >
         <img
           src={displayImageUrl}
           alt={getVehicleDisplayName(brand, model, productionSeries, title)}

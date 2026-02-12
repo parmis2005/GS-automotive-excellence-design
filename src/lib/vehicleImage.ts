@@ -77,6 +77,72 @@ export function getVehicleImageWithFallback(imageUrl: string | undefined | null,
 }
 
 /**
+ * Gets a lighter vehicle image URL for list views (faster than xl)
+ */
+export function getVehicleListImageWithFallback(imageUrl: string | undefined | null, vehicleId: string): string {
+  if (!imageUrl || !imageUrl.trim()) {
+    return PLACEHOLDER_IMAGE_URL;
+  }
+
+  if (imageUrl.includes('cargate360')) {
+    return imageUrl.replace(/format=[^&]*/i, 'format=l');
+  }
+  if (imageUrl.includes('carzilla-services.com')) {
+    return imageUrl.replace(/format=[^&]*/i, 'format=l');
+  }
+
+  return imageUrl;
+}
+
+function getBidFromImageUrl(imageUrl: string | undefined | null): string {
+  return imageUrl?.match(/[?&]bid=([^&]+)/)?.[1] || '1790';
+}
+
+/**
+ * Builds a small list of image URLs to prefetch (for hover/intent).
+ */
+export function getVehiclePrefetchUrls(
+  imageUrl: string | undefined | null,
+  vehicleId: string,
+  imageCount?: number,
+  limit: number = 3
+): string[] {
+  if (!imageUrl || !imageUrl.trim()) return [];
+
+  const maxCount = typeof imageCount === "number" && imageCount > 0
+    ? Math.min(imageCount, limit + 1)
+    : limit + 1;
+
+  if (maxCount <= 1) return [];
+
+  const urls: string[] = [];
+  const bid = getBidFromImageUrl(imageUrl);
+
+  for (let ino = 2; ino <= maxCount; ino += 1) {
+    if (imageUrl.includes('cargate360')) {
+      urls.push(`https://img.cargate360.de/default.aspx?vid=${vehicleId}&bid=${bid}&format=l&ino=${ino}&app=Kiste-Default`);
+      continue;
+    }
+    if (imageUrl.includes('carzilla-services.com')) {
+      urls.push(`https://img.carzilla-services.com/Images.ashx?vid=${vehicleId}&bid=${bid}&format=l&ino=${ino}&app=carzilla`);
+    }
+  }
+
+  return urls.slice(0, limit);
+}
+
+/**
+ * Prefetches a list of image URLs into the browser cache.
+ */
+export function prefetchImages(urls: string[]): void {
+  urls.forEach((url) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.src = url;
+  });
+}
+
+/**
  * Checks if an image URL is likely a placeholder image by checking if only image 1 exists
  * This is a client-side check that can be used before displaying images
  * Note: This is a heuristic - the backend should handle the actual validation
