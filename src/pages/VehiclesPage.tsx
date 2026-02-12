@@ -710,7 +710,11 @@ const VehiclesPage = () => {
                         )}
                       </Button>
                     </SheetTrigger>
-                    <SheetContent side="right" className="w-full sm:w-[400px] overflow-y-auto">
+                    <SheetContent
+                      side="right"
+                      className="w-full sm:w-[400px] overflow-y-auto"
+                      onOpenAutoFocus={(event) => event.preventDefault()}
+                    >
                       <SheetHeader>
                         <SheetTitle>Filter</SheetTitle>
                       </SheetHeader>
