@@ -35,7 +35,7 @@ const equipmentMatchesOptions = (allowed: string, equipmentList: string[]): bool
 const EQUIPMENT_FILTER_CATEGORIES: { label: string; items: string[] }[] = [
   {
     label: "Infotainment & Konnektivität",
-    items: ["Apple CarPlay", "Android Auto", "Navi", "Bluetooth", "Freisprecheinrichtung", "USB-anschluss", "Induktionsladen"],
+    items: ["Apple CarPlay", "Android Auto", "Navi", "Bluetooth", "Freisprecheinrichtung", "USB-Anschluss", "Induktionsladen"],
   },
   {
     label: "Klima & Komfort",
@@ -43,7 +43,7 @@ const EQUIPMENT_FILTER_CATEGORIES: { label: string; items: string[] }[] = [
   },
   {
     label: "Sicherheit & Fahrassistenz",
-    items: ["Einparkhilfe", "Rückfahrkamera", "360 grad kamera", "Totwinkelassistent", "Müdigkeitserkennung", "Fernlichtassistent", "ACC", "Tempomat"],
+    items: ["Einparkhilfe", "Rückfahrkamera", "360 Grad Kamera", "Totwinkelassistent", "Müdigkeitserkennung", "Fernlichtassistent", "ACC", "Tempomat"],
   },
   {
     label: "Beleuchtung",
@@ -51,7 +51,7 @@ const EQUIPMENT_FILTER_CATEGORIES: { label: string; items: string[] }[] = [
   },
   {
     label: "Innenausstattung",
-    items: ["ALU", "Sportsitze", "Stoff", "Teilleder", "Leder", "Lederlenkrad", "Panoramadach", "Schiebedach"],
+    items: ["Sportsitze", "Stoff", "Teilleder", "Leder", "Lederlenkrad", "Panoramadach", "Schiebedach"],
   },
   {
     label: "Komfort & Zugang",
@@ -59,7 +59,7 @@ const EQUIPMENT_FILTER_CATEGORIES: { label: string; items: string[] }[] = [
   },
   {
     label: "Pakete & Sonstiges",
-    items: ["Sportpaket", "Garantie", "Regensensor"],
+    items: ["Alufelgen", "Sportpaket", "Garantie", "Regensensor"],
   },
 ];
 
