@@ -59,22 +59,8 @@ import { VehicleTitle } from "@/components/VehicleTitle";
 /**
  * Helper function to build cargate360 image URL
  */
-const DETAIL_IMAGE_FORMAT = "l";
-const DETAIL_ZOOM_FORMAT = "xl";
-
-function cargateImage(vid: string, ino: number = 1, format: string = DETAIL_IMAGE_FORMAT): string {
+function cargateImage(vid: string, ino: number = 1, format: string = "xl"): string {
   return `https://img.cargate360.de/default.aspx?vid=${vid}&bid=1790&format=${format}&ino=${ino}&app=Kiste-Default`;
-}
-
-function toZoomImageUrl(url: string): string {
-  if (!url) return url;
-  if (url.includes("cargate360")) {
-    return url.replace(/format=[^&]*/i, `format=${DETAIL_ZOOM_FORMAT}`);
-  }
-  if (url.includes("carzilla-services.com")) {
-    return url.replace(/format=[^&]*/i, "format=l");
-  }
-  return url;
 }
 
 const VehicleDetailPage = () => {
@@ -126,62 +112,60 @@ const VehicleDetailPage = () => {
 
     let cancelled = false;
     setAvailableImages([]);
+    setIsLoadingImages(true);
 
-    const imageExists = (url: string) =>
-      new Promise<boolean>((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-          if (img.naturalWidth > 600 && img.naturalHeight > 400) {
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        };
-        img.onerror = () => resolve(false);
-        img.src = url;
-        setTimeout(() => resolve(false), 2000);
-      });
-
+    // Check up to 30 images, but only add ones that exist
+    // Use image loading approach instead of HEAD requests to avoid CORS issues
+    // IMPORTANT: All images (including the first one) use the same "xl" format for consistent quality
+    // This ensures the first image is not a thumbnail/small format that gets upscaled and looks blurry
     const checkImages = async () => {
-      setIsLoadingImages(true);
       const validImages: string[] = [];
-
-      const firstUrl = cargateImage(vehicle.id, 1, DETAIL_IMAGE_FORMAT);
-      const firstExists = await imageExists(firstUrl);
-      if (cancelled) return;
-
-      if (firstExists) {
-        validImages.push(firstUrl);
-        setAvailableImages([...validImages]);
-      }
-      setIsLoadingImages(false);
-
-      if (!firstExists) {
-        return;
-      }
-
+      
+      // Check images sequentially starting from image 1, all using "xl" format
+      // This prevents loading placeholder images that cargate returns for non-existent images
       let consecutiveFailures = 0;
-      const maxConsecutiveFailures = 3;
-      const maxImagesToCheck = Math.min(
-        typeof vehicle.imageCount === "number" && vehicle.imageCount > 0 ? vehicle.imageCount : 30,
-        30
-      );
-
-      for (let imageNum = 2; imageNum <= maxImagesToCheck && consecutiveFailures < maxConsecutiveFailures; imageNum++) {
-        const url = cargateImage(vehicle.id, imageNum, DETAIL_IMAGE_FORMAT);
+      const maxConsecutiveFailures = 3; // Stop after 3 consecutive failures
+      const maxImagesToCheck = 30;
+      
+      for (let imageNum = 1; imageNum <= maxImagesToCheck && consecutiveFailures < maxConsecutiveFailures; imageNum++) {
+        const url = cargateImage(vehicle.id, imageNum, "xl");
+        
         try {
-          const exists = await imageExists(url);
+          const imageExists = await new Promise<boolean>((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              // Check if image is a placeholder by checking its dimensions
+              // Real car photos are usually larger (at least 600px width)
+              // Placeholder images from cargate are typically smaller
+              if (img.naturalWidth > 600 && img.naturalHeight > 400) {
+                resolve(true);
+              } else {
+                // Likely a placeholder
+                resolve(false);
+              }
+            };
+            img.onerror = () => resolve(false);
+            img.src = url;
+            // Timeout after 2 seconds
+            setTimeout(() => resolve(false), 2000);
+          });
+          
           if (cancelled) return;
-          if (exists) {
+          if (imageExists) {
             validImages.push(url);
             setAvailableImages([...validImages]);
-            consecutiveFailures = 0;
+            setIsLoadingImages(false);
+            consecutiveFailures = 0; // Reset counter on success
           } else {
             consecutiveFailures++;
           }
-        } catch {
+        } catch (e) {
           consecutiveFailures++;
         }
+      }
+
+      if (!cancelled) {
+        setIsLoadingImages(false);
       }
     };
 
@@ -1114,7 +1098,7 @@ const VehicleDetailPage = () => {
             {availableImages.length > 0 && (
               <>
                 <img
-                  src={toZoomImageUrl(availableImages[selectedImageIndex])}
+                  src={availableImages[selectedImageIndex]}
                   alt={vehicle ? `${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${selectedImageIndex + 1}` : "Fahrzeugbild"}
                   className="w-full sm:w-auto h-auto object-contain sm:max-w-[calc(100vw-3rem)]"
                   style={{ maxHeight: 'calc(100vh - 2rem)' }}
