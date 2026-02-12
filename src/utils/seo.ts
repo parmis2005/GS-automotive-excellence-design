@@ -28,7 +28,7 @@ export function getDefaultSEO(): SEOData {
   return {
     title: generateTitle("Gebrauchtwagen in Krefeld"),
     description: "GS Automobile Rheinland - Ihr Spezialist für Gebrauchtwagen in Krefeld. Geprüfte Qualität, faire Preise, 10+ Jahre Erfahrung. Fahrzeuge sofort verfügbar!",
-    keywords: "Gebrauchtwagen Krefeld, Auto kaufen, GS Automobile, Autohaus Krefeld, Gebrauchtwagen kaufen Niederrhein",
+    keywords: "Gebrauchtwagen Krefeld, Auto kaufen, GS Automobile, Autohaus Krefeld, Autohaus NRW, BMW Krefeld, Opel Krefeld, Auto Krefeld, Autohaus Nähe, Gebrauchtwagen kaufen Niederrhein",
     image: `${BASE_URL}/logo.png`,
     url: BASE_URL,
     type: "website",
