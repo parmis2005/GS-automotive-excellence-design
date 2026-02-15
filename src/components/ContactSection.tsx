@@ -1,7 +1,62 @@
+import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Phone, Mail, MapPin, Clock, ArrowRight, ExternalLink } from "lucide-react";
 
 const ContactSection = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    message: "",
+  });
+
+  const updateField = (key: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitError("");
+    setSubmitSuccess(false);
+
+    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
+      setSubmitError("Bitte Vorname, Nachname und E-Mail ausfüllen.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Kontaktformular",
+          ...formData,
+          page: "Startseite – Kontakt",
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Request failed");
+      }
+      setSubmitSuccess(true);
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        message: "",
+      });
+    } catch {
+      setSubmitError("Senden fehlgeschlagen. Bitte erneut versuchen.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <section id="contact" className="py-20 bg-secondary/50">
       <div className="container mx-auto px-6">
@@ -104,7 +159,7 @@ const ContactSection = () => {
             <h3 className="font-display text-xl text-foreground mb-6">
               Kontaktformular
             </h3>
-            <form className="space-y-4">
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
@@ -114,6 +169,8 @@ const ContactSection = () => {
                     type="text"
                     className="w-full px-4 py-3 rounded-md bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground text-sm"
                     placeholder="Max"
+                    value={formData.firstName}
+                    onChange={(event) => updateField("firstName", event.target.value)}
                   />
                 </div>
                 <div>
@@ -124,6 +181,8 @@ const ContactSection = () => {
                     type="text"
                     className="w-full px-4 py-3 rounded-md bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground text-sm"
                     placeholder="Mustermann"
+                    value={formData.lastName}
+                    onChange={(event) => updateField("lastName", event.target.value)}
                   />
                 </div>
               </div>
@@ -135,6 +194,8 @@ const ContactSection = () => {
                   type="email"
                   className="w-full px-4 py-3 rounded-md bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground text-sm"
                   placeholder="max@beispiel.de"
+                  value={formData.email}
+                  onChange={(event) => updateField("email", event.target.value)}
                 />
               </div>
               <div>
@@ -145,6 +206,8 @@ const ContactSection = () => {
                   type="tel"
                   className="w-full px-4 py-3 rounded-md bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground text-sm"
                   placeholder="+49 123 456789"
+                  value={formData.phone}
+                  onChange={(event) => updateField("phone", event.target.value)}
                 />
               </div>
               <div>
@@ -155,12 +218,20 @@ const ContactSection = () => {
                   rows={4}
                   className="w-full px-4 py-3 rounded-md bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-foreground resize-none text-sm"
                   placeholder="Ihre Nachricht..."
+                  value={formData.message}
+                  onChange={(event) => updateField("message", event.target.value)}
                 />
               </div>
-              <Button variant="hero" size="lg" className="w-full group">
-                Nachricht senden
+              <Button variant="hero" size="lg" className="w-full group" disabled={isSubmitting}>
+                {isSubmitting ? "Sende..." : "Nachricht senden"}
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Button>
+              {submitError && (
+                <p className="text-sm text-destructive">{submitError}</p>
+              )}
+              {submitSuccess && (
+                <p className="text-sm text-emerald-600">Vielen Dank! Wir melden uns zeitnah.</p>
+              )}
             </form>
           </div>
         </div>

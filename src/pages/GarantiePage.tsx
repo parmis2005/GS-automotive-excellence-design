@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
@@ -13,6 +13,59 @@ const heroImageUrl =
 
 const GarantiePage = () => {
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    message: "",
+  });
+
+  const updateField = (key: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitError("");
+    setSubmitSuccess(false);
+
+    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
+      setSubmitError("Bitte Vorname, Nachname und E-Mail ausfüllen.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Garantie",
+          ...formData,
+          page: "Garantie",
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Request failed");
+      }
+      setSubmitSuccess(true);
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        message: "",
+      });
+    } catch {
+      setSubmitError("Senden fehlgeschlagen. Bitte erneut versuchen.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -204,7 +257,7 @@ const GarantiePage = () => {
               Hinterlassen Sie Ihre Daten – wir melden uns schnellstmöglich bei Ihnen.
             </DialogDescription>
           </DialogHeader>
-          <form className="grid gap-5">
+          <form className="grid gap-5" onSubmit={handleSubmit}>
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
@@ -214,6 +267,8 @@ const GarantiePage = () => {
                   type="text"
                   className="w-full h-12 px-4 rounded-lg bg-muted/20 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-colors text-foreground text-base placeholder:text-muted-foreground/70"
                   placeholder="Max"
+                  value={formData.firstName}
+                  onChange={(event) => updateField("firstName", event.target.value)}
                 />
               </div>
               <div>
@@ -224,6 +279,8 @@ const GarantiePage = () => {
                   type="text"
                   className="w-full h-12 px-4 rounded-lg bg-muted/20 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-colors text-foreground text-base placeholder:text-muted-foreground/70"
                   placeholder="Mustermann"
+                  value={formData.lastName}
+                  onChange={(event) => updateField("lastName", event.target.value)}
                 />
               </div>
             </div>
@@ -235,6 +292,8 @@ const GarantiePage = () => {
                 type="tel"
                 className="w-full h-12 px-4 rounded-lg bg-muted/20 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-colors text-foreground text-base placeholder:text-muted-foreground/70"
                 placeholder="+49 123 456789"
+                value={formData.phone}
+                onChange={(event) => updateField("phone", event.target.value)}
               />
             </div>
             <div>
@@ -245,6 +304,8 @@ const GarantiePage = () => {
                 type="email"
                 className="w-full h-12 px-4 rounded-lg bg-muted/20 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-colors text-foreground text-base placeholder:text-muted-foreground/70"
                 placeholder="max@beispiel.de"
+                value={formData.email}
+                onChange={(event) => updateField("email", event.target.value)}
               />
             </div>
             <div>
@@ -255,11 +316,19 @@ const GarantiePage = () => {
                 rows={5}
                 className="w-full px-4 py-3 rounded-lg bg-muted/20 border border-border/70 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-colors text-foreground resize-none text-base placeholder:text-muted-foreground/70"
                 placeholder="Worum geht es bei Ihrer Garantie?"
+                value={formData.message}
+                onChange={(event) => updateField("message", event.target.value)}
               />
             </div>
-            <Button variant="hero" size="lg" className="w-full text-base">
-              Anfrage senden
+            <Button variant="hero" size="lg" className="w-full text-base" disabled={isSubmitting}>
+              {isSubmitting ? "Sende..." : "Anfrage senden"}
             </Button>
+            {submitError && (
+              <p className="text-sm text-destructive">{submitError}</p>
+            )}
+            {submitSuccess && (
+              <p className="text-sm text-emerald-600">Vielen Dank! Wir melden uns zeitnah.</p>
+            )}
           </form>
         </DialogContent>
       </Dialog>

@@ -101,6 +101,9 @@ const VehicleDetailPage = () => {
     message: "",
     privacyAccepted: false,
   });
+  const [isSubmittingInquiry, setIsSubmittingInquiry] = useState(false);
+  const [inquiryError, setInquiryError] = useState("");
+  const [inquirySuccess, setInquirySuccess] = useState(false);
 
   // Check which images actually exist (only if vehicle has a valid image already)
   useEffect(() => {
@@ -795,9 +798,45 @@ const VehicleDetailPage = () => {
                 <h3 className="text-xl font-bold text-white tracking-tight">Kaufanfrage</h3>
               </div>
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
-                  console.log("Form submitted:", formData);
+                  setInquiryError("");
+                  setInquirySuccess(false);
+
+                  if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
+                    setInquiryError("Bitte Vorname, Nachname und E-Mail ausfüllen.");
+                    return;
+                  }
+
+                  try {
+                    setIsSubmittingInquiry(true);
+                    const vehicleLabel = vehicle
+                      ? `${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} (${vehicle.id})`
+                      : "";
+                    const response = await fetch("/api/inquiries", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        type: "Kaufanfrage",
+                        firstName: formData.firstName,
+                        lastName: formData.lastName,
+                        email: formData.email,
+                        phone: formData.phone,
+                        subject: "Kaufanfrage",
+                        message: formData.message,
+                        vehicle: vehicleLabel,
+                        page: vehicle ? `Fahrzeugdetail ${vehicle.id}` : "Fahrzeugdetail",
+                      }),
+                    });
+                    if (!response.ok) {
+                      throw new Error("Request failed");
+                    }
+                    setInquirySuccess(true);
+                  } catch {
+                    setInquiryError("Senden fehlgeschlagen. Bitte erneut versuchen.");
+                  } finally {
+                    setIsSubmittingInquiry(false);
+                  }
                 }}
                 className="p-6 lg:p-8 space-y-4"
               >
@@ -1013,10 +1052,16 @@ const VehicleDetailPage = () => {
                   type="submit"
                   size="lg"
                   className="w-full bg-primary hover:bg-primary/90 text-white font-semibold"
-                  disabled={!formData.privacyAccepted}
+                  disabled={!formData.privacyAccepted || isSubmittingInquiry}
                 >
-                  Kaufanfrage absenden
+                  {isSubmittingInquiry ? "Sende..." : "Kaufanfrage absenden"}
                 </Button>
+                {inquiryError && (
+                  <p className="text-sm text-destructive">{inquiryError}</p>
+                )}
+                {inquirySuccess && (
+                  <p className="text-sm text-emerald-600">Vielen Dank! Wir melden uns zeitnah.</p>
+                )}
               </form>
             </div>
 
