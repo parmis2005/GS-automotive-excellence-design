@@ -43,7 +43,7 @@ purchaseInquiryRouter.get("/", async (_req, res) => {
 });
 
 const resendApiKey = process.env.RESEND_API_KEY?.trim();
-const resendFrom = process.env.RESEND_FROM?.trim() || "onboarding@resend.dev";
+const resendFrom = process.env.RESEND_FROM?.trim() || "ankauf@gsauto.de";
 const resendTo = process.env.RESEND_TO?.trim() || "sebo.ziemianski@web.de";
 
 const escapeHtml = (value: string) =>
