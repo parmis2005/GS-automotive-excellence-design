@@ -7,6 +7,7 @@ import { getVehicleListImageWithFallback, getPlaceholderImage, getVehiclePrefetc
 import { ExposeViewerDialog } from "@/components/ExposeViewerDialog";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
 import { formatFuelType, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
+import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
 import { VehicleTitle } from "@/components/VehicleTitle";
 
 interface VehicleCardProps extends Vehicle {
@@ -164,7 +165,7 @@ const VehicleCard = ({
     <div className="group relative bg-background rounded-lg overflow-hidden hover-lift border border-border shadow-soft h-full flex flex-col">
       {/* Image Container - klickbar zur Detailseite */}
       <Link
-        to={`/fahrzeuge/${id}`}
+        to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`}
         className="relative block aspect-[4/3] overflow-hidden bg-secondary cursor-pointer"
         onMouseEnter={handlePrefetch}
         onFocus={handlePrefetch}
@@ -232,7 +233,7 @@ const VehicleCard = ({
               {vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
             </div>
           )}
-          <Link to={`/fahrzeuge/${id}#kaufanfrage`} className="mt-3 inline-block">
+          <Link to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}#kaufanfrage`} className="mt-3 inline-block">
             <Button
               variant="default"
               size="sm"
@@ -274,7 +275,7 @@ const VehicleCard = ({
 
         {/* Actions */}
         <div className="pt-4 border-t border-border space-y-2 mt-auto">
-          <Link to={`/fahrzeuge/${id}`} className="block w-full">
+          <Link to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`} className="block w-full">
             <Button
               variant="outline"
               size="sm"

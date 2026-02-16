@@ -3,6 +3,8 @@
  * Centralized functions for SEO-related operations
  */
 
+import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
+
 export interface SEOData {
   title: string;
   description: string;
@@ -50,12 +52,13 @@ export function getVehicleSEO(
   const title = generateTitle(`${brand} ${model} ${year} | Gebrauchtwagen`);
   const description = `${brand} ${model} ${year} in Krefeld. ${mileage.toLocaleString("de-DE")} km, ${price.toLocaleString("de-DE")} €. Jetzt bei GS Automobile Rheinland ansehen!`;
 
+  const path = vehicleId ? `/fahrzeuge/${getVehicleDetailSlug(vehicleId, brand, model)}` : "/fahrzeuge";
   return {
     title,
     description,
     keywords: `${brand} ${model} Gebrauchtwagen, ${brand} ${model} kaufen Krefeld, ${brand} ${model} ${year}`,
     image: image || `${BASE_URL}/logo.png`,
-    url: vehicleId ? `${BASE_URL}/fahrzeuge/${vehicleId}` : `${BASE_URL}/fahrzeuge`,
+    url: `${BASE_URL}${path}`,
     type: "product",
   };
 }
@@ -131,7 +134,8 @@ export function generateVehicleSchema(
   vehicleId?: string,
   description?: string
 ) {
-  const url = vehicleId ? `${BASE_URL}/fahrzeuge/${vehicleId}` : BASE_URL;
+  const path = vehicleId ? `/fahrzeuge/${getVehicleDetailSlug(vehicleId, brand, model)}` : "";
+  const url = path ? `${BASE_URL}${path}` : BASE_URL;
   
   return {
     "@context": "https://schema.org",

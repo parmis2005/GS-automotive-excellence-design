@@ -54,6 +54,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { getPlaceholderImage, getVehicleImageWithFallback } from "@/lib/vehicleImage";
 import { ExposeViewerDialog } from "@/components/ExposeViewerDialog";
 import { getBaseModelName, getVehicleDisplayName, groupEquipmentByCategory } from "@/lib/vehicleNameUtils";
+import { getVehicleDetailSlug, getVehicleIdFromSlug } from "@/lib/vehicleSlug";
 import { VehicleTitle } from "@/components/VehicleTitle";
 
 /**
@@ -167,10 +168,11 @@ function formatDescriptionAsHtml(description: string): string {
 }
 
 const VehicleDetailPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
+  const vehicleId = getVehicleIdFromSlug(slug || "");
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: vehicle, isLoading, error } = useVehicle(id || "");
+  const { data: vehicle, isLoading, error } = useVehicle(vehicleId);
   const { data: allVehicles } = useVehicles();
 
   // State for available images (only images that actually exist)
@@ -184,7 +186,16 @@ const VehicleDetailPage = () => {
   useEffect(() => {
     setSelectedImageIndex(0);
     setIsZoomed(false);
-  }, [id]);
+  }, [vehicleId]);
+
+  // Canonical URL: Redirect to slug format if user opened /fahrzeuge/123 (old link)
+  useEffect(() => {
+    if (!vehicle || !slug) return;
+    const canonicalSlug = getVehicleDetailSlug(vehicle.id, vehicle.brand, vehicle.model);
+    if (slug !== canonicalSlug) {
+      navigate(`/fahrzeuge/${canonicalSlug}${location.hash || ""}`, { replace: true });
+    }
+  }, [vehicle, slug, navigate, location.hash]);
 
   // Form state for purchase inquiry
   const [formData, setFormData] = useState({
@@ -438,7 +449,7 @@ const VehicleDetailPage = () => {
   const breadcrumbs = [
     { name: "Startseite", url: "/" },
     { name: "Fahrzeugsuche", url: "/fahrzeuge" },
-    { name: `${vehicle.brand} ${vehicle.model} ${vehicle.year}`, url: `/fahrzeuge/${vehicle.id}` },
+    { name: `${vehicle.brand} ${vehicle.model} ${vehicle.year}`, url: `/fahrzeuge/${getVehicleDetailSlug(vehicle.id, vehicle.brand, vehicle.model)}` },
   ];
 
   return (
@@ -618,7 +629,7 @@ const VehicleDetailPage = () => {
                         const isPlaceholderDisplay = shouldUsePlaceholder;
                         return (
                           <CarouselItem key={similarVehicle.id} className="pl-2 basis-[calc((100%-1rem)/3)] min-w-0 shrink-0">
-                            <Link to={`/fahrzeuge/${similarVehicle.id}`}>
+                            <Link to={`/fahrzeuge/${getVehicleDetailSlug(similarVehicle.id, similarVehicle.brand, similarVehicle.model)}`}>
                               <div className="group relative bg-background rounded-lg overflow-hidden border border-border shadow-sm hover:shadow-md transition-shadow flex flex-col">
                                 <div className="relative aspect-[16/9] overflow-hidden bg-secondary">
                                   <img

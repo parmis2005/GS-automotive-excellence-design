@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import type { Vehicle } from "@/types/vehicle";
 import { normalizeColorToBasic, BASIC_COLORS } from "@/lib/colorUtils";
 import { getBaseModelName, groupModelsBySeries, getVehicleType, isKleinwagenModel, START_PAGE_VEHICLE_TYPES } from "@/lib/vehicleNameUtils";
+import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
 import SEO from "@/components/SEO";
 import { getVehiclesPageSEO, generateCollectionPageSchema } from "@/utils/seo";
 
@@ -578,7 +579,7 @@ const VehiclesPage = () => {
   const seoData = getVehiclesPageSEO();
   const vehicleUrls = (filteredAndSortedVehicles ?? [])
     .slice(0, 20)
-    .map((v) => `https://www.gsauto.de/fahrzeuge/${v.id}`);
+    .map((v) => `https://www.gsauto.de/fahrzeuge/${getVehicleDetailSlug(v.id, v.brand, v.model)}`);
   const collectionSchema = vehicleUrls.length > 0
     ? generateCollectionPageSchema(
         vehicleUrls,
