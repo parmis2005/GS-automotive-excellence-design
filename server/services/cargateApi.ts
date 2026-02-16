@@ -697,17 +697,6 @@ function findReportId(raw: Record<string, unknown>): string {
   return candidates.length ? formatOidAsUuid(candidates[0]) : "";
 }
 
-/**
- * Holt die Exposé-reportId für ein Fahrzeug aus der Carzilla GetVehicle-API (ohne Browser).
- * Gibt null zurück, wenn die API keine reportId liefert.
- */
-export async function getReportIdFromApi(vehicleId: string): Promise<string | null> {
-  const raw = await getVehicleFromCarzillaApi(vehicleId);
-  if (!raw) return null;
-  const id = findReportId(raw);
-  return id ? id : null;
-}
-
 /** Wie getStrFromMatchingKeys, aber Keys die ein excludeKeyword enthalten werden übersprungen (z. B. "interior" bei Außenfarbe). */
 function getStrFromMatchingKeysExcluding(
   obj: Record<string, unknown>,

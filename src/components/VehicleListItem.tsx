@@ -402,9 +402,6 @@ const VehicleListItem = ({
       <ExposeViewerDialog
         open={showExpose}
         onOpenChange={setShowExpose}
-        exposeUrl={exposeUrl}
-        offerUrl={offerUrl}
-        vehicleId={id}
         vehicleName={displayTitle}
       />
     </div>

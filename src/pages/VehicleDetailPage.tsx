@@ -1339,9 +1339,6 @@ const VehicleDetailPage = () => {
         <ExposeViewerDialog
           open={showExpose}
           onOpenChange={setShowExpose}
-          exposeUrl={vehicle.exposeUrl}
-          offerUrl={vehicle.offerUrl}
-          vehicleId={vehicle.id}
           vehicleName={getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)}
         />
       )}

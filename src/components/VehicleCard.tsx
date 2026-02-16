@@ -301,9 +301,6 @@ const VehicleCard = ({
       <ExposeViewerDialog
         open={showExpose}
         onOpenChange={setShowExpose}
-        exposeUrl={exposeUrl}
-        offerUrl={offerUrl}
-        vehicleId={id}
         vehicleName={getVehicleDisplayName(brand, model, productionSeries, title)}
       />
     </div>
