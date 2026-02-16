@@ -542,6 +542,35 @@ function getStrFromNestedMatchingKeys(obj: unknown, keywords: string[], maxDepth
   return "";
 }
 
+function findUuidLikeValue(obj: unknown, maxDepth = 5): string {
+  if (maxDepth <= 0 || obj == null) return "";
+  if (typeof obj === "string") {
+    return isUuidLike(obj) ? obj : "";
+  }
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const found = findUuidLikeValue(item, maxDepth - 1);
+      if (found) return found;
+    }
+    return "";
+  }
+  if (typeof obj === "object") {
+    const o = obj as Record<string, unknown>;
+    for (const key of Object.keys(o)) {
+      const v = o[key];
+      if (typeof v === "string" && isUuidLike(v)) return v;
+    }
+    for (const key of Object.keys(o)) {
+      const v = o[key];
+      if (v && typeof v === "object") {
+        const found = findUuidLikeValue(v, maxDepth - 1);
+        if (found) return found;
+      }
+    }
+  }
+  return "";
+}
+
 /** Wie getStrFromMatchingKeys, aber Keys die ein excludeKeyword enthalten werden übersprungen (z. B. "interior" bei Außenfarbe). */
 function getStrFromMatchingKeysExcluding(
   obj: Record<string, unknown>,
@@ -1634,6 +1663,18 @@ function isUuidLike(s: string): boolean {
 export function buildExposeUrlFromCarzillaVehicle(raw: Record<string, unknown>, vehicleId: string): string | null {
   const base = (process.env.CARGATE_EXPOSE_BASE_URL || "https://fahrzeuge.gs-automobile-rheinland.de").replace(/\/+$/, "");
   let oid = getStrFromRaw(raw, "Oid", "oid", "OfferId", "OfferGuid", "VehicleGuid", "Uuid", "Guid");
+  if (!oid) {
+    oid = findUuidLikeValue(raw) || "";
+  }
+  const compactOid = oid ? oid.replace(/-/g, "") : "";
+  const templateInfo = raw.TemplateInfo ?? raw.templateInfo;
+  const templateLinks = (templateInfo as Record<string, unknown> | undefined)?.Links ?? (templateInfo as Record<string, unknown> | undefined)?.links;
+  const detailsPageTemplate = typeof templateLinks === "object" && templateLinks && !Array.isArray(templateLinks)
+    ? (templateLinks as Record<string, unknown>).DetailsPage ?? (templateLinks as Record<string, unknown>).detailsPage
+    : undefined;
+  const templateDetailsUrl = typeof detailsPageTemplate === "string" && detailsPageTemplate.trim()
+    ? detailsPageTemplate.trim()
+    : "";
   const offerUrl =
     normalizeDealerUrlForExpose(
       getStr(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link") || getStrFromRaw(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link"),
@@ -1641,7 +1682,52 @@ export function buildExposeUrlFromCarzillaVehicle(raw: Record<string, unknown>, 
     ) || "";
   if (!oid && offerUrl) oid = extractOidFromOfferUrl(offerUrl) || "";
   const hasRealOid = oid && isUuidLike(oid);
-  const detailUrl = offerUrl && (offerUrl.startsWith("http") || offerUrl.startsWith("/")) ? offerUrl : `${base}/Fahrzeugsuche/Details?vid=${vehicleId}`;
+  const resolvedTemplateUrl = templateDetailsUrl
+    ? templateDetailsUrl
+        .replace(/\{Vehicle\.VehicleId\}/gi, vehicleId)
+        .replace(/\{VehicleId\}/gi, vehicleId)
+        .replace(/\{vid\}/gi, vehicleId)
+    : "";
+  const detailUrlCandidate = resolvedTemplateUrl
+    ? (resolvedTemplateUrl.startsWith("http") || resolvedTemplateUrl.startsWith("/")
+        ? resolvedTemplateUrl
+        : `${base}${resolvedTemplateUrl.startsWith("?") ? `/Fahrzeugsuche/Details${resolvedTemplateUrl}` : `/${resolvedTemplateUrl}`}`)
+    : "";
+  const safeSegment = (value: string) =>
+    value
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^A-Za-z0-9ÄÖÜäöüß\-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+  const dealerName =
+    getStrFromRaw(raw, "DealerName", "Dealer") ||
+    getStr(raw, "DealerName", "Dealer") ||
+    getStrFromRaw(raw, "DealerCompany", "DealerCompanyName") ||
+    "GS-Automobile-Rheinland-GmbH";
+  const make = getStr(raw, "Make", "MakeName", "make", "makeName") || "";
+  const model = getStr(raw, "Model", "ModelName", "model", "modelName") || "";
+  const fuel = getStr(raw, "MotorType", "FuelType", "Fuel", "fuelType", "EnergySource", "energySource") || "";
+  const transmission = getStr(raw, "Transmission", "transmission") || "";
+  const offerNumber = getStr(raw, "OfferNumber", "offerNumber", "OfferNo", "offerNo") || "";
+  const hasPathPieces = dealerName && make && model && fuel && transmission && compactOid;
+  const customDetailUrl = hasPathPieces
+    ? `${base}/${[
+        safeSegment(dealerName),
+        safeSegment(make),
+        safeSegment(model),
+        "Gebrauchtfahrzeug",
+        safeSegment(fuel),
+        safeSegment(transmission),
+        compactOid,
+        offerNumber ? safeSegment(offerNumber) : "",
+      ]
+        .filter(Boolean)
+        .join("/")}`
+    : "";
+  const detailUrl = offerUrl && (offerUrl.startsWith("http") || offerUrl.startsWith("/"))
+    ? offerUrl
+    : customDetailUrl || detailUrlCandidate || `${base}/Fahrzeugsuche/Details?vid=${vehicleId}`;
   const ourl = encodeURIComponent(detailUrl);
   if (hasRealOid) {
     return `${base}/Expose.pdf?oid=${encodeURIComponent(formatOidAsUuid(oid!))}&ourl=${ourl}`;
