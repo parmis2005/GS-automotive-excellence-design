@@ -1698,6 +1698,11 @@ function isUuidLike(s: string): boolean {
 export function buildExposeUrlFromCarzillaVehicle(raw: Record<string, unknown>, vehicleId: string): string | null {
   const base = (process.env.CARGATE_EXPOSE_BASE_URL || "https://fahrzeuge.gs-automobile-rheinland.de").replace(/\/+$/, "");
   const reportId = findReportId(raw);
+  if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
+    const docs = raw.Documents ?? raw.documents ?? raw.Reports ?? raw.reports ?? raw.InspectionReport ?? raw.inspectionReport;
+    const docSample = docs ? JSON.stringify(docs, null, 2).slice(0, 1200) : "(keine Documents/Reports gefunden)";
+    console.warn(`[CarGate] Expose debug vid=${vehicleId}: reportId=${reportId || "(leer)"} docs=${docSample}`);
+  }
   if (reportId) {
     return `https://reporting.cargate360.de/ReportingProxy/DownloadReport?reportId=${encodeURIComponent(reportId)}`;
   }
