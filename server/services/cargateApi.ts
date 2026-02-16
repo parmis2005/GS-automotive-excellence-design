@@ -571,23 +571,45 @@ function findUuidLikeValue(obj: unknown, maxDepth = 5): string {
   return "";
 }
 
+/** CarGate Exposé: reportId aus ReportingProxy/DownloadReport?reportId=... (reporting.cargate360.de) */
+const CARGATE_REPORTING_EXPOSE_PATTERN = /reportId=([0-9a-fA-F-]{32,36})/i;
+
 function findReportId(raw: Record<string, unknown>): string {
   const candidates: string[] = [];
   const pushIfUuid = (value: unknown) => {
-    if (typeof value === "string" && isUuidLike(value)) candidates.push(value);
+    if (value == null) return;
+    const s = typeof value === "string" ? value.trim() : String(value);
+    if (s && isUuidLike(s)) candidates.push(s);
   };
   const extractFromUrl = (value: unknown) => {
     if (typeof value !== "string") return;
-    const match = value.match(/[?&]reportId=([0-9a-fA-F-]{32,36})/);
+    const match = value.match(CARGATE_REPORTING_EXPOSE_PATTERN);
     if (match) candidates.push(match[1]);
   };
 
-  const documents = raw.Documents ?? raw.documents ?? raw.InspectionReport ?? raw.inspectionReport ?? raw.Reports ?? raw.reports;
+  // 1) Direkte Top-Level-Keys (CarGate API: ReportId, ExposeReportId etc. – getStrFromMatchingKeys überspringt *id)
+  const directReportId = getStr(raw, "ReportId", "reportId", "ExposeReportId", "exposeReportId", "ExposeId", "exposeId", "ReportGuid", "reportGuid", "ExposeReportGuid", "exposeReportGuid", "ExposePdfReportId", "exposePdfReportId", "DocumentId", "documentId");
+  pushIfUuid(directReportId);
+
+  // 2) Bereits vollständige Reporting-URL von der API (z. B. aus CarGate Management)
+  const exposeUrlFromApi = getStr(raw, "ExposeUrl", "exposeUrl", "ExposePdfUrl", "exposePdfUrl", "ExposeReportUrl", "exposeReportUrl", "ReportUrl", "reportUrl", "PdfUrl", "pdfUrl") || getStrFromMatchingKeys(raw, "expose", "report", "pdf");
+  extractFromUrl(exposeUrlFromApi);
+
+  // 3) InspectionReport (Objekt mit ReportId/Url – oft Exposé)
+  const inspectionReport = raw.InspectionReport ?? raw.inspectionReport;
+  if (inspectionReport != null && typeof inspectionReport === "object" && !Array.isArray(inspectionReport)) {
+    const ir = inspectionReport as Record<string, unknown>;
+    pushIfUuid(ir.ReportId ?? ir.reportId ?? ir.ReportGuid ?? ir.reportGuid ?? ir.Id ?? ir.id);
+    extractFromUrl(ir.Url ?? ir.url ?? ir.DownloadUrl ?? ir.downloadUrl ?? ir.Link ?? ir.link);
+  }
+
+  // 4) Documents/Reports-Arrays (Carzilla-Struktur; je Eintrag alle möglichen Felder prüfen)
+  const documents = raw.Documents ?? raw.documents ?? raw.Reports ?? raw.reports ?? raw.ExposeReports ?? raw.exposeReports;
   if (Array.isArray(documents)) {
     for (const doc of documents) {
       if (doc && typeof doc === "object") {
         const d = doc as Record<string, unknown>;
-        pushIfUuid(d.ReportId ?? d.reportId ?? d.ReportGuid ?? d.reportGuid);
+        pushIfUuid(d.ReportId ?? d.reportId ?? d.ReportGuid ?? d.reportGuid ?? d.Id ?? d.id);
         extractFromUrl(d.Url ?? d.url ?? d.DownloadUrl ?? d.downloadUrl ?? d.Link ?? d.link);
       }
     }
@@ -597,11 +619,80 @@ function findReportId(raw: Record<string, unknown>): string {
     extractFromUrl(d.Url ?? d.url ?? d.DownloadUrl ?? d.downloadUrl ?? d.Link ?? d.link);
   }
 
-  const deepMatch = getStrFromMatchingKeys(raw, "reportid", "reportguid", "report");
-  pushIfUuid(deepMatch);
+  // 5) ExtendedProperties (Key-Value oder Array von { Name/Key, Value })
+  const ext = raw.ExtendedProperties ?? raw.extendedProperties;
+  if (ext != null && typeof ext === "object") {
+    if (Array.isArray(ext)) {
+      for (const item of ext) {
+        if (item && typeof item === "object") {
+          const it = item as Record<string, unknown>;
+          const name = String(it.Name ?? it.Key ?? it.name ?? it.key ?? "").toLowerCase();
+          if (/report|expose|pdf|document/.test(name)) {
+            const val = it.Value ?? it.value ?? it.Url ?? it.url;
+            if (typeof val === "string") {
+              pushIfUuid(val);
+              extractFromUrl(val);
+            }
+          }
+        }
+      }
+    } else {
+      const ex = ext as Record<string, unknown>;
+      for (const [k, v] of Object.entries(ex)) {
+        if (!/report|expose|pdf|document/i.test(k)) continue;
+        if (typeof v === "string") {
+          pushIfUuid(v);
+          extractFromUrl(v);
+        }
+      }
+    }
+  }
 
-  const uuid = findUuidLikeValue(raw);
-  pushIfUuid(uuid);
+  // 6) Rekursiv nach Keys mit "report" (ohne *id-Skip: nur Werte prüfen)
+  for (const key of Object.keys(raw)) {
+    if (!/report|expose|document|pdf/i.test(key)) continue;
+    const v = raw[key];
+    if (typeof v === "string") {
+      pushIfUuid(v);
+      extractFromUrl(v);
+    } else if (v != null && typeof v === "object" && !Array.isArray(v)) {
+      const o = v as Record<string, unknown>;
+      pushIfUuid(o.ReportId ?? o.reportId ?? o.ReportGuid ?? o.reportGuid ?? o.Id ?? o.id);
+      extractFromUrl(o.Url ?? o.url ?? o.DownloadUrl ?? o.downloadUrl ?? o.Link ?? o.link);
+    }
+  }
+
+  // 7) Tiefe Suche: alle Strings im Objekt nach reportId= oder "reportId":"..." durchsuchen
+  function searchReportIdInValue(val: unknown): void {
+    if (val == null || typeof val !== "string") return;
+    const match = val.match(CARGATE_REPORTING_EXPOSE_PATTERN);
+    if (match && match[1]) candidates.push(match[1]);
+    const jsonMatch = val.match(/"reportId"\s*:\s*"([0-9a-fA-F-]{32,36})"/);
+    if (jsonMatch && jsonMatch[1]) candidates.push(jsonMatch[1]);
+  }
+  function walk(obj: unknown, depth: number): void {
+    if (depth <= 0 || obj == null) return;
+    if (typeof obj === "string") {
+      searchReportIdInValue(obj);
+      return;
+    }
+    if (Array.isArray(obj)) {
+      for (const item of obj) walk(item, depth - 1);
+      return;
+    }
+    if (typeof obj === "object") {
+      const o = obj as Record<string, unknown>;
+      for (const [k, v] of Object.entries(o)) {
+        if (/report|expose|pdf|document/i.test(k) && typeof v === "string") {
+          pushIfUuid(v);
+          extractFromUrl(v);
+          searchReportIdInValue(v);
+        }
+        if (v != null && typeof v === "object") walk(v, depth - 1);
+      }
+    }
+  }
+  walk(raw, 8);
 
   return candidates.length ? formatOidAsUuid(candidates[0]) : "";
 }
@@ -1157,9 +1248,7 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     if (b != null && typeof b === "object" && "branchId" in b) return String((b as { branchId: unknown }).branchId);
     return getBranchId();
   })();
-  const exposeTemplate = process.env.CARGATE_EXPOSE_URL_TEMPLATE?.trim();
   const exposeBaseUrl = (process.env.CARGATE_EXPOSE_BASE_URL || "https://fahrzeuge.gs-automobile-rheinland.de").replace(/\/+$/, "");
-  const useVidParam = (process.env.CARGATE_EXPOSE_USE_VID || "").toLowerCase() === "true";
 
   let offerUrl =
     normalizeDealerUrlForExpose(
@@ -1220,39 +1309,17 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
   const vehicleType = bodyTypeStr ||
     getStr(raw, "BodyType", "bodyType", "vehicleType", "Karosserie", "BodyTypeName") ||
     getStrFromMatchingKeys(raw, "body", "karosserie", "vehicletype");
+  // Nur echte Exposé-URLs (z. B. reporting.cargate360.de) – kein Fallback mehr (Händler-Expose.pdf entfernt)
   let exposeUrl = getUrlFromRaw(raw, "ExposeUrl", "exposeUrl", "ExposePdfUrl", "exposePdfUrl", "ExposePdf", "exposePdf", "PdfUrl", "pdfUrl", "ExposeLink", "exposeLink") || getStr(raw, "ExposeUrl", "exposeUrl", "exposePdf", "ExposePdfUrl") || getStrFromMatchingKeys(raw, "expose", "exposé", "pdf");
+  if (exposeUrl && !exposeUrl.includes("reporting.cargate360.de")) {
+    exposeUrl = ""; // Kein Fallback: nur CarGate-Reporting-URL zulassen
+  }
   if (!exposeUrl && !_carzillaExposeStructureLogged) {
     _carzillaExposeStructureLogged = true;
     const exposeKeys = Object.keys(raw).filter((k) => /expose|exposé|pdf|link|url/i.test(k) && !/id$/i.test(k));
     const sample: Record<string, unknown> = {};
     for (const k of exposeKeys) sample[k] = raw[k];
     if (exposeKeys.length > 0) console.warn("Carzilla: Exposé-URL nicht gefunden. Rohdaten (expose/pdf/url-Keys):", JSON.stringify(sample, null, 2).slice(0, 800));
-  }
-  if (!exposeUrl && id) {
-    let oidForExpose = getStr(raw, "Oid", "oid", "OfferId", "OfferGuid", "VehicleGuid", "Uuid", "Guid") || getUrlFromRaw(raw, "Oid", "oid", "OfferId");
-    if (!oidForExpose && offerUrl) oidForExpose = extractOidFromOfferUrl(offerUrl) || "";
-    const hasRealOid = oidForExpose && isUuidLike(oidForExpose);
-    if (!oidForExpose) oidForExpose = id;
-    oidForExpose = formatOidAsUuid(oidForExpose);
-    const defaultDetailUrl = (offerUrl && (offerUrl.startsWith("http") || offerUrl.startsWith("/")) ? offerUrl : null) || `${exposeBaseUrl}/Fahrzeugsuche/Details?vid=${id}`;
-    if (exposeTemplate) {
-      exposeUrl = exposeTemplate
-        .replace(/\{id\}/gi, id)
-        .replace(/\{vehicleId\}/gi, id)
-        .replace(/\{oid\}/gi, oidForExpose)
-        .replace(/\{vid\}/gi, id)
-        .replace(/\{ourl\}/gi, () => encodeURIComponent(defaultDetailUrl));
-      if (!exposeUrl.startsWith("http://") && !exposeUrl.startsWith("https://")) {
-        exposeUrl = (exposeUrl.startsWith("/") ? exposeBaseUrl + exposeUrl : exposeBaseUrl + "/" + exposeUrl);
-      }
-    } else {
-      if (useVidParam || !hasRealOid) {
-        exposeUrl = `${exposeBaseUrl}/Expose.pdf?vid=${encodeURIComponent(id)}&ourl=${encodeURIComponent(defaultDetailUrl)}`;
-      } else {
-        exposeUrl = `${exposeBaseUrl}/Expose.pdf?oid=${encodeURIComponent(oidForExpose)}&ourl=${encodeURIComponent(defaultDetailUrl)}`;
-      }
-    }
-    if (!exposeUrl.startsWith("http") && !exposeUrl.startsWith("/")) exposeUrl = "";
   }
   const previousOwners = typeof raw.PreviousOwners === "number" ? raw.PreviousOwners : typeof raw.previousOwners === "number" ? raw.previousOwners : getNum(raw, "PreviousOwners", "previousOwners", "numberOfPreviousOwners");
   const vatDisplayable = parseVatDisplayable(raw);
@@ -1695,88 +1762,163 @@ function isUuidLike(s: string): boolean {
  * nur VehicleId für Details und Bilder kennt. Wenn die API Oid oder eine OfferUrl mit UUID
  * zurückgibt, verwenden wir oid.
  */
-export function buildExposeUrlFromCarzillaVehicle(raw: Record<string, unknown>, vehicleId: string): string | null {
+const CARGATE_REPORTING_BASE = "https://reporting.cargate360.de/ReportingProxy/DownloadReport";
+
+/** Cache-Key für aus der Detailseite ausgelesene reportId (TTL 1 h). */
+const EXPOSE_REPORTID_CACHE_PREFIX = "expose_reportid_";
+/** TTL wenn reportId auf der Detailseite nicht gefunden wurde (5 min). */
+const EXPOSE_REPORTID_MISS_TTL = 5 * 60;
+
+/** Sucht im HTML-Text nach reportId (verschiedene Schreibweisen, inkl. URL-encoded). */
+function extractReportIdFromHtml(html: string): string | null {
+  const uuidPattern = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+  const patterns = [
+    CARGATE_REPORTING_EXPOSE_PATTERN,
+    /["']reportId["']\s*:\s*["']([0-9a-fA-F-]{32,36})["']/i,
+    /reportId["']?\s*[:=]\s*["']?([0-9a-fA-F-]{32,36})/i,
+    /data-report-id=["']([0-9a-fA-F-]{32,36})["']/i,
+    /DownloadReport\?[^"'\s<>]*reportId=([0-9a-fA-F-]{32,36})/i,
+    /reportId%3D([0-9a-fA-F-]{32,36})/i,
+    /ReportingProxy%2FDownloadReport[^"'\s<>]*reportId%3D([0-9a-fA-F-]{32,36})/i,
+    new RegExp(`reporting\\.cargate360\\.de[^"'\s]*?(?:reportId=|%3D)(${uuidPattern})`, "i"),
+    new RegExp(`"ExposeReportId"\\s*:\\s*"(${uuidPattern})"`, "i"),
+    new RegExp(`"ExposeUrl"\\s*:\\s*"[^"]*?reportId=([0-9a-fA-F-]{36})[^"]*"`, "i"),
+  ];
+  for (const re of patterns) {
+    const m = html.match(re);
+    if (m && m[1]) return formatOidAsUuid(m[1].trim());
+  }
+  const nearReporting = html.match(/reporting\.cargate360\.de[^"'\s]*?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/i);
+  if (nearReporting && nearReporting[1]) return formatOidAsUuid(nearReporting[1]);
+  return null;
+}
+
+/**
+ * Optionale .env: CARGATE_EXPOSE_REPORTID_<vehicleId>=<uuid>
+ * Beispiel: CARGATE_EXPOSE_REPORTID_8738290=319d1160-52b6-4ca6-b05c-1b3e7913b41a
+ */
+function getReportIdFromEnv(vehicleId: string): string | null {
+  const vid = String(vehicleId || "").trim();
+  if (!vid) return null;
+  const key = `CARGATE_EXPOSE_REPORTID_${vid}`;
+  const val = process.env[key]?.trim();
+  if (val && (val.length === 32 || val.length === 36) && /^[0-9a-fA-F-]+$/.test(val)) {
+    return formatOidAsUuid(val);
+  }
+  return null;
+}
+
+/**
+ * Holt die reportId von der Händler-Detailseite (HTML), wo sie z. B. im Exposé-Link steht.
+ * Probiert mehrere URL-Varianten und durchsucht das HTML mit mehreren Mustern.
+ */
+export async function fetchReportIdFromDetailPage(vehicleId: string): Promise<string | null> {
+  const vid = String(vehicleId || "").trim();
+  if (!vid) return null;
+
+  const fromEnv = getReportIdFromEnv(vid);
+  if (fromEnv) {
+    cache.set(EXPOSE_REPORTID_CACHE_PREFIX + vid, fromEnv);
+    if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
+      console.warn(`[CarGate] Expose reportId aus Env (CARGATE_EXPOSE_REPORTID_${vid}): ${fromEnv}`);
+    }
+    return fromEnv;
+  }
+
+  const cacheKey = EXPOSE_REPORTID_CACHE_PREFIX + vid;
+  const cached = cache.get<string | "">(cacheKey);
+  if (cached !== undefined) return cached || null;
+
   const base = (process.env.CARGATE_EXPOSE_BASE_URL || "https://fahrzeuge.gs-automobile-rheinland.de").replace(/\/+$/, "");
-  const reportId = findReportId(raw);
+  const urlsToTry = [
+    `${base}/Fahrzeugsuche/Details?vid=${encodeURIComponent(vid)}`,
+    `${base}/Details?vid=${encodeURIComponent(vid)}`,
+    `${base}/fahrzeug/${vid}`,
+    `${base}/Fahrzeug/${vid}`,
+    `${base}/vehicle/${vid}`,
+  ];
+
+  const fetchOpts = {
+    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept": "text/html,application/xhtml+xml" },
+  };
+
+  for (const detailUrl of urlsToTry) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const response = await fetch(detailUrl, { ...fetchOpts, signal: controller.signal, redirect: "follow" });
+      clearTimeout(timeoutId);
+      const finalUrl = response.url || detailUrl;
+      if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
+        console.warn(`[CarGate] Expose Detailseite vid=${vid} ${response.status} ${finalUrl.slice(0, 80)}...`);
+      }
+      if (!response.ok) continue;
+      const html = await response.text();
+      if (process.env.CARGATE_DEBUG_EXPOSE === "1" && html.length > 0) {
+        const snippet = html.replace(/\s+/g, " ").slice(0, 400);
+        console.warn(`[CarGate] Expose HTML-Snippet (${html.length} Zeichen): ${snippet}...`);
+      }
+      const reportId = extractReportIdFromHtml(html);
+      if (reportId) {
+        cache.set(cacheKey, reportId);
+        if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
+          console.warn(`[CarGate] Expose reportId von Detailseite vid=${vid} (${detailUrl}): ${reportId}`);
+        }
+        return reportId;
+      }
+      if (process.env.CARGATE_DEBUG_EXPOSE === "1" && response.ok) {
+        const hasReporting = html.includes("reporting.cargate360");
+        const hasReportId = /reportId/i.test(html);
+        const hasDownloadReport = html.includes("DownloadReport");
+        console.warn(`[CarGate] Expose HTML enthält: reporting.cargate360=${hasReporting} reportId=${hasReportId} DownloadReport=${hasDownloadReport}`);
+      }
+    } catch (e) {
+      if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
+        console.warn(`[CarGate] Expose Fetch fehlgeschlagen ${detailUrl}:`, e instanceof Error ? e.message : String(e));
+      }
+      continue;
+    }
+  }
+
   if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
-    const docs = raw.Documents ?? raw.documents ?? raw.Reports ?? raw.reports ?? raw.InspectionReport ?? raw.inspectionReport;
-    const docSample = docs ? JSON.stringify(docs, null, 2).slice(0, 1200) : "(keine Documents/Reports gefunden)";
-    console.warn(`[CarGate] Expose debug vid=${vehicleId}: reportId=${reportId || "(leer)"} docs=${docSample}`);
+    console.warn(`[CarGate] Expose reportId auf keiner Detailseite gefunden vid=${vid}`);
+  }
+  cache.set(cacheKey, "", EXPOSE_REPORTID_MISS_TTL);
+  return null;
+}
+
+/** Baut die CarGate-Reporting-Exposé-URL aus einer reportId (UUID). */
+export function buildExposeReportingUrl(reportId: string): string {
+  return `${CARGATE_REPORTING_BASE}?reportId=${encodeURIComponent(formatOidAsUuid(reportId))}`;
+}
+
+export function buildExposeUrlFromCarzillaVehicle(raw: Record<string, unknown>, vehicleId: string): string | null {
+  // Vorrang: Bereits vollständige CarGate-Reporting-URL (wie im Management geöffnet)
+  const anyUrl = getStr(raw, "ExposeUrl", "exposeUrl", "ExposePdfUrl", "exposePdfUrl", "ExposeReportUrl", "exposeReportUrl", "ReportUrl", "reportUrl") || getStrFromMatchingKeys(raw, "expose", "report", "pdf");
+  if (anyUrl && anyUrl.includes("reporting.cargate360.de") && anyUrl.includes("DownloadReport")) {
+    const reportIdMatch = anyUrl.match(CARGATE_REPORTING_EXPOSE_PATTERN);
+    if (reportIdMatch) {
+      return `${CARGATE_REPORTING_BASE}?reportId=${encodeURIComponent(formatOidAsUuid(reportIdMatch[1]))}`;
+    }
+  }
+
+  let reportId = getReportIdFromEnv(vehicleId) || findReportId(raw);
+  if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
+    const docs = raw.Documents ?? raw.documents ?? raw.Reports ?? raw.reports;
+    const insp = raw.InspectionReport ?? raw.inspectionReport;
+    const ext = raw.ExtendedProperties ?? raw.extendedProperties;
+    const docSample = docs ? JSON.stringify(docs, null, 2).slice(0, 1500) : "(keine)";
+    const inspSample = insp != null ? JSON.stringify(insp, null, 2).slice(0, 800) : "(keine)";
+    const extSample = ext != null ? JSON.stringify(ext, null, 2).slice(0, 800) : "(keine)";
+    console.warn(`[CarGate] Expose debug vid=${vehicleId}: reportId=${reportId || "(leer)"}`);
+    console.warn(`[CarGate] Expose InspectionReport: ${inspSample}`);
+    console.warn(`[CarGate] Expose ExtendedProperties: ${extSample}`);
+    console.warn(`[CarGate] Expose Documents: ${docSample}`);
   }
   if (reportId) {
-    return `https://reporting.cargate360.de/ReportingProxy/DownloadReport?reportId=${encodeURIComponent(reportId)}`;
+    return `${CARGATE_REPORTING_BASE}?reportId=${encodeURIComponent(reportId)}`;
   }
-  let oid = getStrFromRaw(raw, "Oid", "oid", "OfferId", "OfferGuid", "VehicleGuid", "Uuid", "Guid");
-  if (!oid) {
-    oid = findUuidLikeValue(raw) || "";
-  }
-  const compactOid = oid ? oid.replace(/-/g, "") : "";
-  const templateInfo = raw.TemplateInfo ?? raw.templateInfo;
-  const templateLinks = (templateInfo as Record<string, unknown> | undefined)?.Links ?? (templateInfo as Record<string, unknown> | undefined)?.links;
-  const detailsPageTemplate = typeof templateLinks === "object" && templateLinks && !Array.isArray(templateLinks)
-    ? (templateLinks as Record<string, unknown>).DetailsPage ?? (templateLinks as Record<string, unknown>).detailsPage
-    : undefined;
-  const templateDetailsUrl = typeof detailsPageTemplate === "string" && detailsPageTemplate.trim()
-    ? detailsPageTemplate.trim()
-    : "";
-  const offerUrl =
-    normalizeDealerUrlForExpose(
-      getStr(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link") || getStrFromRaw(raw, "OfferUrl", "offerUrl", "url", "detailUrl", "link"),
-      base
-    ) || "";
-  if (!oid && offerUrl) oid = extractOidFromOfferUrl(offerUrl) || "";
-  const hasRealOid = oid && isUuidLike(oid);
-  const resolvedTemplateUrl = templateDetailsUrl
-    ? templateDetailsUrl
-        .replace(/\{Vehicle\.VehicleId\}/gi, vehicleId)
-        .replace(/\{VehicleId\}/gi, vehicleId)
-        .replace(/\{vid\}/gi, vehicleId)
-    : "";
-  const detailUrlCandidate = resolvedTemplateUrl
-    ? (resolvedTemplateUrl.startsWith("http") || resolvedTemplateUrl.startsWith("/")
-        ? resolvedTemplateUrl
-        : `${base}${resolvedTemplateUrl.startsWith("?") ? `/Fahrzeugsuche/Details${resolvedTemplateUrl}` : `/${resolvedTemplateUrl}`}`)
-    : "";
-  const safeSegment = (value: string) =>
-    value
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^A-Za-z0-9ÄÖÜäöüß\-]/g, "")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "");
-  const dealerName =
-    getStrFromRaw(raw, "DealerName", "Dealer") ||
-    getStr(raw, "DealerName", "Dealer") ||
-    getStrFromRaw(raw, "DealerCompany", "DealerCompanyName") ||
-    "GS-Automobile-Rheinland-GmbH";
-  const make = getStr(raw, "Make", "MakeName", "make", "makeName") || "";
-  const model = getStr(raw, "Model", "ModelName", "model", "modelName") || "";
-  const fuel = getStr(raw, "MotorType", "FuelType", "Fuel", "fuelType", "EnergySource", "energySource") || "";
-  const transmission = getStr(raw, "Transmission", "transmission") || "";
-  const offerNumber = getStr(raw, "OfferNumber", "offerNumber", "OfferNo", "offerNo") || "";
-  const hasPathPieces = dealerName && make && model && fuel && transmission && compactOid;
-  const customDetailUrl = hasPathPieces
-    ? `${base}/${[
-        safeSegment(dealerName),
-        safeSegment(make),
-        safeSegment(model),
-        "Gebrauchtfahrzeug",
-        safeSegment(fuel),
-        safeSegment(transmission),
-        compactOid,
-        offerNumber ? safeSegment(offerNumber) : "",
-      ]
-        .filter(Boolean)
-        .join("/")}`
-    : "";
-  const detailUrl = offerUrl && (offerUrl.startsWith("http") || offerUrl.startsWith("/"))
-    ? offerUrl
-    : customDetailUrl || detailUrlCandidate || `${base}/Fahrzeugsuche/Details?vid=${vehicleId}`;
-  const ourl = encodeURIComponent(detailUrl);
-  if (hasRealOid) {
-    return `${base}/Expose.pdf?oid=${encodeURIComponent(formatOidAsUuid(oid!))}&ourl=${ourl}`;
-  }
-  return `${base}/Expose.pdf?vid=${encodeURIComponent(vehicleId)}&ourl=${ourl}`;
+  return null;
 }
 
 /**

@@ -6,8 +6,15 @@ import {
   getVehiclesFromCargateCached,
   getVehicleFromCarzillaApi,
   buildExposeUrlFromCarzillaVehicle,
+  buildExposeReportingUrl,
+  fetchReportIdFromDetailPage,
   extractDescriptionFromRaw,
 } from "../services/cargateApi.js";
+
+/** Prüft, ob die URL die gültige CarGate-Reporting-Exposé-URL ist (kein 404). */
+function isCarGateReportingExposeUrl(url: string | undefined): boolean {
+  return Boolean(url && url.includes("reporting.cargate360.de") && url.includes("DownloadReport"));
+}
 
 export const vehiclesRouter = Router();
 
@@ -28,17 +35,37 @@ async function resolveExposeUrlForVehicle(id: string): Promise<{ exposeUrl: stri
     return { exposeUrl: null, vehicleExists: false };
   }
 
-  let exposeUrl = vehicle.exposeUrl?.trim();
-  if ((!exposeUrl || (!exposeUrl.startsWith("http://") && !exposeUrl.startsWith("https://"))) && isCargateApiConfigured()) {
+  // CarGate: Exposé-URL aus GetVehicle (Detail-API) oder von der Händler-Detailseite (reportId in URL/HTML)
+  let exposeUrl: string | undefined;
+  if (isCargateApiConfigured()) {
     const raw = await getVehicleFromCarzillaApi(id);
     if (raw) exposeUrl = buildExposeUrlFromCarzillaVehicle(raw, id) ?? undefined;
+    if (!exposeUrl) {
+      const reportId = await fetchReportIdFromDetailPage(id);
+      if (reportId) exposeUrl = buildExposeReportingUrl(reportId);
+    }
+  }
+  if (!exposeUrl && isCarGateReportingExposeUrl(vehicle.exposeUrl)) {
+    exposeUrl = vehicle.exposeUrl?.trim();
   }
 
   if (!exposeUrl || (!exposeUrl.startsWith("http://") && !exposeUrl.startsWith("https://"))) {
     return { exposeUrl: null, vehicleExists: true };
   }
+  if (!isCarGateReportingExposeUrl(exposeUrl)) {
+    return { exposeUrl: null, vehicleExists: true };
+  }
 
   return { exposeUrl, vehicleExists: true };
+}
+
+/** Entfernt exposeUrl, wenn es keine CarGate-Reporting-URL ist (keine Händler-Expose.pdf-URL an Frontend/Cache). */
+function sanitizeVehicleExposeUrl<T extends { exposeUrl?: string | null }>(v: T): T {
+  if (v.exposeUrl != null && v.exposeUrl !== "" && !isCarGateReportingExposeUrl(v.exposeUrl)) {
+    const { exposeUrl: _, ...rest } = v;
+    return { ...rest, exposeUrl: undefined } as T;
+  }
+  return v;
 }
 
 /**
@@ -78,10 +105,11 @@ vehiclesRouter.get("/", async (req, res) => {
     }
 
     res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60, stale-while-revalidate=300");
+    const sanitized = vehicles.map(sanitizeVehicleExposeUrl);
     res.json({
       success: true,
-      count: vehicles.length,
-      data: vehicles,
+      count: sanitized.length,
+      data: sanitized,
       ...(warning && { warning }),
       timestamp: new Date().toISOString(),
     });
@@ -150,6 +178,13 @@ vehiclesRouter.get("/:id/expose/view", async (req, res) => {
     }
 
     if (!exposeUrl) {
+      const accept = (req.headers.accept || "").toLowerCase();
+      if (accept.includes("text/html")) {
+        res.status(404).setHeader("Content-Type", "text/html; charset=utf-8").send(
+          `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Exposé</title></head><body style="font-family:sans-serif;padding:2rem;text-align:center;"><p>Für dieses Fahrzeug ist aktuell kein Exposé verfügbar.</p></body></html>`
+        );
+        return;
+      }
       return res.status(404).json({
         success: false,
         error: "Exposé nicht verfügbar",
@@ -273,16 +308,26 @@ vehiclesRouter.get("/:id", async (req, res) => {
               );
             }
           }
+          let exposeUrlFromApi = buildExposeUrlFromCarzillaVehicle(raw, req.params.id);
+          if (!exposeUrlFromApi) {
+            const reportId = await fetchReportIdFromDetailPage(req.params.id);
+            if (reportId) exposeUrlFromApi = buildExposeReportingUrl(reportId);
+          }
+          if (exposeUrlFromApi) {
+            vehicle = { ...vehicle, exposeUrl: exposeUrlFromApi };
+          } else {
+            vehicle = { ...vehicle, exposeUrl: undefined };
+          }
         }
       } catch {
-        // GetVehicle fehlgeschlagen – Fahrzeug ohne Freie Gestaltung zurückgeben
+        // GetVehicle fehlgeschlagen – Fahrzeug unverändert
       }
     }
 
     res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60, stale-while-revalidate=300");
     res.json({
       success: true,
-      data: vehicle,
+      data: sanitizeVehicleExposeUrl(vehicle),
     });
   } catch (error) {
     console.error("Error fetching vehicle:", error);

@@ -28,13 +28,11 @@ export function ExposeViewerDialog({
   vehicleName,
 }: ExposeViewerDialogProps) {
   const directExposeUrl = getExposeUrl(exposeUrl, offerUrl, vehicleId) ?? null;
-  const viewUrl = buildApiUrl(`/api/vehicles/${vehicleId}/expose/view`);
-  const downloadFallbackUrl = `${viewUrl}${viewUrl.includes("?") ? "&" : "?"}download=1`;
-  const redirectUrl = buildApiUrl(`/api/vehicles/${vehicleId}/expose`);
-
-  const iframeUrl = directExposeUrl ?? viewUrl;
-  const openInNewTabUrl = directExposeUrl ?? redirectUrl;
-  const downloadUrl = directExposeUrl ?? downloadFallbackUrl;
+  const viewApiUrl = buildApiUrl(`/api/vehicles/${vehicleId}/expose/view`);
+  const redirectApiUrl = buildApiUrl(`/api/vehicles/${vehicleId}/expose`);
+  const iframeUrl = directExposeUrl ?? viewApiUrl;
+  const openInNewTabUrl = directExposeUrl ?? redirectApiUrl;
+  const downloadUrl = directExposeUrl ?? `${viewApiUrl}${viewApiUrl.includes("?") ? "&" : "?"}download=1`;
 
   const handleOpenInNewTab = () => {
     window.open(openInNewTabUrl, "_blank", "noopener,noreferrer");
@@ -43,8 +41,6 @@ export function ExposeViewerDialog({
   const handleDownload = () => {
     window.open(downloadUrl, "_blank", "noopener,noreferrer");
   };
-
-  if (!iframeUrl) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
