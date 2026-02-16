@@ -478,6 +478,70 @@ function getStrFromMatchingKeys(obj: Record<string, unknown>, ...keywords: strin
   return getStrFromMatchingKeysExcluding(obj, keywords, []);
 }
 
+/** Liest Text aus CustomFields/AdditionalFields/TextFieldArray (z.B. {Name: "Freie Gestaltung", Value: "..."}) */
+function getStrFromCustomFields(obj: Record<string, unknown>, ...names: string[]): string {
+  const fields = obj.CustomFields ?? obj.customFields ?? obj.AdditionalFields ?? obj.additionalFields ?? obj.TextFields ?? obj.textFields ?? obj.ExtendedFields ?? obj.extendedFields;
+  if (!fields) return "";
+  const arr = Array.isArray(fields) ? fields : (fields && typeof fields === "object" && !Array.isArray(fields) ? Object.values(fields) : []);
+  const lower = (s: string) => s.toLowerCase();
+  for (const item of arr) {
+    if (item == null || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const name = String(o.Name ?? o.name ?? o.Key ?? o.key ?? o.DisplayName ?? o.FieldName ?? "").trim();
+    const value = o.Value ?? o.value ?? o.Text ?? o.text ?? o.Content ?? o.content;
+    if (!name || value == null) continue;
+    const nameLower = lower(name);
+    if (names.some((n) => nameLower.includes(lower(n)))) {
+      const s = typeof value === "string" ? value.trim() : String(value).trim();
+      if (s && s.length > 10) return s;
+    }
+  }
+  return "";
+}
+
+/** Sucht rekursiv in verschachtelten Objekten nach Keys mit Keyword – für z.B. CustomFields.FreieGestaltung */
+function getStrFromNestedMatchingKeys(obj: unknown, keywords: string[], maxDepth = 4): string {
+  if (maxDepth <= 0) return "";
+  if (obj == null) return "";
+  if (typeof obj === "string") {
+    const s = obj.trim();
+    return s && !/^\d+$/.test(s) ? s : "";
+  }
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const found = getStrFromNestedMatchingKeys(item, keywords, maxDepth - 1);
+      if (found) return found;
+    }
+    return "";
+  }
+  if (typeof obj === "object") {
+    const o = obj as Record<string, unknown>;
+    const lower = (s: string) => s.toLowerCase();
+    for (const key of Object.keys(o)) {
+      const keyLower = lower(key);
+      if (keywords.some((kw) => keyLower.includes(lower(kw))) && !keyLower.endsWith("id")) {
+        const v = o[key];
+        if (v != null && typeof v === "string") {
+          const s = (v as string).trim();
+          if (s && s.length > 10) return s; // sinnvoller Text (kein leerer oder kurzer Platzhalter)
+        }
+      }
+    }
+    for (const key of Object.keys(o)) {
+      const v = o[key];
+      if (v != null && typeof v === "object" && !Array.isArray(v)) {
+        const found = getStrFromNestedMatchingKeys(v, keywords, maxDepth - 1);
+        if (found) return found;
+      }
+      if (v != null && Array.isArray(v)) {
+        const found = getStrFromNestedMatchingKeys(v, keywords, maxDepth - 1);
+        if (found) return found;
+      }
+    }
+  }
+  return "";
+}
+
 /** Wie getStrFromMatchingKeys, aber Keys die ein excludeKeyword enthalten werden übersprungen (z. B. "interior" bei Außenfarbe). */
 function getStrFromMatchingKeysExcluding(
   obj: Record<string, unknown>,
@@ -915,6 +979,7 @@ let _carzillaFuelLogged = false;
 let _carzillaPriceStructureLogged = false;
 let _carzillaExposeStructureLogged = false;
 let _carzillaEngineLogged = false;
+let _carzillaDescriptionLogged = false;
 
 function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchCatalogMaps): Vehicle {
   const id =
@@ -1038,7 +1103,28 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
         getStrFromMatchingKeys(raw, "offer", "detail", "fahrzeugsuche", "fahrzeugdetail", "link"),
       exposeBaseUrl
     ) || "";
-  const description = getStr(raw, "Description", "description", "comment", "Beschreibung");
+  // "Freie Gestaltung" (CarGate/Carzilla V6) = freie Fahrzeugbeschreibung (Bei Anfragen, Ausstattung usw.) – als Text-Feld in CarGate
+  let description =
+    getStr(raw, "FreieGestaltung", "freieGestaltung", "Freie_Gestaltung", "FreieGestaltungText", "freieGestaltungText", "FreeDesign", "freeDesign", "Description", "description", "comment", "Beschreibung") ||
+    getStrFromMatchingKeys(raw, "freie", "gestaltung") ||
+    getStrFromNestedMatchingKeys(raw, ["freie", "gestaltung"]);
+  if (!description) {
+    description = getStrFromCustomFields(raw, "Freie Gestaltung", "freie gestaltung", "FreieGestaltung", "FreieGestaltungText");
+  }
+  if (!description && !_carzillaDescriptionLogged) {
+    _carzillaDescriptionLogged = true;
+    const textKeys = Object.keys(raw).filter((k) =>
+      /freie|gestaltung|description|beschreibung|comment|text/i.test(k) && !/id$/i.test(k)
+    );
+    const sample: Record<string, unknown> = {};
+    for (const k of textKeys) sample[k] = raw[k];
+    const topKeys = Object.keys(raw).slice(0, 40).join(", ");
+    console.warn(
+      "Carzilla: Freie Gestaltung/Beschreibung nicht gefunden. Top-Level-Keys:", topKeys,
+      textKeys.length > 0 ? "| Relevante Keys:" : "",
+      textKeys.length > 0 ? JSON.stringify(sample, null, 2).slice(0, 1200) : ""
+    );
+  }
   // Außenfarbe (Allgemeinfarbe für Suche/Filter)
   let exteriorColor =
     getStr(raw, "Color", "ExteriorColor", "exteriorColor", "color", "colour", "Außenfarbe", "PaintColor", "VehicleColor") ||
@@ -1367,6 +1453,19 @@ function isVehicleOnline(raw: Record<string, unknown>): boolean {
  * - Das Vehicle-Objekt kann Oid/GUID enthalten; die Exposé-PDF-URL wird vom Händler bereitgestellt
  *   (z. B. Expose.pdf?oid={Oid}&ourl=…). Wir bauen diese URL aus der GetVehicle-Antwort (Oid).
  */
+
+/**
+ * Extrahiert die "Freie Gestaltung" (Custom Description) aus einem rohen CarGate-Vehicle-Objekt.
+ * Wird für GetVehicle-Detailantwort genutzt – GetVehicleList enthält oft keine Freie Gestaltung.
+ */
+export function extractDescriptionFromRaw(raw: Record<string, unknown>): string {
+  const desc =
+    getStr(raw, "FreieGestaltung", "freieGestaltung", "Freie_Gestaltung", "FreieGestaltungText", "freieGestaltungText", "CustomDescription", "customDescription", "CustomText", "customText", "FreeDesign", "freeDesign", "Description", "description", "comment", "Beschreibung") ||
+    getStrFromMatchingKeys(raw, "freie", "gestaltung") ||
+    getStrFromNestedMatchingKeys(raw, ["freie", "gestaltung"]) ||
+    getStrFromCustomFields(raw, "Freie Gestaltung", "freie gestaltung", "FreieGestaltung", "FreieGestaltungText", "Custom Description", "custom description");
+  return desc ? desc.trim() : "";
+}
 
 /**
  * Ruft Carzilla GetVehicle für ein einzelnes Fahrzeug auf (laut Doku: vehicleId, searchId, searchParams).

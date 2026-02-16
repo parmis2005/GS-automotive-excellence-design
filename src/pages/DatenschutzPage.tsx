@@ -9,7 +9,7 @@ const DatenschutzPage = () => {
     title: "Datenschutzerklärung | GS Automobile Rheinland",
     description:
       "Datenschutzerklärung der GS Automobile Rheinland GmbH – Informationen zur Verarbeitung personenbezogener Daten auf dieser Website.",
-    url: "https://www.gs-automobile-rheinland.de/datenschutz",
+    url: "https://www.gsauto.de/datenschutz",
   };
 
   const standDate = new Date().toLocaleDateString("de-DE", {
@@ -127,9 +127,12 @@ const DatenschutzPage = () => {
             </p>
             <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
               <li>
-                <strong className="text-foreground">Frontend (Webseiten):</strong> Vercel Inc., 440
-                N Barranca Ave #4133, Covina, CA 91723, USA. Beim Aufruf unserer Website können bei
-                Vercel Logdaten (u. a. IP-Adresse, Browsertyp, Zugriffszeit) anfallen.{" "}
+                <strong className="text-foreground">Frontend (Webseiten) und Web Analytics:</strong>{" "}
+                Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, USA. Beim Aufruf unserer
+                Website können bei Vercel Logdaten (u. a. IP-Adresse, Browsertyp, Zugriffszeit)
+                anfallen. Zusätzlich nutzen wir Vercel Web Analytics zur Erfassung von
+                Nutzungsstatistiken (z. B. Seitenaufrufe); dabei werden keine Cookies gesetzt, die
+                Auswertung erfolgt in anonymisierter Form.{" "}
                 <a
                   href="https://vercel.com/legal/privacy-policy"
                   target="_blank"

@@ -85,7 +85,8 @@ const CookieBanner = () => {
                 </div>
               ))}
               <p className="text-xs text-muted-foreground">
-                Aktuell sind nur essenzielle Cookies im Einsatz.
+                Aktuell sind nur essenzielle Cookies im Einsatz. Für anonymisierte
+                Nutzungsstatistiken nutzen wir Vercel Web Analytics (ohne Cookies).
               </p>
             </div>
           )}

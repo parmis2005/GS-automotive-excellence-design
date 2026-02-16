@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 
 # Sitemap
-Sitemap: https://www.gs-automobile-rheinland.de/sitemap.xml
+Sitemap: https://www.gsauto.de/sitemap.xml

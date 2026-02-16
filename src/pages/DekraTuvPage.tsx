@@ -76,7 +76,7 @@ const DekraTuvPage = () => {
     description:
       "Geprüfte Sicherheit vor Ort: DEKRA & TÜV Rheinland auf unserem Gelände. HU, Checks und transparente Berichte für maximale Sicherheit.",
     image: heroImageUrl,
-    url: "https://www.gs-automobile-rheinland.de/dekra-tuev",
+    url: "https://www.gsauto.de/dekra-tuev",
     type: "website" as const,
   };
 

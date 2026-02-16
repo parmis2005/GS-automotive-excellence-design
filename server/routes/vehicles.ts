@@ -6,6 +6,7 @@ import {
   getVehiclesFromCargateCached,
   getVehicleFromCarzillaApi,
   buildExposeUrlFromCarzillaVehicle,
+  extractDescriptionFromRaw,
 } from "../services/cargateApi.js";
 
 export const vehiclesRouter = Router();
@@ -217,7 +218,8 @@ vehiclesRouter.get("/:id/expose/view", async (req, res) => {
 
 /**
  * GET /api/vehicles/:id
- * Einzelnes Fahrzeug: bei CarGate direkt aus Cache, sonst aus DB.
+ * Einzelnes Fahrzeug: bei CarGate aus Cache, plus Freie Gestaltung (Custom Description) per GetVehicle.
+ * GetVehicleList liefert oft keine Freie Gestaltung – GetVehicle enthält die vollständige Beschreibung.
  */
 vehiclesRouter.get("/:id", async (req, res) => {
   try {
@@ -238,6 +240,24 @@ vehiclesRouter.get("/:id", async (req, res) => {
         success: false,
         error: "Vehicle not found",
       });
+    }
+
+    // Freie Gestaltung (Custom Description) via GetVehicle – GetVehicleList enthält sie oft nicht
+    if (isCargateApiConfigured()) {
+      try {
+        const raw = await getVehicleFromCarzillaApi(req.params.id);
+        if (raw) {
+          const description = extractDescriptionFromRaw(raw);
+          if (description) {
+            vehicle = { ...vehicle, description };
+          } else if (process.env.CARGATE_DEBUG_DESCRIPTION === "1") {
+            const keys = Object.keys(raw).filter((k) => /freie|gestaltung|description|beschreibung|text|comment|custom/i.test(k));
+            console.warn(`[CarGate] Freie Gestaltung nicht gefunden für vid=${req.params.id}. Relevante Keys:`, keys.join(", ") || "(keine)");
+          }
+        }
+      } catch {
+        // GetVehicle fehlgeschlagen – Fahrzeug ohne Freie Gestaltung zurückgeben
+      }
     }
 
     res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60, stale-while-revalidate=300");

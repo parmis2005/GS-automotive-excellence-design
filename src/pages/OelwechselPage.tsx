@@ -76,7 +76,7 @@ const OelwechselPage = () => {
     description:
       "Professioneller Ölwechsel mit hochwertigen Ölen nach Herstellerfreigabe. Mehr Leistung, längere Lebensdauer, volle Sicherheit.",
     image: heroImageUrl,
-    url: "https://www.gs-automobile-rheinland.de/oelwechsel",
+    url: "https://www.gsauto.de/oelwechsel",
     type: "website" as const,
   };
 

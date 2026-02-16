@@ -9,7 +9,7 @@ const HaftungsausschlussPage = () => {
     title: "Haftungsausschluss | GS Automobile Rheinland",
     description:
       "Haftungsausschluss der GS Automobile Rheinland GmbH – Haftung für Inhalte, Links und Urheberrecht gemäß TMG.",
-    url: "https://www.gs-automobile-rheinland.de/haftungsausschluss",
+    url: "https://www.gsauto.de/haftungsausschluss",
   };
 
   const standDate = new Date().toLocaleDateString("de-DE", {

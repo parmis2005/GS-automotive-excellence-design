@@ -63,6 +63,93 @@ function cargateImage(vid: string, ino: number = 1, format: string = "xl"): stri
   return `https://img.cargate360.de/default.aspx?vid=${vid}&bid=1790&format=${format}&ino=${ino}&app=Kiste-Default`;
 }
 
+/** Escape HTML for safe rendering in dangerouslySetInnerHTML */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Prüft, ob eine Zeile eine kommaseparierte Liste ist (mehrere Stichpunkte) */
+function isCommaSeparatedList(s: string): boolean {
+  if (!s.includes(",")) return false;
+  const items = s.split(",").map((x) => x.trim()).filter(Boolean);
+  return items.length >= 2;
+}
+
+/** CarGate-Beschreibung parsen: Abschnitte, Pakete, Stichpunkte (wie alte Website) */
+function formatDescriptionAsHtml(description: string): string {
+  const lines = description.trim().split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const parts: string[] = [];
+  let i = 0;
+  const sectionHeaders = /^(Ausstattungspakete|Sonderausstattungen|Weitere Ausstattungen)\s*:?\s*$/i;
+  const packageWithItems = /^(.+?):\s*(.+)$/;
+
+  const isSectionHeader = (s: string) => sectionHeaders.test(s);
+  const isPackageLine = (s: string) => {
+    const m = s.match(packageWithItems);
+    return m && m[2] && !isSectionHeader(m[1].trim());
+  };
+
+  const renderCommaListAsBullets = (s: string): string => {
+    const items = s.replace(/:\s*$/, "").split(",").map((x) => x.trim()).filter(Boolean);
+    return items.map((it) => `<li class="mt-2">${escapeHtml(it)}</li>`).join("");
+  };
+
+  while (i < lines.length) {
+    const line = lines[i];
+    if (isSectionHeader(line)) {
+      const title = line.replace(/:?\s*$/, "").trim();
+      const isPakete = /Ausstattungspakete/i.test(title);
+      parts.push(`<h3 class="text-base font-semibold text-foreground mt-6 mb-3 uppercase tracking-wide">${escapeHtml(title)}</h3>`);
+      i++;
+      const listItems: string[] = [];
+      while (i < lines.length && !isSectionHeader(lines[i])) {
+        const ln = lines[i];
+        const m = ln.match(packageWithItems);
+        if (isPakete && m && m[2].includes(",")) {
+          const pkg = m[1].trim();
+          const items = m[2].split(",").map((s) => s.trim()).filter(Boolean);
+          listItems.push(`<li class="mt-2"><span class="font-semibold text-foreground">${escapeHtml(pkg)}:</span><ul class="list-disc pl-6 mt-1 space-y-0.5 text-muted-foreground">${items.map((it) => `<li>${escapeHtml(it)}</li>`).join("")}</ul></li>`);
+        } else if (m && m[2]) {
+          listItems.push(`<li class="mt-2"><span class="font-semibold text-foreground">${escapeHtml(m[1].trim())}:</span> ${escapeHtml(m[2].trim())}</li>`);
+        } else if (isCommaSeparatedList(ln)) {
+          listItems.push(renderCommaListAsBullets(ln));
+        } else if (/^[A-ZÄÖÜ0-9][A-Za-zÄÖÜäöüß0-9\s\-–—()]+$/.test(ln) && ln.length < 80) {
+          listItems.push(`<li class="mt-2"><span class="font-semibold text-foreground">${escapeHtml(ln)}</span></li>`);
+        } else {
+          listItems.push(`<li class="mt-2">${escapeHtml(ln)}</li>`);
+        }
+        i++;
+      }
+      if (listItems.length > 0) {
+        parts.push(`<ul class="list-disc pl-6 space-y-1 text-sm leading-relaxed text-muted-foreground [&_ul]:list-[circle]">${listItems.join("")}</ul>`);
+      }
+      continue;
+    }
+    if (isPackageLine(line)) {
+      const m = line.match(packageWithItems)!;
+      if (m[2].includes(",")) {
+        const pkg = m[1].trim();
+        const items = m[2].split(",").map((s) => s.trim()).filter(Boolean);
+        parts.push(`<p class="mb-2"><span class="font-semibold text-foreground">${escapeHtml(pkg)}:</span></p>`);
+        parts.push(`<ul class="list-disc pl-6 space-y-0.5 text-sm mb-4 text-muted-foreground">${items.map((it) => `<li>${escapeHtml(it)}</li>`).join("")}</ul>`);
+      } else {
+        parts.push(`<p class="mb-4 leading-relaxed"><span class="font-semibold text-foreground">${escapeHtml(m[1].trim())}:</span> ${escapeHtml(m[2].trim())}</p>`);
+      }
+    } else if (isCommaSeparatedList(line)) {
+      parts.push(`<ul class="list-disc pl-6 space-y-0.5 text-sm mb-4 text-muted-foreground">${renderCommaListAsBullets(line)}</ul>`);
+    } else {
+      parts.push(`<p class="mb-4 leading-relaxed text-foreground">${escapeHtml(line)}</p>`);
+    }
+    i++;
+  }
+  return parts.join("");
+}
+
 const VehicleDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -312,8 +399,35 @@ const VehicleDetailPage = () => {
     );
   }
 
+  const seoData = getVehicleSEO(
+    vehicle.brand,
+    vehicle.model,
+    vehicle.year,
+    vehicle.price,
+    vehicle.mileage,
+    vehicle.image,
+    vehicle.id
+  );
+  const vehicleSchema = generateVehicleSchema(
+    vehicle.brand,
+    vehicle.model,
+    vehicle.year,
+    vehicle.price,
+    vehicle.mileage,
+    vehicle.fuel,
+    vehicle.image,
+    vehicle.id,
+    `${vehicle.brand} ${vehicle.model} ${vehicle.year}, ${vehicle.mileage.toLocaleString("de-DE")} km, ${vehicle.fuel} – Gebrauchtwagen bei GS Automobile Rheinland in Krefeld`
+  );
+  const breadcrumbs = [
+    { name: "Startseite", url: "/" },
+    { name: "Fahrzeugsuche", url: "/fahrzeuge" },
+    { name: `${vehicle.brand} ${vehicle.model} ${vehicle.year}`, url: `/fahrzeuge/${vehicle.id}` },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
+      <SEO data={seoData} structuredData={vehicleSchema} breadcrumbs={breadcrumbs} />
       <Navbar />
       <main className="container mx-auto px-4 md:px-6 py-8">
         {/* Back Button */}
@@ -655,6 +769,7 @@ const VehicleDetailPage = () => {
                     </Button>
                   </div>
                 </div>
+              </div>
               </div>
             <Separator />
             <div className="bg-gray-100/60 border border-gray-300/50 rounded-lg p-4">
@@ -1128,7 +1243,23 @@ const VehicleDetailPage = () => {
             </div>
           </div>
         </div>
-        </div>
+
+        {/* Fahrzeugbeschreibung – Freie Gestaltung (Custom Description) von CarGate GetVehicle */}
+        {(vehicle.description && vehicle.description.trim()) && (
+          <section className="mt-12 lg:mt-16">
+            <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+              <div className="bg-[#0f2439] px-6 py-4">
+                <h2 className="text-xl font-bold text-white tracking-tight">Fahrzeugbeschreibung</h2>
+              </div>
+              <div className="p-6 md:p-8 text-foreground">
+                <div
+                  className="max-w-none [&_h3]:first:mt-0 [&_ul]:marker:text-primary/60 [&_a]:text-primary [&_a]:hover:underline"
+                  dangerouslySetInnerHTML={{ __html: formatDescriptionAsHtml(vehicle.description) }}
+                />
+              </div>
+            </div>
+          </section>
+        )}
 
       </main>
       <Footer />

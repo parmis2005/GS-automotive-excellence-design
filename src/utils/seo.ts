@@ -12,7 +12,7 @@ export interface SEOData {
   type?: "website" | "product" | "article";
 }
 
-const BASE_URL = "https://www.gs-automobile-rheinland.de";
+const BASE_URL = "https://www.gsauto.de";
 
 /**
  * Generates page title with brand suffix
@@ -27,7 +27,7 @@ export function generateTitle(pageTitle: string): string {
 export function getDefaultSEO(): SEOData {
   return {
     title: generateTitle("Gebrauchtwagen in Krefeld"),
-    description: "GS Automobile Rheinland - Ihr Spezialist für Gebrauchtwagen in Krefeld. Geprüfte Qualität, faire Preise, 10+ Jahre Erfahrung. Fahrzeuge sofort verfügbar!",
+    description: "GS Automobile Rheinland - Ihr Spezialist für Gebrauchtwagen in Krefeld. Geprüfte Qualität, faire Preise, 25+ Jahre Erfahrung. Über 10.000 verkaufte Fahrzeuge. Jetzt Traumauto finden!",
     keywords: "Gebrauchtwagen Krefeld, Auto kaufen, GS Automobile, Autohaus Krefeld, Autohaus NRW, BMW Krefeld, Opel Krefeld, Auto Krefeld, Autohaus Nähe, Gebrauchtwagen kaufen Niederrhein, günstige Finanzierung, Finanzierung Krefeld, Inzahlungnahme Krefeld, Auto verkaufen Krefeld, Fahrzeugankauf Krefeld, Jahreswagen Krefeld, junge Gebrauchtwagen Krefeld",
     image: `${BASE_URL}/logo.png`,
     url: BASE_URL,
@@ -66,8 +66,9 @@ export function getVehicleSEO(
 export function getVehiclesPageSEO(): SEOData {
   return {
     title: generateTitle("Fahrzeugsuche | Gebrauchtwagen Krefeld"),
-    description: "Finden Sie Ihr Traumauto in Krefeld! Große Auswahl an Gebrauchtwagen bei GS Automobile Rheinland. Filtern Sie nach Marke, Preis, Baujahr und mehr.",
-    keywords: "Fahrzeugsuche Krefeld, Gebrauchtwagen suchen, Auto finden, Autohaus Krefeld",
+    description: "Finden Sie Ihr Traumauto in Krefeld! Große Auswahl an geprüften Gebrauchtwagen bei GS Automobile Rheinland. Filtern Sie nach Marke, Preis, Baujahr und mehr – faire Preise, sofort verfügbar.",
+    keywords: "Fahrzeugsuche Krefeld, Gebrauchtwagen suchen, Auto finden Krefeld, Autohaus Krefeld, Gebrauchtwagen Krefeld",
+    image: `${BASE_URL}/logo.png`,
     url: `${BASE_URL}/fahrzeuge`,
     type: "website",
   };
@@ -112,7 +113,7 @@ export function generateLocalBusinessSchema() {
       }
     ],
     "priceRange": "€€",
-    "description": "Ihr Spezialist für Gebrauchtwagen in Krefeld. Geprüfte Qualität, faire Preise, 10+ Jahre Erfahrung."
+    "description": "Ihr Spezialist für Gebrauchtwagen in Krefeld. Geprüfte Qualität, faire Preise, 25+ Jahre Erfahrung."
   };
 }
 
@@ -180,9 +181,36 @@ export function generateVehicleSchema(
 }
 
 /**
+ * Generates CollectionPage + ItemList schema for vehicle listing pages
+ */
+export function generateCollectionPageSchema(
+  itemUrls: string[],
+  pageTitle: string,
+  description?: string
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": pageTitle,
+    "description": description || "Gebrauchtwagen bei GS Automobile Rheinland in Krefeld",
+    "url": `${BASE_URL}/fahrzeuge`,
+    "mainEntity": {
+      "@type": "ItemList",
+      "numberOfItems": itemUrls.length,
+      "itemListElement": itemUrls.slice(0, 20).map((url, index) => ({
+        "@type": "ListItem",
+        "position": index + 1,
+        "url": url
+      }))
+    }
+  };
+}
+
+/**
  * Generates BreadcrumbList structured data (JSON-LD)
  */
 export function generateBreadcrumbSchema(items: Array<{ name: string; url: string }>) {
+  const fullUrl = (u: string) => u.startsWith("http") ? u : `${BASE_URL}${u.startsWith("/") ? "" : "/"}${u}`;
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -190,7 +218,7 @@ export function generateBreadcrumbSchema(items: Array<{ name: string; url: strin
       "@type": "ListItem",
       "position": index + 1,
       "name": item.name,
-      "item": item.url
+      "item": fullUrl(item.url)
     }))
   };
 }

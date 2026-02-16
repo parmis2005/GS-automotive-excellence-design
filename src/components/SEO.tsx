@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import type { SEOData } from "@/utils/seo";
-import { generateLocalBusinessSchema, generateVehicleSchema, generateBreadcrumbSchema } from "@/utils/seo";
+import { generateLocalBusinessSchema, generateBreadcrumbSchema } from "@/utils/seo";
 
 interface SEOProps {
   data: SEOData;
@@ -23,7 +23,7 @@ export default function SEO({ data, structuredData, breadcrumbs }: SEOProps) {
     type = "website",
   } = data;
 
-  const baseUrl = "https://www.gs-automobile-rheinland.de";
+  const baseUrl = "https://www.gsauto.de";
   const fullImageUrl = image?.startsWith("http") ? image : `${baseUrl}${image}`;
   const fullUrl = url?.startsWith("http") ? url : `${baseUrl}${url}`;
 

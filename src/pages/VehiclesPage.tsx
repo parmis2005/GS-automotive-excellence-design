@@ -14,7 +14,7 @@ import type { Vehicle } from "@/types/vehicle";
 import { normalizeColorToBasic, BASIC_COLORS } from "@/lib/colorUtils";
 import { getBaseModelName, groupModelsBySeries, getVehicleType, isKleinwagenModel, START_PAGE_VEHICLE_TYPES } from "@/lib/vehicleNameUtils";
 import SEO from "@/components/SEO";
-import { getVehiclesPageSEO } from "@/utils/seo";
+import { getVehiclesPageSEO, generateCollectionPageSchema } from "@/utils/seo";
 
 export interface VehicleFiltersState {
   internalNumber: string; // 3-stellige Kennnummer (Angebotsnummer)
@@ -576,10 +576,24 @@ const VehiclesPage = () => {
   };
   
   const seoData = getVehiclesPageSEO();
+  const vehicleUrls = (filteredAndSortedVehicles ?? [])
+    .slice(0, 20)
+    .map((v) => `https://www.gsauto.de/fahrzeuge/${v.id}`);
+  const collectionSchema = vehicleUrls.length > 0
+    ? generateCollectionPageSchema(
+        vehicleUrls,
+        "Gebrauchtwagen Krefeld | GS Automobile Rheinland",
+        "Finden Sie Ihr Traumauto in Krefeld – große Auswahl an geprüften Gebrauchtwagen bei GS Automobile Rheinland."
+      )
+    : undefined;
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO data={seoData} breadcrumbs={[{ name: "Startseite", url: "/" }, { name: "Fahrzeugsuche", url: "/fahrzeuge" }]} />
+      <SEO
+        data={seoData}
+        structuredData={collectionSchema}
+        breadcrumbs={[{ name: "Startseite", url: "/" }, { name: "Fahrzeugsuche", url: "/fahrzeuge" }]}
+      />
       <Navbar />
       <main className="pt-8 pb-20">
         <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
