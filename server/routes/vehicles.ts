@@ -250,9 +250,28 @@ vehiclesRouter.get("/:id", async (req, res) => {
           const description = extractDescriptionFromRaw(raw);
           if (description) {
             vehicle = { ...vehicle, description };
-          } else if (process.env.CARGATE_DEBUG_DESCRIPTION === "1") {
-            const keys = Object.keys(raw).filter((k) => /freie|gestaltung|description|beschreibung|text|comment|custom/i.test(k));
-            console.warn(`[CarGate] Freie Gestaltung nicht gefunden für vid=${req.params.id}. Relevante Keys:`, keys.join(", ") || "(keine)");
+          } else {
+            vehicle = { ...vehicle, description: undefined };
+            if (process.env.CARGATE_DEBUG_DESCRIPTION === "1") {
+              const keys = Object.keys(raw).filter((k) => /freie|gestaltung|description|beschreibung|text|comment|custom/i.test(k));
+              console.warn(`[CarGate] Freie Gestaltung nicht gefunden für vid=${req.params.id}. Relevante Keys:`, keys.join(", ") || "(keine)");
+              const sample = (label: string, value: unknown) => {
+                if (typeof value !== "string") return `${label}: (leer)`;
+                const trimmed = value.trim();
+                if (!trimmed) return `${label}: (leer)`;
+                return `${label}: len=${trimmed.length} preview=${trimmed.slice(0, 140).replace(/\s+/g, " ")}`;
+              };
+              console.warn(
+                `[CarGate] Description-Samples vid=${req.params.id}:`,
+                sample("Description", raw["Description"]),
+                "|",
+                sample("DescriptionAdditional", raw["DescriptionAdditional"]),
+                "|",
+                sample("DescriptionWithoutAdditional", raw["DescriptionWithoutAdditional"]),
+                "|",
+                sample("FormattedDescription", raw["FormattedDescription"])
+              );
+            }
           }
         }
       } catch {

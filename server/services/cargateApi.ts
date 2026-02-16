@@ -1459,12 +1459,53 @@ function isVehicleOnline(raw: Record<string, unknown>): boolean {
  * Wird für GetVehicle-Detailantwort genutzt – GetVehicleList enthält oft keine Freie Gestaltung.
  */
 export function extractDescriptionFromRaw(raw: Record<string, unknown>): string {
-  const desc =
-    getStr(raw, "FreieGestaltung", "freieGestaltung", "Freie_Gestaltung", "FreieGestaltungText", "freieGestaltungText", "CustomDescription", "customDescription", "CustomText", "customText", "FreeDesign", "freeDesign", "Description", "description", "comment", "Beschreibung") ||
-    getStrFromMatchingKeys(raw, "freie", "gestaltung") ||
-    getStrFromNestedMatchingKeys(raw, ["freie", "gestaltung"]) ||
-    getStrFromCustomFields(raw, "Freie Gestaltung", "freie gestaltung", "FreieGestaltung", "FreieGestaltungText", "Custom Description", "custom description");
-  return desc ? desc.trim() : "";
+  const normalizeFormatted = (value: string) =>
+    value
+      .replace(/\\r\\n|\\n|\\r/g, "\n")
+      .replace(/\\-\\-\\-\\-+/g, "\n")
+      .replace(/----+/g, "\n")
+      .replace(/\*\*/g, "")
+      .replace(/\s+\n/g, "\n")
+      .trim();
+
+  const formattedRaw = getStr(raw, "FormattedDescription", "formattedDescription");
+  const formatted = formattedRaw ? normalizeFormatted(formattedRaw) : "";
+
+  if (formatted) {
+    return formatted;
+  }
+
+  const candidates = [
+    getStr(raw, "FreieGestaltung", "freieGestaltung", "Freie_Gestaltung", "FreieGestaltungText", "freieGestaltungText", "CustomDescription", "customDescription", "CustomText", "customText", "FreeDesign", "freeDesign"),
+    getStrFromMatchingKeys(raw, "freie", "gestaltung"),
+    getStrFromNestedMatchingKeys(raw, ["freie", "gestaltung"]),
+    getStrFromCustomFields(raw, "Freie Gestaltung", "freie gestaltung", "FreieGestaltung", "FreieGestaltungText", "Custom Description", "custom description"),
+    getStr(raw, "DescriptionWithoutAdditional", "descriptionWithoutAdditional"),
+  ]
+    .map((s) => (s ? s.trim() : ""))
+    .filter((s) => s.length >= 20);
+
+  const scoreCandidate = (text: string): number => {
+    let score = 0;
+    const lower = text.toLowerCase();
+    if (/(bei anfragen|gsauto\.de|gs automobile|gs-automobile)/i.test(lower)) score += 5;
+    if (text.length < 1200) score += 2;
+    if (text.length < 600) score += 1;
+    if (looksLikeEquipmentOrDescription(text)) score -= 5;
+    return score;
+  };
+
+  let best = "";
+  let bestScore = -999;
+  for (const candidate of candidates) {
+    const score = scoreCandidate(candidate);
+    if (score > bestScore) {
+      bestScore = score;
+      best = candidate;
+    }
+  }
+
+  return bestScore > 0 ? best : "";
 }
 
 /**

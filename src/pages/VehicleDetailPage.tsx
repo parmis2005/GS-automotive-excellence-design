@@ -82,11 +82,18 @@ function isCommaSeparatedList(s: string): boolean {
 
 /** CarGate-Beschreibung parsen: Abschnitte, Pakete, Stichpunkte (wie alte Website) */
 function formatDescriptionAsHtml(description: string): string {
-  const lines = description.trim().split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const normalized = description
+    .replace(/\\\s*$/gm, "")
+    .replace(/\\+/g, "\n")
+    .replace(/^\s*[*•]\s+/gm, "")
+    .trim();
+  const lines = normalized.split(/\n+/).map((l) => l.trim()).filter(Boolean);
   const parts: string[] = [];
   let i = 0;
   const sectionHeaders = /^(Ausstattungspakete|Sonderausstattungen|Weitere Ausstattungen)\s*:?\s*$/i;
   const packageWithItems = /^(.+?):\s*(.+)$/;
+  const isIntroLine = (s: string) =>
+    /^(bei anfragen|besuchen sie unsere website|besuchen sie unsere seite|gsauto\.de)/i.test(s);
 
   const isSectionHeader = (s: string) => sectionHeaders.test(s);
   const isPackageLine = (s: string) => {
@@ -98,9 +105,18 @@ function formatDescriptionAsHtml(description: string): string {
     const items = s.replace(/:\s*$/, "").split(",").map((x) => x.trim()).filter(Boolean);
     return items.map((it) => `<li class="mt-2">${escapeHtml(it)}</li>`).join("");
   };
+  const renderParagraph = (s: string) =>
+    `<p class="mb-4 leading-relaxed text-muted-foreground">${escapeHtml(s)}</p>`;
 
   while (i < lines.length) {
     const line = lines[i];
+    if (isIntroLine(line)) {
+      parts.push(
+        `<div class="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm font-medium text-primary">${escapeHtml(line)}</div>`
+      );
+      i++;
+      continue;
+    }
     if (isSectionHeader(line)) {
       const title = line.replace(/:?\s*$/, "").trim();
       const isPakete = /Ausstattungspakete/i.test(title);
@@ -117,11 +133,11 @@ function formatDescriptionAsHtml(description: string): string {
         } else if (m && m[2]) {
           listItems.push(`<li class="mt-2"><span class="font-semibold text-foreground">${escapeHtml(m[1].trim())}:</span> ${escapeHtml(m[2].trim())}</li>`);
         } else if (isCommaSeparatedList(ln)) {
-          listItems.push(renderCommaListAsBullets(ln));
+          listItems.push(`<ul class="list-disc pl-5 text-muted-foreground">${renderCommaListAsBullets(ln)}</ul>`);
         } else if (/^[A-ZÄÖÜ0-9][A-Za-zÄÖÜäöüß0-9\s\-–—()]+$/.test(ln) && ln.length < 80) {
           listItems.push(`<li class="mt-2"><span class="font-semibold text-foreground">${escapeHtml(ln)}</span></li>`);
         } else {
-          listItems.push(`<li class="mt-2">${escapeHtml(ln)}</li>`);
+          listItems.push(`<li class="mt-2 text-muted-foreground">${escapeHtml(ln)}</li>`);
         }
         i++;
       }
@@ -143,7 +159,7 @@ function formatDescriptionAsHtml(description: string): string {
     } else if (isCommaSeparatedList(line)) {
       parts.push(`<ul class="list-disc pl-6 space-y-0.5 text-sm mb-4 text-muted-foreground">${renderCommaListAsBullets(line)}</ul>`);
     } else {
-      parts.push(`<p class="mb-4 leading-relaxed text-foreground">${escapeHtml(line)}</p>`);
+      parts.push(renderParagraph(line));
     }
     i++;
   }
