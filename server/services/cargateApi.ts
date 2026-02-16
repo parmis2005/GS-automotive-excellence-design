@@ -571,6 +571,41 @@ function findUuidLikeValue(obj: unknown, maxDepth = 5): string {
   return "";
 }
 
+function findReportId(raw: Record<string, unknown>): string {
+  const candidates: string[] = [];
+  const pushIfUuid = (value: unknown) => {
+    if (typeof value === "string" && isUuidLike(value)) candidates.push(value);
+  };
+  const extractFromUrl = (value: unknown) => {
+    if (typeof value !== "string") return;
+    const match = value.match(/[?&]reportId=([0-9a-fA-F-]{32,36})/);
+    if (match) candidates.push(match[1]);
+  };
+
+  const documents = raw.Documents ?? raw.documents ?? raw.InspectionReport ?? raw.inspectionReport ?? raw.Reports ?? raw.reports;
+  if (Array.isArray(documents)) {
+    for (const doc of documents) {
+      if (doc && typeof doc === "object") {
+        const d = doc as Record<string, unknown>;
+        pushIfUuid(d.ReportId ?? d.reportId ?? d.ReportGuid ?? d.reportGuid);
+        extractFromUrl(d.Url ?? d.url ?? d.DownloadUrl ?? d.downloadUrl ?? d.Link ?? d.link);
+      }
+    }
+  } else if (documents && typeof documents === "object") {
+    const d = documents as Record<string, unknown>;
+    pushIfUuid(d.ReportId ?? d.reportId ?? d.ReportGuid ?? d.reportGuid);
+    extractFromUrl(d.Url ?? d.url ?? d.DownloadUrl ?? d.downloadUrl ?? d.Link ?? d.link);
+  }
+
+  const deepMatch = getStrFromMatchingKeys(raw, "reportid", "reportguid", "report");
+  pushIfUuid(deepMatch);
+
+  const uuid = findUuidLikeValue(raw);
+  pushIfUuid(uuid);
+
+  return candidates.length ? formatOidAsUuid(candidates[0]) : "";
+}
+
 /** Wie getStrFromMatchingKeys, aber Keys die ein excludeKeyword enthalten werden übersprungen (z. B. "interior" bei Außenfarbe). */
 function getStrFromMatchingKeysExcluding(
   obj: Record<string, unknown>,
@@ -1662,6 +1697,10 @@ function isUuidLike(s: string): boolean {
  */
 export function buildExposeUrlFromCarzillaVehicle(raw: Record<string, unknown>, vehicleId: string): string | null {
   const base = (process.env.CARGATE_EXPOSE_BASE_URL || "https://fahrzeuge.gs-automobile-rheinland.de").replace(/\/+$/, "");
+  const reportId = findReportId(raw);
+  if (reportId) {
+    return `https://reporting.cargate360.de/ReportingProxy/DownloadReport?reportId=${encodeURIComponent(reportId)}`;
+  }
   let oid = getStrFromRaw(raw, "Oid", "oid", "OfferId", "OfferGuid", "VehicleGuid", "Uuid", "Guid");
   if (!oid) {
     oid = findUuidLikeValue(raw) || "";
