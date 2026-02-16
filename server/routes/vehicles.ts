@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { Readable } from "node:stream";
-import { getAllVehicles, getVehicleById } from "../db/database.js";
+import { getAllVehicles, getVehicleById, getExposeUrlsByVehicleIds } from "../db/database.js";
 import {
   isCargateApiConfigured,
   getVehiclesFromCargateCached,
@@ -47,6 +47,10 @@ async function resolveExposeUrlForVehicle(id: string): Promise<{ exposeUrl: stri
   }
   if (!exposeUrl && isCarGateReportingExposeUrl(vehicle.exposeUrl)) {
     exposeUrl = vehicle.exposeUrl?.trim();
+  }
+  if (!exposeUrl && process.env.DATABASE_URL) {
+    const fromDb = await getExposeUrlsByVehicleIds([id]);
+    if (fromDb[id]) exposeUrl = fromDb[id];
   }
 
   if (!exposeUrl || (!exposeUrl.startsWith("http://") && !exposeUrl.startsWith("https://"))) {
@@ -104,6 +108,13 @@ vehiclesRouter.get("/", async (req, res) => {
       vehicles = await getAllVehicles();
     }
 
+    if (vehicles.length > 0 && process.env.DATABASE_URL) {
+      const exposeMap = await getExposeUrlsByVehicleIds(vehicles.map((v) => v.id));
+      vehicles = vehicles.map((v) => ({
+        ...v,
+        exposeUrl: exposeMap[v.id] ?? v.exposeUrl,
+      }));
+    }
     res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60, stale-while-revalidate=300");
     const sanitized = vehicles.map(sanitizeVehicleExposeUrl);
     res.json({
@@ -277,6 +288,13 @@ vehiclesRouter.get("/:id", async (req, res) => {
       });
     }
 
+    if (process.env.DATABASE_URL) {
+      const exposeMap = await getExposeUrlsByVehicleIds([vehicle.id]);
+      if (exposeMap[vehicle.id]) {
+        vehicle = { ...vehicle, exposeUrl: exposeMap[vehicle.id] };
+      }
+    }
+
     // Freie Gestaltung (Custom Description) via GetVehicle – GetVehicleList enthält sie oft nicht
     if (isCargateApiConfigured()) {
       try {
@@ -308,16 +326,11 @@ vehiclesRouter.get("/:id", async (req, res) => {
               );
             }
           }
-          let exposeUrlFromApi = buildExposeUrlFromCarzillaVehicle(raw, req.params.id);
-          if (!exposeUrlFromApi) {
-            const reportId = await fetchReportIdFromDetailPage(req.params.id);
-            if (reportId) exposeUrlFromApi = buildExposeReportingUrl(reportId);
-          }
+          const exposeUrlFromApi = buildExposeUrlFromCarzillaVehicle(raw, req.params.id);
           if (exposeUrlFromApi) {
             vehicle = { ...vehicle, exposeUrl: exposeUrlFromApi };
-          } else {
-            vehicle = { ...vehicle, exposeUrl: undefined };
           }
+          // Sonst bleibt exposeUrl aus DB (oben bereits gemerged)
         }
       } catch {
         // GetVehicle fehlgeschlagen – Fahrzeug unverändert

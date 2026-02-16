@@ -4,6 +4,7 @@ import {
   fetchVehiclesFromCargateApi,
 } from "./cargateApi.js";
 import { upsertVehicles, deleteOldVehicles } from "../db/database.js";
+import { startExposeReportIdJob } from "./exposeSyncJob.js";
 import { getVehicleImageCount } from "../lib/imageCount.js";
 import type { Vehicle } from "../types/vehicle.js";
 
@@ -80,8 +81,12 @@ export async function syncVehicles(): Promise<{ success: boolean; count: number;
     await upsertVehicles(vehicles);
 
     // Delete vehicles that are no longer in the source
-    const currentVehicleIds = vehicles.map(v => v.id);
+    const currentVehicleIds = vehicles.map((v) => v.id);
     await deleteOldVehicles(currentVehicleIds);
+
+    if (isCargateApiConfigured() && currentVehicleIds.length > 0) {
+      startExposeReportIdJob(currentVehicleIds);
+    }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`✅ Sync completed successfully in ${duration}s (${vehicles.length} vehicles)`);

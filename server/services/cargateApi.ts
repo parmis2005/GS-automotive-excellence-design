@@ -697,6 +697,17 @@ function findReportId(raw: Record<string, unknown>): string {
   return candidates.length ? formatOidAsUuid(candidates[0]) : "";
 }
 
+/**
+ * Holt die Exposé-reportId für ein Fahrzeug aus der Carzilla GetVehicle-API (ohne Browser).
+ * Gibt null zurück, wenn die API keine reportId liefert.
+ */
+export async function getReportIdFromApi(vehicleId: string): Promise<string | null> {
+  const raw = await getVehicleFromCarzillaApi(vehicleId);
+  if (!raw) return null;
+  const id = findReportId(raw);
+  return id ? id : null;
+}
+
 /** Wie getStrFromMatchingKeys, aber Keys die ein excludeKeyword enthalten werden übersprungen (z. B. "interior" bei Außenfarbe). */
 function getStrFromMatchingKeysExcluding(
   obj: Record<string, unknown>,
@@ -1768,6 +1779,10 @@ const CARGATE_REPORTING_BASE = "https://reporting.cargate360.de/ReportingProxy/D
 const EXPOSE_REPORTID_CACHE_PREFIX = "expose_reportid_";
 /** TTL wenn reportId auf der Detailseite nicht gefunden wurde (5 min). */
 const EXPOSE_REPORTID_MISS_TTL = 5 * 60;
+/** Debug nur einmal pro Prozess ausgeben (CARGATE_DEBUG_EXPOSE), um Log-Spam zu vermeiden. */
+let exposeDebugLoggedEmpty = false;
+let exposeDetailPageDebugLogged = false;
+let exposeDetailPageMissLogged = false;
 
 /** Sucht im HTML-Text nach reportId (verschiedene Schreibweisen, inkl. URL-encoded). */
 function extractReportIdFromHtml(html: string): string | null {
@@ -1794,36 +1809,12 @@ function extractReportIdFromHtml(html: string): string | null {
 }
 
 /**
- * Optionale .env: CARGATE_EXPOSE_REPORTID_<vehicleId>=<uuid>
- * Beispiel: CARGATE_EXPOSE_REPORTID_8738290=319d1160-52b6-4ca6-b05c-1b3e7913b41a
- */
-function getReportIdFromEnv(vehicleId: string): string | null {
-  const vid = String(vehicleId || "").trim();
-  if (!vid) return null;
-  const key = `CARGATE_EXPOSE_REPORTID_${vid}`;
-  const val = process.env[key]?.trim();
-  if (val && (val.length === 32 || val.length === 36) && /^[0-9a-fA-F-]+$/.test(val)) {
-    return formatOidAsUuid(val);
-  }
-  return null;
-}
-
-/**
  * Holt die reportId von der Händler-Detailseite (HTML), wo sie z. B. im Exposé-Link steht.
  * Probiert mehrere URL-Varianten und durchsucht das HTML mit mehreren Mustern.
  */
 export async function fetchReportIdFromDetailPage(vehicleId: string): Promise<string | null> {
   const vid = String(vehicleId || "").trim();
   if (!vid) return null;
-
-  const fromEnv = getReportIdFromEnv(vid);
-  if (fromEnv) {
-    cache.set(EXPOSE_REPORTID_CACHE_PREFIX + vid, fromEnv);
-    if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
-      console.warn(`[CarGate] Expose reportId aus Env (CARGATE_EXPOSE_REPORTID_${vid}): ${fromEnv}`);
-    }
-    return fromEnv;
-  }
 
   const cacheKey = EXPOSE_REPORTID_CACHE_PREFIX + vid;
   const cached = cache.get<string | "">(cacheKey);
@@ -1849,14 +1840,19 @@ export async function fetchReportIdFromDetailPage(vehicleId: string): Promise<st
       const response = await fetch(detailUrl, { ...fetchOpts, signal: controller.signal, redirect: "follow" });
       clearTimeout(timeoutId);
       const finalUrl = response.url || detailUrl;
-      if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
+      if (process.env.CARGATE_DEBUG_EXPOSE === "1" && !exposeDetailPageDebugLogged) {
         console.warn(`[CarGate] Expose Detailseite vid=${vid} ${response.status} ${finalUrl.slice(0, 80)}...`);
       }
       if (!response.ok) continue;
       const html = await response.text();
-      if (process.env.CARGATE_DEBUG_EXPOSE === "1" && html.length > 0) {
+      if (process.env.CARGATE_DEBUG_EXPOSE === "1" && html.length > 0 && !exposeDetailPageDebugLogged) {
+        exposeDetailPageDebugLogged = true;
         const snippet = html.replace(/\s+/g, " ").slice(0, 400);
         console.warn(`[CarGate] Expose HTML-Snippet (${html.length} Zeichen): ${snippet}...`);
+        const hasReporting = html.includes("reporting.cargate360");
+        const hasReportId = /reportId/i.test(html);
+        const hasDownloadReport = html.includes("DownloadReport");
+        console.warn(`[CarGate] Expose HTML enthält: reporting.cargate360=${hasReporting} reportId=${hasReportId} DownloadReport=${hasDownloadReport}`);
       }
       const reportId = extractReportIdFromHtml(html);
       if (reportId) {
@@ -1866,22 +1862,17 @@ export async function fetchReportIdFromDetailPage(vehicleId: string): Promise<st
         }
         return reportId;
       }
-      if (process.env.CARGATE_DEBUG_EXPOSE === "1" && response.ok) {
-        const hasReporting = html.includes("reporting.cargate360");
-        const hasReportId = /reportId/i.test(html);
-        const hasDownloadReport = html.includes("DownloadReport");
-        console.warn(`[CarGate] Expose HTML enthält: reporting.cargate360=${hasReporting} reportId=${hasReportId} DownloadReport=${hasDownloadReport}`);
-      }
     } catch (e) {
-      if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
+      if (process.env.CARGATE_DEBUG_EXPOSE === "1" && !exposeDetailPageDebugLogged) {
         console.warn(`[CarGate] Expose Fetch fehlgeschlagen ${detailUrl}:`, e instanceof Error ? e.message : String(e));
       }
       continue;
     }
   }
 
-  if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
-    console.warn(`[CarGate] Expose reportId auf keiner Detailseite gefunden vid=${vid}`);
+  if (process.env.CARGATE_DEBUG_EXPOSE === "1" && !exposeDetailPageMissLogged) {
+    exposeDetailPageMissLogged = true;
+    console.warn(`[CarGate] Expose reportId auf keiner Detailseite gefunden (Detailseite enthält kein cargate360/reportId).`);
   }
   cache.set(cacheKey, "", EXPOSE_REPORTID_MISS_TTL);
   return null;
@@ -1902,15 +1893,16 @@ export function buildExposeUrlFromCarzillaVehicle(raw: Record<string, unknown>, 
     }
   }
 
-  let reportId = getReportIdFromEnv(vehicleId) || findReportId(raw);
-  if (process.env.CARGATE_DEBUG_EXPOSE === "1") {
+  const reportId = findReportId(raw);
+  if (process.env.CARGATE_DEBUG_EXPOSE === "1" && !reportId && !exposeDebugLoggedEmpty) {
+    exposeDebugLoggedEmpty = true;
     const docs = raw.Documents ?? raw.documents ?? raw.Reports ?? raw.reports;
     const insp = raw.InspectionReport ?? raw.inspectionReport;
     const ext = raw.ExtendedProperties ?? raw.extendedProperties;
     const docSample = docs ? JSON.stringify(docs, null, 2).slice(0, 1500) : "(keine)";
     const inspSample = insp != null ? JSON.stringify(insp, null, 2).slice(0, 800) : "(keine)";
     const extSample = ext != null ? JSON.stringify(ext, null, 2).slice(0, 800) : "(keine)";
-    console.warn(`[CarGate] Expose debug vid=${vehicleId}: reportId=${reportId || "(leer)"}`);
+    console.warn(`[CarGate] Expose debug (einmalig) vid=${vehicleId}: reportId=(leer) – API liefert keine reportId.`);
     console.warn(`[CarGate] Expose InspectionReport: ${inspSample}`);
     console.warn(`[CarGate] Expose ExtendedProperties: ${extSample}`);
     console.warn(`[CarGate] Expose Documents: ${docSample}`);

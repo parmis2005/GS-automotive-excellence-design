@@ -451,6 +451,46 @@ export async function getLastSyncTimestamp(): Promise<Date | null> {
 }
 
 /**
+ * Exposé-URL (nur CarGate-Reporting-URL) für ein Fahrzeug in der DB speichern.
+ * Wird vom automatischen Exposé-Job nach dem Sync befüllt.
+ */
+export async function updateVehicleExposeUrl(id: string, exposeUrl: string): Promise<void> {
+  if (!id || !exposeUrl || !exposeUrl.includes("reporting.cargate360.de")) return;
+  const client = await getClient();
+  try {
+    await client.query(
+      `UPDATE vehicles SET expose_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [exposeUrl, id]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Exposé-URLs für mehrere Fahrzeuge aus der DB laden (für Anreicherung der API-Response).
+ */
+export async function getExposeUrlsByVehicleIds(ids: string[]): Promise<Record<string, string>> {
+  if (ids.length === 0) return {};
+  const client = await getClient();
+  try {
+    const result = await client.query<{ id: string; expose_url: string }>(
+      `SELECT id, expose_url FROM vehicles WHERE id = ANY($1::text[]) AND expose_url IS NOT NULL AND expose_url != ''`,
+      [ids]
+    );
+    const map: Record<string, string> = {};
+    for (const row of result.rows) {
+      if (row.expose_url && row.expose_url.includes("reporting.cargate360.de")) {
+        map[row.id] = row.expose_url;
+      }
+    }
+    return map;
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Holt alle Ankauf-Anfragen aus der Datenbank (neueste zuerst)
  */
 export async function getPurchaseInquiries(limit = 100): Promise<Array<{ id: number; payload: Record<string, unknown>; createdAt: string }>> {
