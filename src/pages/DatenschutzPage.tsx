@@ -142,16 +142,16 @@ const DatenschutzPage = () => {
               </li>
               <li>
                 <strong className="text-foreground">Backend (API, Formulare, E-Mail-Versand):</strong>{" "}
-                Render Services, 525 Brannan Street, San Francisco, CA 94107, USA. Anfragen an
-                unsere API (z. B. Fahrzeugdaten, Kaufanfragen) werden über Render verarbeitet; dabei
-                können Logdaten anfallen.{" "}
+                DigitalOcean, LLC, 101 6th Ave, New York, NY 10013, USA (Droplet-Hosting). Anfragen an
+                unsere API (z. B. Fahrzeugdaten, Kaufanfragen) werden auf unserem DigitalOcean-Server
+                verarbeitet; dabei können Logdaten anfallen.{" "}
                 <a
-                  href="https://render.com/privacy"
+                  href="https://www.digitalocean.com/legal/privacy-policy"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline inline-flex items-center gap-1"
                 >
-                  Datenschutz Render
+                  Datenschutz DigitalOcean
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </li>
@@ -286,7 +286,7 @@ const DatenschutzPage = () => {
                 <p className="font-medium text-foreground">Datenübermittlung in Drittländer</p>
                 <p>
                   Soweit Daten in Länder außerhalb des Europäischen Wirtschaftsraums (EWR)
-                  übermittelt werden (z. B. USA bei Vercel, Render, Resend), erfolgt dies nur unter
+                  übermittelt werden (z. B. USA bei Vercel, DigitalOcean, Resend), erfolgt dies nur unter
                   geeigneten Garantien (z. B. Standardvertragsklauseln der EU-Kommission) oder auf
                   Grundlage einer Einwilligung. Sie können bei der verantwortlichen Stelle Auskunft
                   zu den konkreten Garantien verlangen.
@@ -327,7 +327,7 @@ const DatenschutzPage = () => {
               <div>
                 <p className="font-medium text-foreground">Server-Log-Dateien</p>
                 <p>
-                  Der Betreiber (Vercel/Render) erhebt automatisch Informationen, die Ihr Browser
+                  Der Betreiber (Vercel/DigitalOcean) erhebt automatisch Informationen, die Ihr Browser
                   übermittelt: Browsertyp, Browserversion, Betriebssystem, Referrer-URL, Hostname,
                   Uhrzeit der Anfrage, IP-Adresse. Eine Zusammenführung mit anderen Datenquellen
                   erfolgt nicht. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse
