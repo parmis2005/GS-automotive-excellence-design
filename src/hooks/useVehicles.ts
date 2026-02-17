@@ -18,7 +18,7 @@ export function useVehicles() {
   return useQuery<Vehicle[]>({
     queryKey: ["vehicles"],
     queryFn: fetchVehicles,
-    staleTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 2 * 60 * 1000, // 2 minutes – Sync läuft alle 5 Min, Nutzer sehen bald neue Daten
     gcTime: 60 * 60 * 1000, // 1 hour (formerly cacheTime)
     retry: 2, // Retry 2 times on failure
     retryDelay: 1000, // Wait 1 second between retries
@@ -40,7 +40,7 @@ export function useVehicle(id: string) {
     queryKey: ["vehicles", id],
     queryFn: () => fetchVehicleById(id),
     enabled: !!id,
-    staleTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 60 * 60 * 1000, // 1 hour
   });
 }
