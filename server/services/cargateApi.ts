@@ -2071,6 +2071,13 @@ async function getSearchCatalogFromApi(): Promise<SearchCatalogMaps> {
 }
 
 /**
+ * Leert den Fahrzeug-Cache (z. B. vor Sync), damit der nächste Abruf frisch von Carzilla holt.
+ */
+export function clearVehiclesCache(): void {
+  cache.del(CACHE_KEY);
+}
+
+/**
  * Liefert alle Fahrzeuge von CarGate (Cache oder API-Abruf).
  * Für direkte Auslieferung ohne Datenbank.
  */

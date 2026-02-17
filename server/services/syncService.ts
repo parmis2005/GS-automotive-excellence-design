@@ -2,6 +2,7 @@ import { fetchVehiclesFromWebsite } from "./vehicleScraper.js";
 import {
   isCargateApiConfigured,
   fetchVehiclesFromCargateApi,
+  clearVehiclesCache,
 } from "./cargateApi.js";
 import { upsertVehicles, deleteOldVehicles } from "../db/database.js";
 import { getVehicleImageCount } from "../lib/imageCount.js";
@@ -33,6 +34,7 @@ export async function syncVehicles(): Promise<{ success: boolean; count: number;
 
     if (isCargateApiConfigured()) {
       console.log("📡 Using CarGate Carzilla V6 API as data source");
+      clearVehiclesCache(); // Frisch von CarGate holen, nicht aus 24h-Cache
       try {
         vehicles = await fetchVehiclesFromCargateApi();
       } catch (apiError) {
