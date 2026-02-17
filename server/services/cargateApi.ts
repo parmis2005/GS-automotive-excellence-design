@@ -17,8 +17,9 @@ import NodeCache from "node-cache";
 import type { Vehicle } from "../types/vehicle.js";
 import { getVehicleImageCount, hasOnlyPlaceholderImage } from "../lib/imageCount.js";
 
+/** Fahrzeug-Cache: 5 Min TTL, damit Daten spätestens alle 5 Min erneuert werden (Sync oder nächster API-Request). */
 const cache = new NodeCache({
-  stdTTL: 24 * 60 * 60,
+  stdTTL: 5 * 60,
   checkperiod: 60,
   useClones: false,
 });
