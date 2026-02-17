@@ -579,7 +579,7 @@ const VehiclesPage = () => {
   const seoData = getVehiclesPageSEO();
   const vehicleUrls = (filteredAndSortedVehicles ?? [])
     .slice(0, 20)
-    .map((v) => `https://www.gsauto.de/fahrzeuge/${getVehicleDetailSlug(v.id, v.brand, v.model)}`);
+    .map((v) => `https://gsauto.de/fahrzeuge/${getVehicleDetailSlug(v.id, v.brand, v.model)}`);
   const collectionSchema = vehicleUrls.length > 0
     ? generateCollectionPageSchema(
         vehicleUrls,

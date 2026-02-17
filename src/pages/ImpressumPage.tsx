@@ -14,7 +14,7 @@ const ImpressumPage = () => {
     title: "Impressum | GS Automobile Rheinland",
     description:
       "Impressum der GS Automobile Rheinland GmbH – Kontakt, Handelsregister, Umsatzsteuer-ID, Berufshaftpflicht.",
-    url: "https://www.gsauto.de/impressum",
+    url: "https://gsauto.de/impressum",
   };
 
   const standDate = new Date().toLocaleDateString("de-DE", {

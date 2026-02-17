@@ -9,7 +9,7 @@ const DatenschutzPage = () => {
     title: "Datenschutzerklärung | GS Automobile Rheinland",
     description:
       "Datenschutzerklärung der GS Automobile Rheinland GmbH – Informationen zur Verarbeitung personenbezogener Daten auf dieser Website.",
-    url: "https://www.gsauto.de/datenschutz",
+    url: "https://gsauto.de/datenschutz",
   };
 
   const standDate = new Date().toLocaleDateString("de-DE", {

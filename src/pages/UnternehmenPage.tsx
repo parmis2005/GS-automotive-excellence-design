@@ -56,7 +56,7 @@ const UnternehmenPage = () => {
     description:
       "GS Automobile Rheinland: fair, transparent, effizient. Schneller Bestand, attraktive Marktpreise und geprüfte Qualität.",
     image: heroImageUrl,
-    url: "https://www.gsauto.de/unternehmen",
+    url: "https://gsauto.de/unternehmen",
     type: "website" as const,
   };
 

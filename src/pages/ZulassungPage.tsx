@@ -76,7 +76,7 @@ const ZulassungPage = () => {
     description:
       "Zulassungsservice in Krefeld: schnell, bequem, zuverlässig. Wunschkennzeichen, Express-Service und komplette Abwicklung inklusive.",
     image: heroImageUrl,
-    url: "https://www.gsauto.de/zulassung",
+    url: "https://gsauto.de/zulassung",
     type: "website" as const,
   };
 

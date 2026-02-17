@@ -76,7 +76,7 @@ const GarantiePage = () => {
     description:
       "Gebrauchtwagengarantie mit 12–24 Monaten Laufzeit – GS Automobile Rheinland. Umfassender Schutz für zentrale Fahrzeugkomponenten in Krefeld.",
     image: heroImageUrl,
-    url: "https://www.gsauto.de/garantie",
+    url: "https://gsauto.de/garantie",
     type: "website" as const,
   };
 

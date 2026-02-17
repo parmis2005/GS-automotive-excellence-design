@@ -41,7 +41,7 @@ const VehiclePurchasePage = () => {
     description:
       "Fahrzeugankauf bei GS Automobile Rheinland: schnelle Bewertung, faire Preise und sofortige Auszahlung in Krefeld.",
     image: heroImageUrl,
-    url: "https://www.gsauto.de/fahrzeugankauf",
+    url: "https://gsauto.de/fahrzeugankauf",
     type: "website" as const,
   };
 

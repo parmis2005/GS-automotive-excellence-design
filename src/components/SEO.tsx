@@ -23,7 +23,7 @@ export default function SEO({ data, structuredData, breadcrumbs }: SEOProps) {
     type = "website",
   } = data;
 
-  const baseUrl = "https://www.gsauto.de";
+  const baseUrl = "https://gsauto.de";
   const fullImageUrl = image?.startsWith("http") ? image : `${baseUrl}${image}`;
   const fullUrl = url?.startsWith("http") ? url : `${baseUrl}${url}`;
 

@@ -76,7 +76,7 @@ const FinanzierungPage = () => {
     description:
       "Individuelle Finanzierung mit der BMW Bank – GS Automobile Rheinland als langjähriger Partner. Basis-Finanzierung, Ziel-Finanzierung, persönliche Beratung in Krefeld.",
     image: heroImageUrl,
-    url: "https://www.gsauto.de/finanzierung",
+    url: "https://gsauto.de/finanzierung",
     type: "website" as const,
   };
 

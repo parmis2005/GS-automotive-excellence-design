@@ -14,7 +14,7 @@ export interface SEOData {
   type?: "website" | "product" | "article";
 }
 
-const BASE_URL = "https://www.gsauto.de";
+const BASE_URL = "https://gsauto.de";
 
 /**
  * Generates page title with brand suffix

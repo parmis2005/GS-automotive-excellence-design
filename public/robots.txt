@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 
 # Sitemap
-Sitemap: https://www.gsauto.de/sitemap.xml
+Sitemap: https://gsauto.de/sitemap.xml
