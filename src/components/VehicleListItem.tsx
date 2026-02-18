@@ -166,12 +166,12 @@ const VehicleListItem = ({
         {/* Image – ab lg nebeneinander, darunter gestapelt */}
         <Link
           to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`}
-          className="relative w-full lg:w-80 xl:w-96 2xl:w-[32rem] flex-shrink-0 bg-secondary overflow-hidden block group/image"
+          className="relative w-full lg:w-80 xl:w-96 2xl:w-[32rem] flex-shrink-0 bg-white overflow-hidden block group/image"
           onMouseEnter={handlePrefetch}
           onFocus={handlePrefetch}
           onTouchStart={handlePrefetch}
         >
-          <div className="relative w-full aspect-[4/3] p-1 bg-secondary">
+          <div className="relative w-full aspect-[4/3] p-1 bg-white">
             {isNew && (
               <div className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wide">
                 Neu eingetroffen

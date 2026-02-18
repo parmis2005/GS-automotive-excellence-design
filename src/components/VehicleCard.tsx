@@ -166,7 +166,7 @@ const VehicleCard = ({
       {/* Image Container - klickbar zur Detailseite */}
       <Link
         to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`}
-        className="relative block aspect-[4/3] overflow-hidden bg-secondary cursor-pointer"
+        className="relative block aspect-[4/3] overflow-hidden bg-white cursor-pointer"
         onMouseEnter={handlePrefetch}
         onFocus={handlePrefetch}
         onTouchStart={handlePrefetch}
