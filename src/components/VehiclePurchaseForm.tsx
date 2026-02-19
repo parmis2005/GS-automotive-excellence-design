@@ -2083,7 +2083,7 @@ const VehiclePurchaseForm = ({
       })
       .then(() => {
         setSubmitSuccess(true);
-        navigate("/?ankauf=success", { replace: true });
+        navigate("/kontakt-erfolgreich", { replace: true });
       })
       .catch(() => {
         setSubmitError("Senden fehlgeschlagen. Bitte erneut versuchen.");

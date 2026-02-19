@@ -974,6 +974,7 @@ const VehicleDetailPage = () => {
                       throw new Error("Request failed");
                     }
                     setInquirySuccess(true);
+                    navigate("/kontakt-erfolgreich", { replace: true });
                   } catch {
                     setInquiryError("Senden fehlgeschlagen. Bitte erneut versuchen.");
                   } finally {

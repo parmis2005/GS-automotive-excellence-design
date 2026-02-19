@@ -148,31 +148,31 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Main Navbar – sticky auf Mobile, in fixiertem Container auf Desktop */}
+        {/* Main Navbar – sticky auf Mobile, in fixiertem Container auf Desktop; einheitlicher Grauton, keine Höhenänderung beim Scroll */}
         <nav
-          className={`sticky top-0 transition-all duration-300 navbar-scalable overflow-x-hidden 2xl:overflow-visible ${
+          className={`sticky top-0 transition-shadow duration-300 navbar-scalable overflow-x-hidden lg:overflow-visible border-b border-gray-200 ${
             isScrolled
-              ? "bg-gray-200/95 backdrop-blur-md shadow-md"
+              ? "bg-gray-200 shadow-md"
               : "bg-gray-100"
           }`}
         >
-        <div className="flex items-stretch w-full min-h-[80px] sm:min-h-[88px] 2xl:overflow-visible">
-          <div className="flex-1 min-w-0 flex items-center 2xl:overflow-visible">
-            <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 lg:ml-[30px] flex items-center justify-between lg:justify-start min-w-0 gap-2 sm:gap-3 2xl:overflow-visible">
-              {/* Logo – vertikales Padding nur am Logo */}
+        <div className="flex items-stretch w-full min-h-[80px] sm:min-h-[88px] lg:min-h-[84px] xl:min-h-[92px] 2xl:min-h-[100px] lg:overflow-visible">
+          <div className="flex-1 min-w-0 flex items-center lg:overflow-visible">
+            <div className="w-full max-w-7xl xl:max-w-none mx-auto pl-3 sm:pl-4 lg:pl-4 xl:pl-8 2xl:pl-10 pr-3 sm:pr-4 lg:pr-2 xl:pr-[92px] 2xl:pr-[100px] lg:ml-[20px] xl:ml-0 flex items-center justify-between lg:justify-start min-w-0 gap-2 sm:gap-3 lg:overflow-visible">
+              {/* Logo – skaliert mit Viewport; Padding konstant, damit Navbar-Höhe sich nicht ändert */}
               <Link 
                 to="/"
-                className={`flex items-center transition-transform hover:scale-105 duration-200 flex-shrink-0 min-w-[100px] sm:min-w-0 lg:mr-0 ${isScrolled ? "py-3" : "py-4"}`}
+                className="flex items-center transition-transform hover:scale-105 duration-200 flex-shrink-0 min-w-[100px] sm:min-w-0 lg:mr-0 py-3 lg:py-3 xl:py-4"
               >
                 <img 
                   src="/logo.png" 
                   alt="GS Automobile Rheinland" 
-                  className="h-12 sm:h-16 lg:h-[72px] xl:h-20 w-auto max-w-[155px] sm:max-w-[200px] lg:max-w-none object-contain"
+                  className="h-12 sm:h-16 lg:h-16 xl:h-[72px] 2xl:h-20 w-auto max-w-[155px] sm:max-w-[200px] lg:max-w-[200px] xl:max-w-[240px] 2xl:max-w-none object-contain"
                 />
               </Link>
 
-              {/* Desktop Navigation inkl. SERVICE-Dropdown – ab 2xl (1536px) */}
-              <div className="hidden 2xl:flex items-center gap-4 flex-1 justify-center mx-14 overflow-visible" style={{ marginLeft: "clamp(64px, 8vw, 260px)" }}>
+              {/* Desktop Navigation – ab lg (1024px); ab xl volle Breite, größere Schrift für gefüllten Look */}
+              <div className="hidden lg:flex items-center gap-2 xl:gap-5 2xl:gap-6 flex-1 justify-center overflow-visible lg:mx-4 xl:mx-6 2xl:mx-10" style={{ marginLeft: "clamp(24px, 4vw, 120px)" }}>
                 {navLinks.map((link) => {
                   const hasSubItems = "subItems" in link && link.subItems && link.subItems.length > 0;
                   if (hasSubItems && link.subItems) {
@@ -181,20 +181,20 @@ const Navbar = () => {
                         <Link
                           to={link.to}
                           onClick={link.isHash ? (e) => handleHashNavClick(e, link.hash!) : undefined}
-                          className="px-4 py-2 text-base font-display font-bold tracking-wide transition-colors relative flex items-center gap-1 text-foreground/80 hover:text-primary"
+                          className="px-2.5 py-1.5 xl:px-4 xl:py-2 2xl:px-5 2xl:py-2.5 text-sm xl:text-base 2xl:text-lg font-display font-bold tracking-wide transition-colors relative flex items-center gap-0.5 xl:gap-1 text-foreground/80 hover:text-primary"
                         >
                           {link.label}
-                          <ChevronDown className="w-4 h-4 opacity-70 group-hover/dropdown:rotate-180 transition-transform shrink-0" />
+                          <ChevronDown className="w-3.5 h-3.5 xl:w-4 xl:h-4 2xl:w-5 2xl:h-5 opacity-70 group-hover/dropdown:rotate-180 transition-transform shrink-0" />
                           <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-primary transition-all duration-300 group-hover/dropdown:w-3/4" />
                         </Link>
                         <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover/dropdown:opacity-100 group-hover/dropdown:visible transition-all duration-200 z-[100] pointer-events-none group-hover/dropdown:pointer-events-auto">
-                          <div className="rounded-xl border border-border bg-white shadow-xl py-3 min-w-[220px]">
+                          <div className="rounded-xl border border-border bg-white shadow-xl py-3 min-w-[200px] xl:min-w-[220px]">
                             {link.subItems.map((sub) => (
                               <Link
                                 key={sub.label}
                                 to={sub.to}
                                 onClick={sub.to.startsWith("/#") ? (e) => handleHashNavClick(e, sub.to.slice(1)) : undefined}
-                                className="block px-5 py-2.5 text-sm font-medium text-gray-900 hover:text-primary hover:bg-primary/5 transition-colors first:pt-2 last:pb-2"
+                                className="block px-4 xl:px-5 py-2 xl:py-2.5 text-xs xl:text-sm font-medium text-gray-900 hover:text-primary hover:bg-primary/5 transition-colors first:pt-2 last:pb-2"
                               >
                                 {sub.label}
                               </Link>
@@ -215,7 +215,7 @@ const Navbar = () => {
                         : link.isHash
                         ? (e) => handleHashNavClick(e, link.hash!)
                         : undefined}
-                      className={`px-4 py-2 text-base font-display font-bold tracking-wide transition-colors relative group ${
+                      className={`px-2.5 py-1.5 xl:px-4 xl:py-2 2xl:px-5 2xl:py-2.5 text-sm xl:text-base 2xl:text-lg font-display font-bold tracking-wide transition-colors relative group ${
                         link.label === "STARTSEITE"
                           ? "text-primary hover:text-primary/80"
                           : "text-foreground/80 hover:text-primary"
@@ -228,8 +228,8 @@ const Navbar = () => {
                 })}
               </div>
 
-              {/* Mobile/Tablet: Fahrzeugsuche-Button mittig – bis 2xl */}
-              <div className="2xl:hidden flex-1 flex justify-center items-center min-w-0 pr-2">
+              {/* Mobile/Tablet: Fahrzeugsuche-Button mittig – nur unter lg */}
+              <div className="lg:hidden flex-1 flex justify-center items-center min-w-0 pr-2">
                 <Link to="/fahrzeuge" className="h-full flex items-center">
                   <Button 
                     variant="default"
@@ -242,25 +242,25 @@ const Navbar = () => {
                 </Link>
               </div>
 
-              {/* CTA Button - Desktop (ab 2xl) */}
-              <div className="hidden 2xl:flex items-center gap-3 flex-shrink-0 ml-auto lg:mr-8">
+              {/* CTA Button – Desktop ab lg, am rechten Rand (bei xl/2xl volle Navbar-Breite) */}
+              <div className="hidden lg:flex items-center gap-2 xl:gap-3 flex-shrink-0 ml-auto">
                 <Link to="/fahrzeuge">
                   <Button 
                     variant="default" 
-                    size="lg"
-                    className="font-display font-semibold tracking-wide text-base bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all"
+                    size="default"
+                    className="font-display font-semibold tracking-wide text-sm xl:text-base 2xl:text-lg h-9 xl:h-11 2xl:h-12 px-4 xl:px-6 2xl:px-7 bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all"
                   >
                     Fahrzeugsuche
-                    <ArrowRight className="w-5 h-5 ml-1.5" />
+                    <ArrowRight className="w-4 h-4 xl:w-5 xl:h-5 2xl:w-6 2xl:h-6 ml-1 xl:ml-1.5" />
                   </Button>
                 </Link>
               </div>
             </div>
           </div>
 
-          {/* Hamburger – bis 2xl */}
+          {/* Hamburger – nur unter lg (1024px) */}
           <button
-            className="2xl:hidden flex-shrink-0 w-14 min-w-[56px] self-stretch text-foreground hover:bg-gray-300/80 active:bg-gray-300 transition-colors flex items-center justify-center border-l border-gray-300/50"
+            className="lg:hidden flex-shrink-0 w-14 min-w-[56px] self-stretch text-foreground hover:bg-gray-300/80 active:bg-gray-300 transition-colors flex items-center justify-center border-l border-gray-300/50"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Menu"
           >
@@ -272,9 +272,9 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile/Tablet Menu (bis 2xl) */}
+        {/* Mobile/Tablet Menu (nur unter lg) */}
         {isMobileMenuOpen && (
-          <div className="2xl:hidden border-t border-border bg-gray-100">
+          <div className="lg:hidden border-t border-border bg-gray-100">
             <div className="container mx-auto px-6 py-4">
               <div className="flex flex-col gap-1">
                 {navLinks.map((link) => {
@@ -370,8 +370,8 @@ const Navbar = () => {
       </nav>
       </div>
 
-      {/* Spacer für fixierten Header – Höhe immer gleich, damit kein Layout-Sprung/Bounce beim Ein-/Ausblenden */}
-      <div className="h-[88px] lg:h-[135px]" />
+      {/* Spacer = exakt Header-Höhe (Top Bar + Nav-Zeile), damit kein weißer Streifen unter der Navbar */}
+      <div className="h-[88px] lg:h-[124px] xl:h-[132px] 2xl:h-[140px]" />
     </>
   );
 };

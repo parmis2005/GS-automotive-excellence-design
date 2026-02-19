@@ -19,6 +19,7 @@ import ZulassungPage from "./pages/ZulassungPage";
 import DekraTuvPage from "./pages/DekraTuvPage";
 import OelwechselPage from "./pages/OelwechselPage";
 import UnternehmenPage from "./pages/UnternehmenPage";
+import KontaktErfolgreichPage from "./pages/KontaktErfolgreichPage";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
 import CookieBanner from "./components/CookieBanner";
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/dekra-tuev" element={<DekraTuvPage />} />
               <Route path="/oelwechsel" element={<OelwechselPage />} />
               <Route path="/unternehmen" element={<UnternehmenPage />} />
+              <Route path="/kontakt-erfolgreich" element={<KontaktErfolgreichPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

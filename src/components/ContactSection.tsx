@@ -13,7 +13,6 @@ const ContactSection = () => {
     phone: "",
     message: "",
   });
-
   const updateField = (key: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
@@ -22,7 +21,6 @@ const ContactSection = () => {
     event.preventDefault();
     setSubmitError("");
     setSubmitSuccess(false);
-
     if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
       setSubmitError("Bitte Vorname, Nachname und E-Mail ausfüllen.");
       return;
@@ -42,7 +40,6 @@ const ContactSection = () => {
       if (!response.ok) {
         throw new Error("Request failed");
       }
-      setSubmitSuccess(true);
       setFormData({
         firstName: "",
         lastName: "",
@@ -50,6 +47,7 @@ const ContactSection = () => {
         phone: "",
         message: "",
       });
+      setSubmitSuccess(true);
     } catch {
       setSubmitError("Senden fehlgeschlagen. Bitte erneut versuchen.");
     } finally {
