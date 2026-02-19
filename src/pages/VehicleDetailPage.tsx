@@ -15,7 +15,6 @@ import {
   Gauge, 
   Fuel, 
   Zap, 
-  Download,
   Phone,
   Mail,
   CheckCircle2,
@@ -52,7 +51,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { getPlaceholderImage, getVehicleImageWithFallback } from "@/lib/vehicleImage";
-import { ExposeViewerDialog } from "@/components/ExposeViewerDialog";
+import { ShareVehicleButton } from "@/components/ShareVehicleButton";
 import { getBaseModelName, getVehicleDisplayName, groupEquipmentByCategory } from "@/lib/vehicleNameUtils";
 import { getVehicleDetailSlug, getVehicleIdFromSlug } from "@/lib/vehicleSlug";
 import { VehicleTitle } from "@/components/VehicleTitle";
@@ -180,7 +179,6 @@ const VehicleDetailPage = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [showExpose, setShowExpose] = useState(false);
 
   // Reset image index when vehicle ID changes
   useEffect(() => {
@@ -922,15 +920,13 @@ const VehicleDetailPage = () => {
                 <Mail className="w-4 h-4 mr-2" />
                 Nachricht senden
               </Button>
-              <Button
-                size="default"
+              <ShareVehicleButton
+                vehicleUrl={`/fahrzeuge/${getVehicleDetailSlug(vehicle.id, vehicle.brand, vehicle.model)}`}
+                label="Teilen"
                 variant="outline"
+                size="default"
                 className="flex-1"
-                onClick={() => setShowExpose(true)}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Exposé PDF
-              </Button>
+              />
             </div>
           </div>
 
@@ -1347,13 +1343,6 @@ const VehicleDetailPage = () => {
         </DialogContent>
       </Dialog>
 
-      {vehicle && (
-        <ExposeViewerDialog
-          open={showExpose}
-          onOpenChange={setShowExpose}
-          vehicleName={getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)}
-        />
-      )}
     </div>
   );
 };

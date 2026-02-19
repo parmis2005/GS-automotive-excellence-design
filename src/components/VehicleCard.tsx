@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap } from "lucide-react";
+import { Fuel, Gauge, Calendar, ArrowRight, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { getVehicleListImageWithFallback, getPlaceholderImage, getVehiclePrefetchUrls, prefetchImages } from "@/lib/vehicleImage";
-import { ExposeViewerDialog } from "@/components/ExposeViewerDialog";
+import { ShareVehicleButton } from "@/components/ShareVehicleButton";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
 import { formatFuelType, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
@@ -33,7 +33,6 @@ const VehicleCard = ({
   transmission,
   exteriorColor,
   interiorColor,
-  exposeUrl,
   offerUrl,
   category,
   arrivalDate,
@@ -48,7 +47,6 @@ const VehicleCard = ({
   // State for image error handling and placeholder detection
   const [imageError, setImageError] = useState(false);
   const [usePlaceholder, setUsePlaceholder] = useState(!image || !image.trim());
-  const [showExpose, setShowExpose] = useState(false);
   
   // Check if the image is a placeholder (only one image exists AND it's a placeholder)
   useEffect(() => {
@@ -284,26 +282,16 @@ const VehicleCard = ({
               Fahrzeug ansehen
             </Button>
           </Link>
-          <Button
+          <ShareVehicleButton
+            vehicleUrl={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`}
+            label="Teilen"
             variant="outline"
             size="sm"
             className="w-full"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowExpose(true);
-            }}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Exposé herunterladen
-          </Button>
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       </div>
-
-      <ExposeViewerDialog
-        open={showExpose}
-        onOpenChange={setShowExpose}
-        vehicleName={getVehicleDisplayName(brand, model, productionSeries, title)}
-      />
     </div>
   );
 };

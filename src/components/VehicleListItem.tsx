@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Fuel, Gauge, Calendar, ArrowRight, Download, Zap, Phone, Mail, Car, Route, Cog, User } from "lucide-react";
+import { Fuel, Gauge, Calendar, ArrowRight, Zap, Phone, Mail, Car, Route, Cog, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { getVehicleListImageWithFallback, getPlaceholderImage, getVehiclePrefetchUrls, prefetchImages } from "@/lib/vehicleImage";
-import { ExposeViewerDialog } from "@/components/ExposeViewerDialog";
+import { ShareVehicleButton } from "@/components/ShareVehicleButton";
 import { getVehicleType, formatFuelType, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
 import { VehicleTitle } from "@/components/VehicleTitle";
@@ -30,7 +30,6 @@ const VehicleListItem = ({
   transmission,
   exteriorColor,
   interiorColor,
-  exposeUrl,
   offerUrl,
   internalNumber,
   vatDisplayable,
@@ -43,7 +42,6 @@ const VehicleListItem = ({
   isFirst = false,
 }: VehicleListItemProps) => {
   const displayTitle = getVehicleDisplayName(brand, model, productionSeries, title);
-  const [showExpose, setShowExpose] = useState(false);
 
   // Get image URL with fallback to placeholder
   const initialImageUrl = getVehicleListImageWithFallback(image, id);
@@ -363,17 +361,13 @@ const VehicleListItem = ({
                 Inzahlungnahme
               </Button>
             </Link>
-            <Button
+            <ShareVehicleButton
+              vehicleUrl={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`}
+              label="Teilen"
               variant="outline"
               className="flex-shrink-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowExpose(true);
-              }}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Exposé
-            </Button>
+              onClick={(e) => e.stopPropagation()}
+            />
             <Button
               variant="outline"
               className="flex-shrink-0"
@@ -399,12 +393,6 @@ const VehicleListItem = ({
           </div>
         </div>
       </div>
-
-      <ExposeViewerDialog
-        open={showExpose}
-        onOpenChange={setShowExpose}
-        vehicleName={displayTitle}
-      />
     </div>
   );
 };
