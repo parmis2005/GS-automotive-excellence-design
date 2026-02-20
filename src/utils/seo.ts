@@ -38,7 +38,8 @@ export function getDefaultSEO(): SEOData {
 }
 
 /**
- * Generates SEO data for vehicle detail pages
+ * Generates SEO data for vehicle detail pages (mobile.de-Stil für Link-Vorschau).
+ * Titel: "Marke Modell für Preis €", Beschreibung: "Gebrauchtfahrzeug • km • kW (PS) • Kraftstoff"
  */
 export function getVehicleSEO(
   brand: string,
@@ -47,10 +48,23 @@ export function getVehicleSEO(
   price: number,
   mileage: number,
   image?: string,
-  vehicleId?: string
+  vehicleId?: string,
+  options?: { power?: number; powerKw?: number; fuel?: string }
 ): SEOData {
-  const title = generateTitle(`${brand} ${model} ${year} | Gebrauchtwagen`);
-  const description = `${brand} ${model} ${year} in Krefeld. ${mileage.toLocaleString("de-DE")} km, ${price.toLocaleString("de-DE")} €. Jetzt bei GS Automobile Rheinland ansehen!`;
+  const powerKw = options?.powerKw ?? 0;
+  const powerPs = options?.power ?? 0;
+  const fuel = (options?.fuel ?? "").trim() || "–";
+  const priceStr = price > 0 ? price.toLocaleString("de-DE") : "";
+  const title = priceStr
+    ? `${brand} ${model} für ${priceStr} € | GS Automobile Rheinland`
+    : generateTitle(`${brand} ${model} ${year} | Gebrauchtwagen`);
+  const parts = ["Gebrauchtfahrzeug"];
+  if (mileage > 0) parts.push(`${mileage.toLocaleString("de-DE")} km`);
+  if (powerKw > 0 && powerPs > 0) parts.push(`${powerKw} kW (${powerPs} PS)`);
+  else if (powerKw > 0) parts.push(`${powerKw} kW`);
+  else if (powerPs > 0) parts.push(`${powerPs} PS`);
+  if (fuel && fuel !== "–") parts.push(fuel);
+  const description = parts.join(" • ");
 
   const path = vehicleId ? `/fahrzeuge/${getVehicleDetailSlug(vehicleId, brand, model)}` : "/fahrzeuge";
   return {

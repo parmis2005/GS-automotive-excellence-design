@@ -431,7 +431,8 @@ const VehicleDetailPage = () => {
     vehicle.price,
     vehicle.mileage,
     vehicle.image,
-    vehicle.id
+    vehicle.id,
+    { power: vehicle.power, powerKw: vehicle.powerKw, fuel: vehicle.fuel }
   );
   const vehicleSchema = generateVehicleSchema(
     vehicle.brand,

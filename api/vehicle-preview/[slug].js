@@ -84,12 +84,25 @@ export default async function handler(req, res) {
   const year = Number(vehicle.year) || new Date().getFullYear();
   const price = Number(vehicle.price) || 0;
   const mileage = Number(vehicle.mileage) || 0;
+  const fuel = (vehicle.fuel ?? "").trim() || "–";
+  const powerKw = Number(vehicle.powerKw) || 0;
+  const powerPs = Number(vehicle.power) || 0;
   const image = ensureAbsoluteImageUrl(vehicle.image);
   const detailPath = `/fahrzeuge/${slug}`;
   const fullUrl = `${BASE_URL}${detailPath}`;
 
-  const title = `${brand} ${model} ${year} | Gebrauchtwagen | GS Automobile Rheinland`;
-  const description = `${brand} ${model} ${year} in Krefeld. ${mileage.toLocaleString("de-DE")} km, ${price.toLocaleString("de-DE")} €. Jetzt bei GS Automobile Rheinland ansehen!`;
+  // mobile.de-Stil: "Ford Mustang für 14.990 €" / "Gebrauchtfahrzeug • 133.500 km • 228 kW (310 PS) • Benzin..."
+  const priceStr = price > 0 ? price.toLocaleString("de-DE") : "";
+  const title = priceStr
+    ? `${brand} ${model} für ${priceStr} €`
+    : `${brand} ${model} ${year} | Gebrauchtwagen`;
+  const parts = ["Gebrauchtfahrzeug"];
+  if (mileage > 0) parts.push(`${mileage.toLocaleString("de-DE")} km`);
+  if (powerKw > 0 && powerPs > 0) parts.push(`${powerKw} kW (${powerPs} PS)`);
+  else if (powerKw > 0) parts.push(`${powerKw} kW`);
+  else if (powerPs > 0) parts.push(`${powerPs} PS`);
+  if (fuel && fuel !== "–") parts.push(fuel);
+  const description = parts.join(" • ");
 
   let html;
   try {
