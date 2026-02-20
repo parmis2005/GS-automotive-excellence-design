@@ -2,7 +2,12 @@
  * Vercel Serverless Function: returns index.html with vehicle-specific Open Graph
  * meta tags so crawlers (WhatsApp, Facebook, etc.) show the correct preview.
  * Used via vercel.json rewrite: /fahrzeuge/:slug → this function.
+ *
+ * Wichtig: gsauto.de muss in diesem Vercel-Projekt als Production-Domain eingetragen
+ * sein, damit die Rewrites greifen. Sonst liefert der alte Host weiter die gleiche
+ * index.html für alle URLs.
  */
+export const config = { maxDuration: 25 };
 
 const BASE_URL = "https://gsauto.de";
 
@@ -29,21 +34,36 @@ function ensureAbsoluteImageUrl(image) {
   return url;
 }
 
+function getSlugFromRequest(req) {
+  const fromQuery = req.query?.slug;
+  if (fromQuery && typeof fromQuery === "string") return fromQuery;
+  if (Array.isArray(fromQuery) && fromQuery[0]) return fromQuery[0];
+  try {
+    const pathname = new URL(req.url || "", BASE_URL).pathname;
+    const segments = pathname.split("/").filter(Boolean);
+    // Nach Rewrite: /api/vehicle-preview/8879641-bmw-320i
+    if (segments[0] === "api" && segments[1] === "vehicle-preview" && segments[2])
+      return segments[2];
+    // Original-URL (falls Rewrite-URL übergeben wird): /fahrzeuge/8879641-bmw-320i
+    if (segments[0] === "fahrzeuge" && segments[1]) return segments[1];
+  } catch (_) {}
+  return "";
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).end();
   }
 
-  const slug = req.query.slug;
+  const slug = getSlugFromRequest(req);
   const vehicleId = getVehicleIdFromSlug(slug);
   if (!vehicleId) {
     return res.redirect(302, "/fahrzeuge");
   }
 
-  const origin = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : BASE_URL;
+  // Immer Production-URL nutzen, damit Fetches dieselbe Domain treffen (gsauto.de)
+  const origin = BASE_URL;
 
   let vehicle;
   try {
