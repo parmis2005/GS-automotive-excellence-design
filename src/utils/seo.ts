@@ -24,13 +24,16 @@ export function generateTitle(pageTitle: string): string {
 }
 
 /**
- * Generates default SEO data for pages
+ * Generates default SEO data for pages (Startseite)
  */
+/** Nachbarstädte (Einzugsgebiet) – ein Standort Krefeld, Sichtbarkeit in der Region */
+const AREA_CITIES = ["Krefeld", "Meerbusch", "Willich", "Kempen", "Tönisvorst", "Düsseldorf", "Duisburg", "Moers", "Neuss", "Mönchengladbach"] as const;
+
 export function getDefaultSEO(): SEOData {
   return {
-    title: generateTitle("Gebrauchtwagen in Krefeld"),
-    description: "GS Automobile Rheinland - Ihr Spezialist für Gebrauchtwagen in Krefeld. Geprüfte Qualität, faire Preise, 25+ Jahre Erfahrung. Über 10.000 verkaufte Fahrzeuge. Jetzt Traumauto finden!",
-    keywords: "Gebrauchtwagen Krefeld, Auto kaufen, GS Automobile, Autohaus Krefeld, Autohaus NRW, BMW Krefeld, Opel Krefeld, Auto Krefeld, Autohaus Nähe, Gebrauchtwagen kaufen Niederrhein, günstige Finanzierung, Finanzierung Krefeld, Inzahlungnahme Krefeld, Auto verkaufen Krefeld, Fahrzeugankauf Krefeld, Jahreswagen Krefeld, junge Gebrauchtwagen Krefeld",
+    title: generateTitle("Autohaus Krefeld & Umgebung – Gebrauchtwagen, BMW, Opel"),
+    description: `GS Automobile Rheinland GmbH (GS Auto): Autohaus in Krefeld – auch für ${AREA_CITIES.slice(1).join(", ")}. Gebrauchtwagen, Jahreswagen, BMW und Opel. Finanzierung, DEKRA, Garantie.`,
+    keywords: "Autohaus Krefeld, Autohaus Düsseldorf, Autohaus Neuss, Autohaus Mönchengladbach, Autohaus Duisburg, Autohaus Moers, Autohaus Meerbusch, Autohaus Willich, Autohaus Kempen, Autohaus Tönisvorst, GS Automobile GmbH, GS Auto, Gebrauchtwagen Krefeld, Gebrauchtwagen Düsseldorf, BMW Krefeld, Opel Krefeld, Jahreswagen, Finanzierung Krefeld, Inzahlungnahme, Fahrzeugankauf",
     image: `${BASE_URL}/logo.png`,
     url: BASE_URL,
     type: "website",
@@ -70,7 +73,7 @@ export function getVehicleSEO(
   return {
     title,
     description,
-    keywords: `${brand} ${model} Gebrauchtwagen, ${brand} ${model} kaufen Krefeld, ${brand} ${model} ${year}`,
+    keywords: `${brand} ${model}, ${brand} ${model} Gebrauchtwagen, ${brand} ${model} Krefeld, ${brand} ${model} kaufen, ${brand} ${model} ${year}, Autohaus Krefeld, GS Automobile Rheinland`,
     image: image || `${BASE_URL}/logo.png`,
     url: `${BASE_URL}${path}`,
     type: "product",
@@ -82,9 +85,9 @@ export function getVehicleSEO(
  */
 export function getVehiclesPageSEO(): SEOData {
   return {
-    title: generateTitle("Fahrzeugsuche | Gebrauchtwagen Krefeld"),
-    description: "Finden Sie Ihr Traumauto in Krefeld! Große Auswahl an geprüften Gebrauchtwagen bei GS Automobile Rheinland. Filtern Sie nach Marke, Preis, Baujahr und mehr – faire Preise, sofort verfügbar.",
-    keywords: "Fahrzeugsuche Krefeld, Gebrauchtwagen suchen, Auto finden Krefeld, Autohaus Krefeld, Gebrauchtwagen Krefeld",
+    title: generateTitle("Gebrauchtwagen Krefeld & Umgebung | Fahrzeugsuche"),
+    description: `Gebrauchtwagen in Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch, Willich: BMW, Opel und mehr bei GS Automobile Rheinland. Große Auswahl, faire Preise. Jetzt Traumauto finden!`,
+    keywords: "Gebrauchtwagen Krefeld, Gebrauchtwagen Düsseldorf, Gebrauchtwagen Neuss, Gebrauchtwagen Mönchengladbach, Gebrauchtwagen Duisburg, Gebrauchtwagen Moers, Fahrzeugsuche, BMW Krefeld, Opel Krefeld, Autohaus Krefeld, GS Auto, Gebrauchtwagen kaufen",
     image: `${BASE_URL}/logo.png`,
     url: `${BASE_URL}/fahrzeuge`,
     type: "website",
@@ -98,9 +101,11 @@ export function generateLocalBusinessSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "AutomotiveBusiness",
-    "name": "GS Automobile Rheinland",
+    "name": "GS Automobile Rheinland GmbH",
+    "alternateName": ["GS Automobile GmbH", "GS Auto", "GS Automobile Rheinland"],
     "image": `${BASE_URL}/logo.png`,
     "url": BASE_URL,
+    "description": "Autohaus in Krefeld – auch für Düsseldorf, Duisburg, Moers, Neuss, Mönchengladbach, Meerbusch, Willich, Kempen, Tönisvorst. Gebrauchtwagen, Jahreswagen, BMW, Opel. GS Automobile Rheinland GmbH.",
     "telephone": "+4921519422262",
     "email": "info@gsauto.de",
     "address": {
@@ -110,6 +115,18 @@ export function generateLocalBusinessSchema() {
       "postalCode": "47809",
       "addressCountry": "DE"
     },
+    "areaServed": [
+      { "@type": "City", "name": "Krefeld" },
+      { "@type": "City", "name": "Meerbusch" },
+      { "@type": "City", "name": "Willich" },
+      { "@type": "City", "name": "Kempen" },
+      { "@type": "City", "name": "Tönisvorst" },
+      { "@type": "City", "name": "Düsseldorf" },
+      { "@type": "City", "name": "Duisburg" },
+      { "@type": "City", "name": "Moers" },
+      { "@type": "City", "name": "Neuss" },
+      { "@type": "City", "name": "Mönchengladbach" }
+    ],
     "geo": {
       "@type": "GeoCoordinates",
       "latitude": "51.3236",
@@ -130,7 +147,7 @@ export function generateLocalBusinessSchema() {
       }
     ],
     "priceRange": "€€",
-    "description": "Ihr Spezialist für Gebrauchtwagen in Krefeld. Geprüfte Qualität, faire Preise, 25+ Jahre Erfahrung."
+    "slogan": "Autohaus in Krefeld – auch für Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers und Umgebung. Gebrauchtwagen, BMW, Opel."
   };
 }
 

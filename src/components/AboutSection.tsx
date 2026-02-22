@@ -28,9 +28,10 @@ const AboutSection = () => {
               <strong className="text-foreground">Warum sich der Fahrzeugkauf bei GS Automobile Rheinland für Sie lohnt?</strong>
             </p>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              GS Automobile Rheinland steht seit vielen Jahren für Kompetenz, 
-              Verlässlichkeit und ein ausgezeichnetes Preis-Leistungs-Verhältnis 
-              in der Automobilbranche.
+              Als <strong className="text-foreground">Autohaus in Krefeld</strong> und Ansprechpartner für 
+              Kunden aus <strong className="text-foreground">Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch, Willich, Kempen, Tönisvorst und Umgebung</strong> steht GS Automobile Rheinland 
+              seit vielen Jahren für Kompetenz, Verlässlichkeit und ein ausgezeichnetes Preis-Leistungs-Verhältnis 
+              bei <strong className="text-foreground">Gebrauchtwagen</strong> und Jahreswagen.
             </p>
             <p className="text-muted-foreground leading-relaxed">
               Unsere langjährige Zusammenarbeit mit renommierten Leasinggesellschaften 
