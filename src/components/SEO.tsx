@@ -62,7 +62,7 @@ export default function SEO({ data, structuredData, breadcrumbs }: SEOProps) {
       <meta property="og:description" content={description} />
       {fullImageUrl && <meta property="og:image" content={fullImageUrl} />}
       <meta property="og:locale" content="de_DE" />
-      <meta property="og:site_name" content="GS Automobile Rheinland" />
+      <meta property="og:site_name" content="GS Automobile Rheinland GmbH" />
       
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
