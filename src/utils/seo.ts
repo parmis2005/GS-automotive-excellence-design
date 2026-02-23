@@ -31,7 +31,7 @@ const AREA_CITIES = ["Krefeld", "Meerbusch", "Willich", "Kempen", "Tönisvorst",
 
 export function getDefaultSEO(): SEOData {
   return {
-    title: generateTitle("Autohaus Krefeld & Umgebung – Gebrauchtwagen, BMW, Opel"),
+    title: "GS Automobile Rheinland GmbH | Autohaus Krefeld & Umgebung – Gebrauchtwagen, BMW, Opel",
     description: `GS Automobile Rheinland GmbH (GS Auto): Autohaus in Krefeld – auch für ${AREA_CITIES.slice(1).join(", ")}. Gebrauchtwagen, Jahreswagen, BMW und Opel. Finanzierung, DEKRA, Garantie.`,
     keywords: "Autohaus Krefeld, Autohaus Düsseldorf, Autohaus Neuss, Autohaus Mönchengladbach, Autohaus Duisburg, Autohaus Moers, Autohaus Meerbusch, Autohaus Willich, Autohaus Kempen, Autohaus Tönisvorst, GS Automobile GmbH, GS Auto, Gebrauchtwagen Krefeld, Gebrauchtwagen Düsseldorf, BMW Krefeld, Opel Krefeld, Jahreswagen, Finanzierung Krefeld, Inzahlungnahme, Fahrzeugankauf",
     image: `${BASE_URL}/logo.png`,
