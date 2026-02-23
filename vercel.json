@@ -1,6 +1,8 @@
 {
   "redirects": [
-    { "source": "/sitemap", "destination": "/sitemap.xml", "permanent": true }
+    { "source": "/sitemap", "destination": "/sitemap.xml", "permanent": true },
+    { "source": "/unternehmen/ueber-uns", "destination": "/unternehmen", "permanent": true },
+    { "source": "/unternehmen/ueber_uns", "destination": "/unternehmen", "permanent": true }
   ],
   "rewrites": [
     { "source": "/fahrzeuge/([^/]+)", "destination": "/api/vehicle-preview/$1" },
