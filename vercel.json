@@ -3,7 +3,16 @@
     { "source": "/sitemap", "destination": "/sitemap.xml", "permanent": true },
     { "source": "/unternehmen/ueber-uns", "destination": "/unternehmen", "permanent": true },
     { "source": "/unternehmen/ueber_uns", "destination": "/unternehmen", "permanent": true },
-    { "source": "/service/finanzierung", "destination": "/finanzierung", "permanent": true }
+    { "source": "/service/finanzierung", "destination": "/finanzierung", "permanent": true },
+    { "source": "/service/zulassungsdienst", "destination": "/zulassung", "permanent": true },
+    { "source": "/service/zulassung", "destination": "/zulassung", "permanent": true },
+    { "source": "/service/garantie", "destination": "/garantie", "permanent": true },
+    { "source": "/service/dekra-tuev", "destination": "/dekra-tuev", "permanent": true },
+    { "source": "/service/dekra", "destination": "/dekra-tuev", "permanent": true },
+    { "source": "/service/tuev", "destination": "/dekra-tuev", "permanent": true },
+    { "source": "/service/oelwechsel", "destination": "/oelwechsel", "permanent": true },
+    { "source": "/service/unternehmen", "destination": "/unternehmen", "permanent": true },
+    { "source": "/ueber-uns", "destination": "/unternehmen", "permanent": true }
   ],
   "rewrites": [
     { "source": "/fahrzeuge/([^/]+)", "destination": "/api/vehicle-preview/$1" },
