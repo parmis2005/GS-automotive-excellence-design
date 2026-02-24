@@ -345,6 +345,8 @@ type FormData = {
   contactLastName: string;
   contactPhone: string;
   contactEmail: string;
+  contactPlz: string;
+  contactCity: string;
 };
 
 type Labels = {
@@ -467,6 +469,8 @@ const VehiclePurchaseForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [plzLookup, setPlzLookup] = useState<"idle" | "loading" | { city: string } | "not_found">("idle");
+  const plzLookupAbortRef = useRef<AbortController | null>(null);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState<FormData>({
@@ -506,6 +510,8 @@ const VehiclePurchaseForm = ({
     contactLastName: "",
     contactPhone: "",
     contactEmail: "",
+    contactPlz: "",
+    contactCity: "",
   });
 
   const { data: vehicles = [] } = useVehicles();
@@ -583,6 +589,41 @@ const VehiclePurchaseForm = ({
     if (mileageFocus) return;
     setMileageInput(formData.mileage ? formatNumber(formData.mileage) : "");
   }, [formData.mileage, mileageFocus]);
+
+  const plzDigits = formData.contactPlz.replace(/\D/g, "");
+  useEffect(() => {
+    if (plzDigits.length !== 5) {
+      setPlzLookup("idle");
+      setFormData((prev) => (prev.contactCity ? { ...prev, contactCity: "" } : prev));
+      return;
+    }
+    const plz = plzDigits;
+    if (plzLookupAbortRef.current) plzLookupAbortRef.current.abort();
+    plzLookupAbortRef.current = new AbortController();
+    setPlzLookup("loading");
+    fetch(`https://api.zippopotam.us/de/${plz}`, { signal: plzLookupAbortRef.current.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error("not_found");
+        return res.json();
+      })
+      .then((data: { places?: Array<{ "place name": string }> }) => {
+        const city = data.places?.[0]?.["place name"];
+        if (city) {
+          setPlzLookup({ city });
+          setFormData((prev) => ({ ...prev, contactCity: city }));
+        } else {
+          setPlzLookup("not_found");
+          setFormData((prev) => ({ ...prev, contactCity: "" }));
+        }
+      })
+      .catch(() => {
+        setPlzLookup("not_found");
+        setFormData((prev) => (prev.contactCity ? { ...prev, contactCity: "" } : prev));
+      });
+    return () => {
+      plzLookupAbortRef.current?.abort();
+    };
+  }, [plzDigits]);
 
   const clearPhotos = () => {
     setPhotoFiles([]);
@@ -734,10 +775,12 @@ const VehiclePurchaseForm = ({
   const isContactValid = () => {
     const email = formData.contactEmail.trim();
     const phoneDigits = formData.contactPhone.replace(/\D/g, "");
+    const plzDigits = formData.contactPlz.replace(/\D/g, "");
     if (!formData.contactFirstName.trim()) return false;
     if (!formData.contactLastName.trim()) return false;
     if (!email.includes("@")) return false;
     if (phoneDigits.length < 6) return false;
+    if (plzDigits.length !== 5) return false;
     return true;
   };
 
@@ -1888,6 +1931,32 @@ const VehiclePurchaseForm = ({
                 />
               </div>
             </div>
+            <div>
+              <label className="text-lg font-bold text-foreground">Postleitzahl (Wohnort)</label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Damit wir wissen, aus welcher Region Sie kommen – 5 Ziffern.
+              </p>
+              <Input
+                value={formData.contactPlz}
+                onChange={(e) => updateField("contactPlz", e.target.value.replace(/\D/g, "").slice(0, 5))}
+                placeholder="z.B. 47809"
+                inputMode="numeric"
+                maxLength={5}
+                className="mt-2 max-w-[140px]"
+                aria-invalid={formData.contactPlz.length > 0 && formData.contactPlz.replace(/\D/g, "").length !== 5}
+              />
+              {plzLookup === "loading" && (
+                <p className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Ort wird ermittelt …
+                </p>
+              )}
+              {plzLookup && plzLookup !== "idle" && plzLookup !== "loading" && (
+                <p className={`mt-2 text-sm ${typeof plzLookup === "object" ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
+                  {typeof plzLookup === "object" ? `Ort: ${plzLookup.city}` : "Diese PLZ wurde nicht gefunden."}
+                </p>
+              )}
+            </div>
           </div>
         ),
       },
@@ -1913,6 +1982,7 @@ const VehiclePurchaseForm = ({
       isSubmitting,
       submitError,
       submitSuccess,
+      plzLookup,
     ],
   );
 
@@ -2005,6 +2075,8 @@ const VehiclePurchaseForm = ({
     ensureInput("contactLastName", data.contactLastName);
     ensureInput("contactPhone", data.contactPhone);
     ensureInput("contactEmail", data.contactEmail);
+    ensureInput("contactPlz", data.contactPlz);
+    ensureInput("contactCity", data.contactCity);
   };
 
   const handleSubmit = () => {
@@ -2058,6 +2130,8 @@ const VehiclePurchaseForm = ({
       contactLastName: formData.contactLastName,
       contactPhone: formData.contactPhone,
       contactEmail: formData.contactEmail,
+      contactPlz: formData.contactPlz,
+      contactCity: formData.contactCity,
     };
 
     setIsSubmitting(true);
