@@ -6,7 +6,7 @@ import { Scale, FileText, Link2 } from "lucide-react";
 
 const HaftungsausschlussPage = () => {
   const seoData = {
-    title: "Haftungsausschluss | GS Automobile Rheinland",
+    title: "Haftungsausschluss | GS Automobile Rheinland GmbH",
     description:
       "Haftungsausschluss der GS Automobile Rheinland GmbH – Haftung für Inhalte, Links und Urheberrecht gemäß TMG.",
     url: "https://gsauto.de/haftungsausschluss",

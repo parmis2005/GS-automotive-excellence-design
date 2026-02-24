@@ -6,7 +6,7 @@ import { Shield, Server, Cookie, Mail, ExternalLink, FileText } from "lucide-rea
 
 const DatenschutzPage = () => {
   const seoData = {
-    title: "Datenschutzerklärung | GS Automobile Rheinland",
+    title: "Datenschutzerklärung | GS Automobile Rheinland GmbH",
     description:
       "Datenschutzerklärung der GS Automobile Rheinland GmbH – Informationen zur Verarbeitung personenbezogener Daten auf dieser Website.",
     url: "https://gsauto.de/datenschutz",

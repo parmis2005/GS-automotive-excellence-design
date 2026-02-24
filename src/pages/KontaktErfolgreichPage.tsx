@@ -21,7 +21,7 @@ const KontaktErfolgreichPage = () => {
   return (
     <>
       <Helmet>
-        <title>Kontakt erfolgreich | GS Automobile Rheinland</title>
+        <title>Kontakt erfolgreich | GS Automobile Rheinland GmbH</title>
         <meta
           name="description"
           content="Vielen Dank fuer Ihre Anfrage. Wir melden uns schnellstmoeglich bei Ihnen."
