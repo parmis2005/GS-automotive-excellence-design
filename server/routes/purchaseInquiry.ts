@@ -241,6 +241,8 @@ purchaseInquiryRouter.post("/", maybeUpload, async (req, res) => {
             ${formatRow("Nachname", payload.contactLastName)}
             ${formatRow("Telefon", payload.contactPhone)}
             ${formatRow("E-Mail", payload.contactEmail)}
+            ${formatRow("Postleitzahl", payload.contactPlz)}
+            ${formatRow("Ort", payload.contactCity)}
           </tbody>`
         )}
       </div>
@@ -285,6 +287,8 @@ purchaseInquiryRouter.post("/", maybeUpload, async (req, res) => {
       `Nachname: ${payload.contactLastName || "-"}`,
       `Telefon: ${payload.contactPhone || "-"}`,
       `E-Mail: ${payload.contactEmail || "-"}`,
+      `Postleitzahl: ${payload.contactPlz || "-"}`,
+      `Ort: ${payload.contactCity || "-"}`,
     ].join("\n");
 
       try {
