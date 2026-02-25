@@ -176,6 +176,17 @@ const Footer = () => {
             </Link>
           </div>
         </div>
+        <p className="mt-4 pt-4 border-t border-gray-800 text-center text-xs text-gray-500">
+          Entwickelt von{" "}
+          <a
+            href="https://carsite24.de"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-200 transition-colors"
+          >
+            carsite24.de
+          </a>
+        </p>
       </div>
     </footer>
   );
