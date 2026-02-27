@@ -9,6 +9,7 @@ import { modelsRouter } from "./routes/models.js";
 import { purchaseInquiryRouter } from "./routes/purchaseInquiry.js";
 import { generalInquiryRouter } from "./routes/generalInquiry.js";
 import { statsRouter } from "./routes/stats.js";
+import { sitemapFahrzeugeRouter } from "./routes/sitemapFahrzeuge.js";
 import { initializeDatabase, closeDatabase } from "./db/database.js";
 import { startSyncJob, stopSyncJob } from "./services/syncService.js";
 import { isCargateApiConfigured } from "./services/cargateApi.js";
@@ -34,6 +35,7 @@ app.use("/api/models", modelsRouter);
 app.use("/api/purchase-inquiry", purchaseInquiryRouter);
 app.use("/api/inquiries", generalInquiryRouter);
 app.use("/api/stats", statsRouter);
+app.use("/", sitemapFahrzeugeRouter);
 
 // Health check
 app.get("/health", (req, res) => {
