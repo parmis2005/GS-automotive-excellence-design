@@ -184,6 +184,7 @@ const VehicleDetailPage = () => {
   const mobileCarouselOffRef = useRef<(() => void) | null>(null);
   const selectedImageIndexRef = useRef(0);
   const lastWheelScrollTimeRef = useRef(0);
+  const zoomTouchStartXRef = useRef<number | null>(null);
   selectedImageIndexRef.current = selectedImageIndex;
 
   // Reset image index when vehicle ID changes
@@ -1477,7 +1478,26 @@ const VehicleDetailPage = () => {
           style={{ height: '100dvh', minHeight: '-webkit-fill-available' } as React.CSSProperties}
         >
           <div
-            className="relative flex-1 min-h-0 flex items-center justify-center p-0 sm:p-6"
+            className="relative flex-1 min-h-0 flex items-center justify-center p-0 sm:p-6 touch-pan-y"
+            onTouchStart={(e) => {
+              if (availableImages.length <= 1) return;
+              zoomTouchStartXRef.current = e.touches[0].clientX;
+            }}
+            onTouchEnd={(e) => {
+              if (availableImages.length <= 1 || zoomTouchStartXRef.current === null) return;
+              const now = Date.now();
+              if (now - lastWheelScrollTimeRef.current < 1200) return;
+              const endX = e.changedTouches[0].clientX;
+              const startX = zoomTouchStartXRef.current;
+              zoomTouchStartXRef.current = null;
+              const deltaX = endX - startX;
+              const minSwipe = 50;
+              if (Math.abs(deltaX) < minSwipe) return;
+              lastWheelScrollTimeRef.current = now;
+              const n = availableImages.length;
+              if (deltaX < 0) setSelectedImageIndex((i) => (i < n - 1 ? i + 1 : 0));
+              else setSelectedImageIndex((i) => (i > 0 ? i - 1 : n - 1));
+            }}
             onWheel={(e) => {
               if (availableImages.length <= 1) return;
               e.preventDefault();
