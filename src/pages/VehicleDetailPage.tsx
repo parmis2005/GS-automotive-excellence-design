@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { useVehicle, useVehicles } from "@/hooks/useVehicles";
 import Navbar from "@/components/Navbar";
@@ -179,12 +179,30 @@ const VehicleDetailPage = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
+  const mobileGalleryRef = useRef<HTMLDivElement>(null);
 
   // Reset image index when vehicle ID changes
   useEffect(() => {
     setSelectedImageIndex(0);
     setIsZoomed(false);
   }, [vehicleId]);
+
+  // Sync selectedImageIndex when user scrolls the mobile gallery
+  const handleMobileGalleryScroll = () => {
+    const el = mobileGalleryRef.current;
+    if (!el || availableImages.length === 0) return;
+    const width = el.offsetWidth;
+    const index = Math.round(el.scrollLeft / width);
+    const clamped = Math.max(0, Math.min(index, availableImages.length - 1));
+    setSelectedImageIndex((prev) => (prev !== clamped ? clamped : prev));
+  };
+
+  // When selectedImageIndex changes (e.g. thumbnail tap), scroll mobile gallery into position
+  useEffect(() => {
+    const el = mobileGalleryRef.current;
+    if (!el || availableImages.length <= 1) return;
+    el.scrollTo({ left: selectedImageIndex * el.offsetWidth, behavior: "smooth" });
+  }, [selectedImageIndex, availableImages.length]);
 
   // Canonical URL: Redirect to slug format if user opened /fahrzeuge/123 (old link)
   useEffect(() => {
@@ -482,78 +500,134 @@ const VehicleDetailPage = () => {
                 </div>
               ) : availableImages.length > 0 ? (
                 <>
-                  <img
-                    key={selectedImageIndex}
-                    src={availableImages[selectedImageIndex]}
-                    alt={`${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${selectedImageIndex + 1}`}
-                    className="w-full h-full object-cover"
-                    loading={selectedImageIndex === 0 ? "eager" : "lazy"}
-                    fetchPriority={selectedImageIndex === 0 ? "high" : "auto"}
-                    decoding="async"
-                    style={{ imageRendering: 'auto' }}
-                  />
-                  {/* Calculate isNew based on arrivalDate or fallback indicators */}
-                  {(() => {
-                    // Priority 1: Use arrivalDate if available
-                    if (vehicle.arrivalDate) {
-                      try {
-                        const arrival = new Date(vehicle.arrivalDate);
-                        if (!isNaN(arrival.getTime())) {
-                          const daysSinceArrival = Math.floor((new Date().getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24));
-                          if (daysSinceArrival >= 0 && daysSinceArrival < 30) {
-                            return true;
+                  {/* Mobile: horizontal swipe/scroll gallery */}
+                  <div
+                    ref={mobileGalleryRef}
+                    onScroll={handleMobileGalleryScroll}
+                    className="lg:hidden absolute inset-0 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth touch-pan-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                    style={{ WebkitOverflowScrolling: "touch" }}
+                    aria-label="Fahrzeugbilder durchwischen"
+                  >
+                    {availableImages.map((url, index) => (
+                      <div
+                        key={index}
+                        className="relative flex-shrink-0 w-full h-full snap-start snap-always"
+                      >
+                        <img
+                          src={url}
+                          alt={`${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          loading={index === 0 ? "eager" : "lazy"}
+                          fetchPriority={index === 0 ? "high" : "auto"}
+                          decoding="async"
+                          style={{ imageRendering: "auto" }}
+                          draggable={false}
+                        />
+                        {index === 0 && (() => {
+                          if (vehicle.arrivalDate) {
+                            try {
+                              const arrival = new Date(vehicle.arrivalDate);
+                              if (!isNaN(arrival.getTime())) {
+                                const daysSinceArrival = Math.floor((new Date().getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24));
+                                if (daysSinceArrival >= 0 && daysSinceArrival < 30) {
+                                  return (
+                                    <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground z-10">
+                                      Neu eingetroffen
+                                    </Badge>
+                                  );
+                                }
+                              }
+                            } catch {
+                              /* fallback */
+                            }
                           }
-                        }
-                      } catch {
-                        // Continue to fallback
-                      }
-                    }
-                    
-                    // Priority 2: Fallback indicators - since arrivalDate is not available via scraping
-                    const currentYear = new Date().getFullYear();
-                    const isVeryNewYear = vehicle.year >= currentYear - 1;
-                    const isVeryLowMileage = vehicle.mileage < 1000;
-                    const isLowMileage = vehicle.mileage < 5000;
-                    return (isVeryNewYear && isLowMileage) || isVeryLowMileage;
-                  })() && (
-                    <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground z-10">
-                      Neu eingetroffen
-                    </Badge>
-                  )}
-                  
-                  {/* Navigation Arrows */}
-                  {availableImages.length > 1 && (
-                    <>
-                      <button
-                        onClick={() => setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : availableImages.length - 1))}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        aria-label="Vorheriges Bild"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => setSelectedImageIndex((prev) => (prev < availableImages.length - 1 ? prev + 1 : 0))}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        aria-label="Nächstes Bild"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                      
-                      {/* Image Counter */}
-                      <div className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded-full text-sm z-10">
-                        {selectedImageIndex + 1} / {availableImages.length}
+                          const currentYear = new Date().getFullYear();
+                          const isVeryNewYear = vehicle.year >= currentYear - 1;
+                          const isLowMileage = vehicle.mileage < 5000;
+                          const isVeryLowMileage = vehicle.mileage < 1000;
+                          if ((isVeryNewYear && isLowMileage) || isVeryLowMileage) {
+                            return (
+                              <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground z-10">
+                                Neu eingetroffen
+                              </Badge>
+                            );
+                          }
+                          return null;
+                        })()}
+                        {availableImages.length > 1 && (
+                          <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm z-10">
+                            {index + 1} / {availableImages.length}
+                          </div>
+                        )}
                       </div>
-                      
-                      {/* Zoom Button - Top Right */}
-                      <button
-                        onClick={() => setIsZoomed(true)}
-                        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center z-10 transition-all"
-                        aria-label="Bild vergrößern"
-                      >
-                        <ZoomIn className="w-5 h-5" />
-                      </button>
-                    </>
-                  )}
+                    ))}
+                  </div>
+
+                  {/* Desktop: single image + arrows + zoom */}
+                  <div className="hidden lg:block absolute inset-0">
+                    <img
+                      key={selectedImageIndex}
+                      src={availableImages[selectedImageIndex]}
+                      alt={`${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${selectedImageIndex + 1}`}
+                      className="w-full h-full object-cover"
+                      loading={selectedImageIndex === 0 ? "eager" : "lazy"}
+                      fetchPriority={selectedImageIndex === 0 ? "high" : "auto"}
+                      decoding="async"
+                      style={{ imageRendering: 'auto' }}
+                    />
+                    {(() => {
+                      if (vehicle.arrivalDate) {
+                        try {
+                          const arrival = new Date(vehicle.arrivalDate);
+                          if (!isNaN(arrival.getTime())) {
+                            const daysSinceArrival = Math.floor((new Date().getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24));
+                            if (daysSinceArrival >= 0 && daysSinceArrival < 30) {
+                              return true;
+                            }
+                          }
+                        } catch {
+                          /* fallback */
+                        }
+                      }
+                      const currentYear = new Date().getFullYear();
+                      const isVeryNewYear = vehicle.year >= currentYear - 1;
+                      const isVeryLowMileage = vehicle.mileage < 1000;
+                      const isLowMileage = vehicle.mileage < 5000;
+                      return (isVeryNewYear && isLowMileage) || isVeryLowMileage;
+                    })() && (
+                      <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground z-10">
+                        Neu eingetroffen
+                      </Badge>
+                    )}
+                    {availableImages.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : availableImages.length - 1))}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          aria-label="Vorheriges Bild"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => setSelectedImageIndex((prev) => (prev < availableImages.length - 1 ? prev + 1 : 0))}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          aria-label="Nächstes Bild"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                        <div className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded-full text-sm z-10">
+                          {selectedImageIndex + 1} / {availableImages.length}
+                        </div>
+                        <button
+                          onClick={() => setIsZoomed(true)}
+                          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center z-10 transition-all"
+                          aria-label="Bild vergrößern"
+                        >
+                          <ZoomIn className="w-5 h-5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </>
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-secondary">
