@@ -180,6 +180,9 @@ const VehicleDetailPage = () => {
   const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
   const mobileGalleryRef = useRef<HTMLDivElement>(null);
+  const thumbnailStripRef = useRef<HTMLDivElement>(null);
+  const isScrollingProgrammaticallyRef = useRef(false);
+  const scrollTimeoutRef = useRef<number | null>(null);
 
   // Reset image index when vehicle ID changes
   useEffect(() => {
@@ -187,21 +190,86 @@ const VehicleDetailPage = () => {
     setIsZoomed(false);
   }, [vehicleId]);
 
-  // Sync selectedImageIndex when user scrolls the mobile gallery
+  // Mobile gallery: infinite loop (last → first, first → last). Uses clone slides [last, ...all, first].
+  // Während programmatischer Scroll (Pfeil/Thumbnail) ignorieren, damit Pfeil nicht überschrieben wird.
   const handleMobileGalleryScroll = () => {
+    if (isScrollingProgrammaticallyRef.current) return;
     const el = mobileGalleryRef.current;
     if (!el || availableImages.length === 0) return;
     const width = el.offsetWidth;
-    const index = Math.round(el.scrollLeft / width);
-    const clamped = Math.max(0, Math.min(index, availableImages.length - 1));
-    setSelectedImageIndex((prev) => (prev !== clamped ? clamped : prev));
+    if (width <= 0) return;
+    const n = availableImages.length;
+    if (n <= 1) {
+      setSelectedImageIndex(0);
+      return;
+    }
+    const slideIndex = Math.round(el.scrollLeft / width);
+    if (slideIndex === 0) {
+      el.scrollLeft = n * width;
+      setSelectedImageIndex(n - 1);
+      return;
+    }
+    if (slideIndex === n + 1) {
+      el.scrollLeft = width;
+      setSelectedImageIndex(0);
+      return;
+    }
+    const realIndex = slideIndex - 1;
+    setSelectedImageIndex((prev) => (prev !== realIndex ? realIndex : prev));
   };
 
-  // When selectedImageIndex changes (e.g. thumbnail tap), scroll mobile gallery into position
+  // When selectedImageIndex changes (e.g. arrow or thumbnail), scroll mobile gallery into position (only when mobile gallery is visible).
+  // Bei schnellem mehrmaligem Klicken: vorherigen Timeout abbruch, sofort zur neuen Position springen (kein smooth), damit es nicht buggt.
   useEffect(() => {
     const el = mobileGalleryRef.current;
     if (!el || availableImages.length <= 1) return;
-    el.scrollTo({ left: selectedImageIndex * el.offsetWidth, behavior: "smooth" });
+    const n = availableImages.length;
+    const scrollDurationMs = 350;
+    const scrollToIndex = () => {
+      const w = el.offsetWidth;
+      if (w <= 0) return;
+      const left = n > 1 ? (selectedImageIndex + 1) * w : selectedImageIndex * w;
+      const alreadyScrolling = isScrollingProgrammaticallyRef.current;
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
+      }
+      isScrollingProgrammaticallyRef.current = true;
+      el.scrollTo({ left, behavior: alreadyScrolling ? "auto" : "smooth" });
+      scrollTimeoutRef.current = window.setTimeout(() => {
+        isScrollingProgrammaticallyRef.current = false;
+        scrollTimeoutRef.current = null;
+      }, scrollDurationMs);
+    };
+    if (typeof window === "undefined" || window.innerWidth >= 1024) return;
+    requestAnimationFrame(() => {
+      if (el.offsetWidth > 0) scrollToIndex();
+      else setTimeout(scrollToIndex, 50);
+    });
+  }, [selectedImageIndex, availableImages.length]);
+
+  // Initial scroll position for infinite mobile gallery when visible (start at first real image)
+  useEffect(() => {
+    const el = mobileGalleryRef.current;
+    if (!el || availableImages.length <= 1) return;
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) return;
+    const setInitialScroll = () => {
+      if (el.offsetWidth > 0) el.scrollLeft = el.offsetWidth;
+    };
+    requestAnimationFrame(() => {
+      if (el.offsetWidth > 0) setInitialScroll();
+      else setTimeout(setInitialScroll, 50);
+    });
+  }, [availableImages.length]);
+
+  // Thumbnail-Streifen so scrollen, dass das gewählte Thumbnail sichtbar ist (w-20 = 80px, gap-2 = 8px)
+  useEffect(() => {
+    const strip = thumbnailStripRef.current;
+    if (!strip || availableImages.length <= 1) return;
+    const thumbWidth = 80;
+    const gap = 8;
+    const scrollLeft = selectedImageIndex * (thumbWidth + gap) - strip.offsetWidth / 2 + (thumbWidth + gap) / 2;
+    strip.scrollTo({ left: Math.max(0, scrollLeft), behavior: "smooth" });
   }, [selectedImageIndex, availableImages.length]);
 
   // Canonical URL: Redirect to slug format if user opened /fahrzeuge/123 (old link)
@@ -500,7 +568,7 @@ const VehicleDetailPage = () => {
                 </div>
               ) : availableImages.length > 0 ? (
                 <>
-                  {/* Mobile: horizontal swipe/scroll gallery */}
+                  {/* Mobile: horizontal swipe/scroll gallery (infinite loop: last → first, first → last) */}
                   <div
                     ref={mobileGalleryRef}
                     onScroll={handleMobileGalleryScroll}
@@ -508,63 +576,116 @@ const VehicleDetailPage = () => {
                     style={{ WebkitOverflowScrolling: "touch" }}
                     aria-label="Fahrzeugbilder durchwischen"
                   >
-                    {availableImages.map((url, index) => (
-                      <div
-                        key={index}
-                        className="relative flex-shrink-0 w-full h-full snap-start snap-always"
-                      >
-                        <img
-                          src={url}
-                          alt={`${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${index + 1}`}
-                          className="w-full h-full object-cover"
-                          loading={index === 0 ? "eager" : "lazy"}
-                          fetchPriority={index === 0 ? "high" : "auto"}
-                          decoding="async"
-                          style={{ imageRendering: "auto" }}
-                          draggable={false}
-                        />
-                        {index === 0 && (() => {
-                          if (vehicle.arrivalDate) {
-                            try {
-                              const arrival = new Date(vehicle.arrivalDate);
-                              if (!isNaN(arrival.getTime())) {
-                                const daysSinceArrival = Math.floor((new Date().getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24));
-                                if (daysSinceArrival >= 0 && daysSinceArrival < 30) {
-                                  return (
-                                    <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground z-10">
-                                      Neu eingetroffen
-                                    </Badge>
-                                  );
+                    {(() => {
+                      const n = availableImages.length;
+                      const slides = n > 1
+                        ? [availableImages[n - 1], ...availableImages, availableImages[0]]
+                        : availableImages;
+                      return slides.map((url, slideIndex) => {
+                        const realIndex = n > 1
+                          ? slideIndex === 0 ? n - 1 : slideIndex === n + 1 ? 0 : slideIndex - 1
+                          : 0;
+                        const isFirstReal = realIndex === 0;
+                        return (
+                          <div
+                            key={slideIndex}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setIsZoomed(true)}
+                            onKeyDown={(e) => e.key === "Enter" && setIsZoomed(true)}
+                            className="relative flex-shrink-0 w-full h-full snap-start snap-always cursor-pointer select-none"
+                            aria-label="Bild vergrößern"
+                          >
+                            <img
+                              src={url}
+                              alt={`${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${realIndex + 1}`}
+                              className="w-full h-full object-cover pointer-events-none"
+                              loading={isFirstReal ? "eager" : "lazy"}
+                              fetchPriority={isFirstReal ? "high" : "auto"}
+                              decoding="async"
+                              style={{ imageRendering: "auto" }}
+                              draggable={false}
+                            />
+                            {isFirstReal && (() => {
+                              if (vehicle.arrivalDate) {
+                                try {
+                                  const arrival = new Date(vehicle.arrivalDate);
+                                  if (!isNaN(arrival.getTime())) {
+                                    const daysSinceArrival = Math.floor((new Date().getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24));
+                                    if (daysSinceArrival >= 0 && daysSinceArrival < 30) {
+                                      return (
+                                        <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground z-10 pointer-events-none">
+                                          Neu eingetroffen
+                                        </Badge>
+                                      );
+                                    }
+                                  }
+                                } catch {
+                                  /* fallback */
                                 }
                               }
-                            } catch {
-                              /* fallback */
-                            }
-                          }
-                          const currentYear = new Date().getFullYear();
-                          const isVeryNewYear = vehicle.year >= currentYear - 1;
-                          const isLowMileage = vehicle.mileage < 5000;
-                          const isVeryLowMileage = vehicle.mileage < 1000;
-                          if ((isVeryNewYear && isLowMileage) || isVeryLowMileage) {
-                            return (
-                              <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground z-10">
-                                Neu eingetroffen
-                              </Badge>
-                            );
-                          }
-                          return null;
-                        })()}
-                        {availableImages.length > 1 && (
-                          <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm z-10">
-                            {index + 1} / {availableImages.length}
+                              const currentYear = new Date().getFullYear();
+                              const isVeryNewYear = vehicle.year >= currentYear - 1;
+                              const isLowMileage = vehicle.mileage < 5000;
+                              const isVeryLowMileage = vehicle.mileage < 1000;
+                              if ((isVeryNewYear && isLowMileage) || isVeryLowMileage) {
+                                return (
+                                  <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground z-10 pointer-events-none">
+                                    Neu eingetroffen
+                                  </Badge>
+                                );
+                              }
+                              return null;
+                            })()}
+                            {n > 1 && (
+                              <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm z-10 pointer-events-none">
+                                {realIndex + 1} / {n}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))}
+                        );
+                      });
+                    })()}
                   </div>
 
-                  {/* Desktop: single image + arrows + zoom */}
-                  <div className="hidden lg:block absolute inset-0">
+                  {/* Mobile: Pfeile + Zoom als Geschwister der Galerie (z-10), damit Taps die Buttons erreichen; Wischen bleibt auf der Galerie */}
+                  {availableImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        className="lg:hidden absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 active:bg-black/80 text-white flex items-center justify-center z-20 transition-opacity touch-manipulation"
+                        style={{ touchAction: "manipulation" }}
+                        onClick={() => setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : availableImages.length - 1))}
+                        aria-label="Vorheriges Bild"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="lg:hidden absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 active:bg-black/80 text-white flex items-center justify-center z-20 transition-opacity touch-manipulation"
+                        style={{ touchAction: "manipulation" }}
+                        onClick={() => setSelectedImageIndex((prev) => (prev < availableImages.length - 1 ? prev + 1 : 0))}
+                        aria-label="Nächstes Bild"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                      <div className="lg:hidden absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm z-20 pointer-events-none">
+                        {selectedImageIndex + 1} / {availableImages.length}
+                      </div>
+                      <button
+                        type="button"
+                        className="lg:hidden absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 active:bg-black/80 text-white flex items-center justify-center z-20 transition-all touch-manipulation"
+                        style={{ touchAction: "manipulation" }}
+                        onClick={() => setIsZoomed(true)}
+                        aria-label="Bild vergrößern"
+                      >
+                        <ZoomIn className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+
+                  {/* Desktop: single image + arrows + zoom (z-10 so buttons are above mobile gallery in stacking order) */}
+                  <div className="hidden lg:block absolute inset-0 z-10">
                     <img
                       key={selectedImageIndex}
                       src={availableImages[selectedImageIndex]}
@@ -603,19 +724,19 @@ const VehicleDetailPage = () => {
                       <>
                         <button
                           onClick={() => setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : availableImages.length - 1))}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center z-10 transition-opacity"
                           aria-label="Vorheriges Bild"
                         >
                           <ChevronLeft className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => setSelectedImageIndex((prev) => (prev < availableImages.length - 1 ? prev + 1 : 0))}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center z-10 transition-opacity"
                           aria-label="Nächstes Bild"
                         >
                           <ChevronRight className="w-5 h-5" />
                         </button>
-                        <div className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded-full text-sm z-10">
+                        <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm z-10">
                           {selectedImageIndex + 1} / {availableImages.length}
                         </div>
                         <button
@@ -640,49 +761,58 @@ const VehicleDetailPage = () => {
               )}
               </div>
 
-              {/* Thumbnail Gallery - Show only 7 thumbnails centered around selected image */}
-              {availableImages.length > 1 && (() => {
-              // Calculate which 7 thumbnails to show (centered around selected image)
-              const totalImages = availableImages.length;
-              const thumbnailsToShow = 7;
-              let startIndex = Math.max(0, selectedImageIndex - Math.floor(thumbnailsToShow / 2));
-              let endIndex = Math.min(totalImages, startIndex + thumbnailsToShow);
-              
-              // Adjust if we're near the end
-              if (endIndex - startIndex < thumbnailsToShow) {
-                startIndex = Math.max(0, endIndex - thumbnailsToShow);
-              }
-              
-              const visibleThumbnails = availableImages.slice(startIndex, endIndex);
-              
-              return (
-                <div className="flex gap-2 justify-center">
-                  {visibleThumbnails.map((url, localIndex) => {
-                    const globalIndex = startIndex + localIndex;
-                    return (
+              {/* Thumbnail Gallery - scrollbar immer, alle Thumbnails anklickbar (z-30 damit auf Mobil nichts darüber liegt) */}
+              {availableImages.length > 1 && (
+                <div className="relative z-30 flex items-center gap-2 isolate">
+                  <button
+                    type="button"
+                    onClick={() => thumbnailStripRef.current?.scrollBy({ left: -120, behavior: "smooth" })}
+                    className="flex-shrink-0 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-opacity touch-manipulation"
+                    style={{ touchAction: "manipulation" }}
+                    aria-label="Thumbnails nach links scrollen"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div
+                    ref={thumbnailStripRef}
+                    className="flex gap-2 overflow-x-auto overflow-y-hidden scroll-smooth py-1 flex-1 min-w-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-gray-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-400 touch-pan-x"
+                  >
+                    {availableImages.map((url, globalIndex) => (
                       <button
                         key={globalIndex}
-                        onClick={() => setSelectedImageIndex(globalIndex)}
-                        className={`relative aspect-square w-20 h-20 overflow-hidden rounded-md bg-secondary cursor-pointer transition-all flex-shrink-0 ${
+                        type="button"
+                        className={`relative aspect-square w-20 h-20 overflow-hidden rounded-md bg-secondary cursor-pointer transition-all flex-shrink-0 select-none touch-manipulation ${
                           selectedImageIndex === globalIndex
-                            ? 'ring-2 ring-primary ring-offset-2'
-                            : 'hover:opacity-80 hover:ring-1 ring-border'
+                            ? "ring-2 ring-primary ring-offset-2"
+                            : "hover:opacity-80 hover:ring-1 ring-border"
                         }`}
+                        style={{ touchAction: "manipulation" }}
+                        onClick={() => setSelectedImageIndex(globalIndex)}
                         aria-label={`Bild ${globalIndex + 1} auswählen`}
+                        aria-pressed={selectedImageIndex === globalIndex}
                       >
                         <img
                           src={url}
                           alt={`${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${globalIndex + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover pointer-events-none"
                           loading={globalIndex === 0 ? "eager" : "lazy"}
                           decoding="async"
+                          draggable={false}
                         />
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => thumbnailStripRef.current?.scrollBy({ left: 120, behavior: "smooth" })}
+                    className="flex-shrink-0 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-opacity touch-manipulation"
+                    style={{ touchAction: "manipulation" }}
+                    aria-label="Thumbnails nach rechts scrollen"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-              );
-              })()}
+              )}
             </div>
 
             {/* Ähnliche Angebote – gleiche Box wie Bildbereich, 3 sichtbar, Carousel, Kanten bündig */}
