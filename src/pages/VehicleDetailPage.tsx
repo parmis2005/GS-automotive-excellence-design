@@ -49,7 +49,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { type CarouselApi, Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { getPlaceholderImage, getVehicleImageWithFallback } from "@/lib/vehicleImage";
 import { ShareVehicleButton } from "@/components/ShareVehicleButton";
 import { getBaseModelName, getVehicleDisplayName, groupEquipmentByCategory } from "@/lib/vehicleNameUtils";
@@ -179,10 +179,12 @@ const VehicleDetailPage = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
-  const mobileGalleryRef = useRef<HTMLDivElement>(null);
   const thumbnailStripRef = useRef<HTMLDivElement>(null);
-  const isScrollingProgrammaticallyRef = useRef(false);
-  const scrollTimeoutRef = useRef<number | null>(null);
+  const mobileCarouselApiRef = useRef<CarouselApi | null>(null);
+  const mobileCarouselOffRef = useRef<(() => void) | null>(null);
+  const selectedImageIndexRef = useRef(0);
+  const lastWheelScrollTimeRef = useRef(0);
+  selectedImageIndexRef.current = selectedImageIndex;
 
   // Reset image index when vehicle ID changes
   useEffect(() => {
@@ -190,76 +192,33 @@ const VehicleDetailPage = () => {
     setIsZoomed(false);
   }, [vehicleId]);
 
-  // Mobile gallery: infinite loop (last → first, first → last). Uses clone slides [last, ...all, first].
-  // Während programmatischer Scroll (Pfeil/Thumbnail) ignorieren, damit Pfeil nicht überschrieben wird.
-  const handleMobileGalleryScroll = () => {
-    if (isScrollingProgrammaticallyRef.current) return;
-    const el = mobileGalleryRef.current;
-    if (!el || availableImages.length === 0) return;
-    const width = el.offsetWidth;
-    if (width <= 0) return;
-    const n = availableImages.length;
-    if (n <= 1) {
-      setSelectedImageIndex(0);
-      return;
-    }
-    const slideIndex = Math.round(el.scrollLeft / width);
-    if (slideIndex === 0) {
-      el.scrollLeft = n * width;
-      setSelectedImageIndex(n - 1);
-      return;
-    }
-    if (slideIndex === n + 1) {
-      el.scrollLeft = width;
-      setSelectedImageIndex(0);
-      return;
-    }
-    const realIndex = slideIndex - 1;
-    setSelectedImageIndex((prev) => (prev !== realIndex ? realIndex : prev));
-  };
-
-  // When selectedImageIndex changes (e.g. arrow or thumbnail), scroll mobile gallery into position (only when mobile gallery is visible).
-  // Bei schnellem mehrmaligem Klicken: vorherigen Timeout abbruch, sofort zur neuen Position springen (kein smooth), damit es nicht buggt.
+  // Mobile Carousel: Listener-Cleanup beim Unmount
   useEffect(() => {
-    const el = mobileGalleryRef.current;
-    if (!el || availableImages.length <= 1) return;
-    const n = availableImages.length;
-    const scrollDurationMs = 350;
-    const scrollToIndex = () => {
-      const w = el.offsetWidth;
-      if (w <= 0) return;
-      const left = n > 1 ? (selectedImageIndex + 1) * w : selectedImageIndex * w;
-      const alreadyScrolling = isScrollingProgrammaticallyRef.current;
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = null;
-      }
-      isScrollingProgrammaticallyRef.current = true;
-      el.scrollTo({ left, behavior: alreadyScrolling ? "auto" : "smooth" });
-      scrollTimeoutRef.current = window.setTimeout(() => {
-        isScrollingProgrammaticallyRef.current = false;
-        scrollTimeoutRef.current = null;
-      }, scrollDurationMs);
+    return () => {
+      mobileCarouselOffRef.current?.();
     };
-    if (typeof window === "undefined" || window.innerWidth >= 1024) return;
-    requestAnimationFrame(() => {
-      if (el.offsetWidth > 0) scrollToIndex();
-      else setTimeout(scrollToIndex, 50);
-    });
+  }, []);
+
+  // Thumbnail-Klick: Carousel auf gewählten Slide scrollen (nur wenn Index vom Carousel abweicht, also Nutzeraktion)
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) return;
+    const api = mobileCarouselApiRef.current;
+    if (!api || availableImages.length <= 1) return;
+    if (api.selectedScrollSnap() !== selectedImageIndex) api.scrollTo(selectedImageIndex);
   }, [selectedImageIndex, availableImages.length]);
 
-  // Initial scroll position for infinite mobile gallery when visible (start at first real image)
+  // Bei Fenster-Resize (z. B. Desktop-Fenster verkleinert → mobile Ansicht): Carousel neu initialisieren, damit Scroll/Drag wieder funktioniert
   useEffect(() => {
-    const el = mobileGalleryRef.current;
-    if (!el || availableImages.length <= 1) return;
-    if (typeof window !== "undefined" && window.innerWidth >= 1024) return;
-    const setInitialScroll = () => {
-      if (el.offsetWidth > 0) el.scrollLeft = el.offsetWidth;
+    const api = mobileCarouselApiRef.current;
+    if (!api || availableImages.length <= 1) return;
+    const onResize = () => {
+      if (window.innerWidth < 1024) {
+        api.reInit();
+        api.scrollTo(selectedImageIndexRef.current, true);
+      }
     };
-    requestAnimationFrame(() => {
-      if (el.offsetWidth > 0) setInitialScroll();
-      else setTimeout(setInitialScroll, 50);
-    });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, [availableImages.length]);
 
   // Thumbnail-Streifen so scrollen, dass das gewählte Thumbnail sichtbar ist (w-20 = 80px, gap-2 = 8px)
@@ -568,45 +527,37 @@ const VehicleDetailPage = () => {
                 </div>
               ) : availableImages.length > 0 ? (
                 <>
-                  {/* Mobile: horizontal swipe/scroll gallery (infinite loop: last → first, first → last) */}
-                  <div
-                    ref={mobileGalleryRef}
-                    onScroll={handleMobileGalleryScroll}
-                    className="lg:hidden absolute inset-0 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth touch-pan-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-                    style={{ WebkitOverflowScrolling: "touch" }}
-                    aria-label="Fahrzeugbilder durchwischen"
+                  {/* Mobile: Embla-Carousel mit Loop (wie Ähnliche Fahrzeuge), flüssiger Endlos-Übergang */}
+                  <Carousel
+                    opts={{ align: "start", slidesToScroll: 1, loop: true }}
+                    setApi={(api) => {
+                      mobileCarouselOffRef.current?.();
+                      mobileCarouselApiRef.current = api;
+                      if (!api || availableImages.length === 0) return;
+                      const onSelect = () => setSelectedImageIndex(api.selectedScrollSnap());
+                      api.on("select", onSelect);
+                      mobileCarouselOffRef.current = () => api.off("select", onSelect);
+                    }}
+                    className="lg:hidden absolute inset-0 w-full h-full touch-pan-x select-none [&_.overflow-hidden]:h-full [&_.overflow-hidden]:pointer-events-auto [&_.overflow-hidden]:cursor-grab [&_.overflow-hidden]:active:cursor-grabbing"
                   >
-                    {(() => {
-                      const n = availableImages.length;
-                      const slides = n > 1
-                        ? [availableImages[n - 1], ...availableImages, availableImages[0]]
-                        : availableImages;
-                      return slides.map((url, slideIndex) => {
-                        const realIndex = n > 1
-                          ? slideIndex === 0 ? n - 1 : slideIndex === n + 1 ? 0 : slideIndex - 1
-                          : 0;
-                        const isFirstReal = realIndex === 0;
-                        return (
+                    <CarouselContent className="-ml-0 h-full min-h-0 pointer-events-none">
+                      {availableImages.map((url, index) => (
+                        <CarouselItem key={index} className="pl-0 basis-full h-full pointer-events-none">
                           <div
-                            key={slideIndex}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => setIsZoomed(true)}
-                            onKeyDown={(e) => e.key === "Enter" && setIsZoomed(true)}
-                            className="relative flex-shrink-0 w-full h-full snap-start snap-always cursor-pointer select-none"
-                            aria-label="Bild vergrößern"
+                            className="relative w-full h-full select-none pointer-events-none"
+                            aria-hidden
                           >
                             <img
                               src={url}
-                              alt={`${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${realIndex + 1}`}
+                              alt={`${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} - Bild ${index + 1}`}
                               className="w-full h-full object-cover pointer-events-none"
-                              loading={isFirstReal ? "eager" : "lazy"}
-                              fetchPriority={isFirstReal ? "high" : "auto"}
+                              loading={index === 0 ? "eager" : "lazy"}
+                              fetchPriority={index === 0 ? "high" : "auto"}
                               decoding="async"
                               style={{ imageRendering: "auto" }}
                               draggable={false}
                             />
-                            {isFirstReal && (() => {
+                            {index === 0 && (() => {
                               if (vehicle.arrivalDate) {
                                 try {
                                   const arrival = new Date(vehicle.arrivalDate);
@@ -637,25 +588,51 @@ const VehicleDetailPage = () => {
                               }
                               return null;
                             })()}
-                            {n > 1 && (
-                              <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm z-10 pointer-events-none">
-                                {realIndex + 1} / {n}
-                              </div>
-                            )}
                           </div>
-                        );
-                      });
-                    })()}
-                  </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
 
-                  {/* Mobile: Pfeile + Zoom als Geschwister der Galerie (z-10), damit Taps die Buttons erreichen; Wischen bleibt auf der Galerie */}
+                  {/* Overlay: Nur bei Maus (hover) – Mausrad = Bild wechseln, Klick = Vergrößern; bei Touch durchlässig für Finger-Scroll */}
+                  {availableImages.length > 1 && (
+                    <div
+                      className="lg:hidden absolute inset-0 z-10 pointer-events-none [@media(hover:hover)]:pointer-events-auto [@media(hover:hover)]:cursor-pointer"
+                      onClick={() => setIsZoomed(true)}
+                      onWheel={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const now = Date.now();
+                        if (now - lastWheelScrollTimeRef.current < 1200) return;
+                        const api = mobileCarouselApiRef.current;
+                        if (!api || availableImages.length <= 1) return;
+                        const dx = e.deltaX;
+                        const dy = e.deltaY;
+                        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+                        lastWheelScrollTimeRef.current = now;
+                        if (Math.abs(dx) >= Math.abs(dy)) {
+                          if (dx > 0) api.scrollNext();
+                          else api.scrollPrev();
+                        } else {
+                          if (dy > 0) api.scrollNext();
+                          else api.scrollPrev();
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Bild vergrößern (klicken), Mausrad zum Wechseln"
+                      onKeyDown={(ev) => ev.key === "Enter" && setIsZoomed(true)}
+                    />
+                  )}
+
+                  {/* Mobile: Pfeile nutzen Carousel-API für flüssigen Loop; Zoom-Button */}
                   {availableImages.length > 1 && (
                     <>
                       <button
                         type="button"
                         className="lg:hidden absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 active:bg-black/80 text-white flex items-center justify-center z-20 transition-opacity touch-manipulation"
                         style={{ touchAction: "manipulation" }}
-                        onClick={() => setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : availableImages.length - 1))}
+                        onClick={() => mobileCarouselApiRef.current?.scrollPrev()}
                         aria-label="Vorheriges Bild"
                       >
                         <ChevronLeft className="w-5 h-5" />
@@ -664,7 +641,7 @@ const VehicleDetailPage = () => {
                         type="button"
                         className="lg:hidden absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 active:bg-black/80 text-white flex items-center justify-center z-20 transition-opacity touch-manipulation"
                         style={{ touchAction: "manipulation" }}
-                        onClick={() => setSelectedImageIndex((prev) => (prev < availableImages.length - 1 ? prev + 1 : 0))}
+                        onClick={() => mobileCarouselApiRef.current?.scrollNext()}
                         aria-label="Nächstes Bild"
                       >
                         <ChevronRight className="w-5 h-5" />
@@ -1499,7 +1476,28 @@ const VehicleDetailPage = () => {
           className="inset-0 left-0 top-0 right-0 bottom-0 w-[100vw] max-w-none max-h-none translate-x-0 translate-y-0 rounded-none p-0 bg-black border-none data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-95 [&>button]:hidden overflow-hidden flex flex-col"
           style={{ height: '100dvh', minHeight: '-webkit-fill-available' } as React.CSSProperties}
         >
-          <div className="relative flex-1 min-h-0 flex items-center justify-center p-0 sm:p-6">
+          <div
+            className="relative flex-1 min-h-0 flex items-center justify-center p-0 sm:p-6"
+            onWheel={(e) => {
+              if (availableImages.length <= 1) return;
+              e.preventDefault();
+              e.stopPropagation();
+              const now = Date.now();
+              if (now - lastWheelScrollTimeRef.current < 1200) return;
+              const dx = e.deltaX;
+              const dy = e.deltaY;
+              if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+              lastWheelScrollTimeRef.current = now;
+              const n = availableImages.length;
+              if (Math.abs(dx) >= Math.abs(dy)) {
+                if (dx > 0) setSelectedImageIndex((i) => (i < n - 1 ? i + 1 : 0));
+                else setSelectedImageIndex((i) => (i > 0 ? i - 1 : n - 1));
+              } else {
+                if (dy > 0) setSelectedImageIndex((i) => (i < n - 1 ? i + 1 : 0));
+                else setSelectedImageIndex((i) => (i > 0 ? i - 1 : n - 1));
+              }
+            }}
+          >
             {availableImages.length > 0 && (
               <>
                 <img
