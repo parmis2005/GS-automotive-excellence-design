@@ -1132,7 +1132,7 @@ const VehicleDetailPage = () => {
                   try {
                     setIsSubmittingInquiry(true);
                     const vehicleLabel = vehicle
-                      ? `${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)} (${vehicle.id})`
+                      ? `${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)}${vehicle.internalNumber ? ` (Kennnr. ${vehicle.internalNumber})` : ` (${vehicle.id})`}`
                       : "";
                     const response = await fetch("/api/inquiries", {
                       method: "POST",
@@ -1146,7 +1146,11 @@ const VehicleDetailPage = () => {
                         subject: "Kaufanfrage",
                         message: formData.message,
                         vehicle: vehicleLabel,
-                        page: vehicle ? `Fahrzeugdetail ${vehicle.id}` : "Fahrzeugdetail",
+                        page: vehicle
+                          ? vehicle.internalNumber
+                            ? `Fahrzeugdetail Kennnr. ${vehicle.internalNumber}`
+                            : `Fahrzeugdetail ${vehicle.id}`
+                          : "Fahrzeugdetail",
                       }),
                     });
                     if (!response.ok) {

@@ -347,6 +347,8 @@ type FormData = {
   contactEmail: string;
   contactPlz: string;
   contactCity: string;
+  /** Optionale Nachricht (z. B. Hinweise, Wünsche) – nur in Kontakt-Slide */
+  contactMessage: string;
 };
 
 type Labels = {
@@ -512,6 +514,7 @@ const VehiclePurchaseForm = ({
     contactEmail: "",
     contactPlz: "",
     contactCity: "",
+    contactMessage: "",
   });
 
   const { data: vehicles = [] } = useVehicles();
@@ -1957,6 +1960,19 @@ const VehiclePurchaseForm = ({
                 </p>
               )}
             </div>
+            <div>
+              <label className="text-lg font-bold text-foreground">Noch etwas mitteilen? (optional)</label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Zusätzliche Hinweise, Wünsche oder Fragen – z. B. gewünschter Abholtermin oder Besonderheiten.
+              </p>
+              <Textarea
+                value={formData.contactMessage}
+                onChange={(event) => updateField("contactMessage", event.target.value)}
+                placeholder="z. B. Rückruf am besten ab 18 Uhr …"
+                className="mt-2 min-h-[100px] resize-y"
+                rows={4}
+              />
+            </div>
           </div>
         ),
       },
@@ -2077,6 +2093,7 @@ const VehiclePurchaseForm = ({
     ensureInput("contactEmail", data.contactEmail);
     ensureInput("contactPlz", data.contactPlz);
     ensureInput("contactCity", data.contactCity);
+    ensureInput("contactMessage", data.contactMessage);
   };
 
   const handleSubmit = () => {
@@ -2132,6 +2149,7 @@ const VehiclePurchaseForm = ({
       contactEmail: formData.contactEmail,
       contactPlz: formData.contactPlz,
       contactCity: formData.contactCity,
+      contactMessage: formData.contactMessage.trim() || "",
     };
 
     setIsSubmitting(true);
