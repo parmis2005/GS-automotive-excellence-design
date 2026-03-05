@@ -2114,11 +2114,12 @@ export async function fetchVehiclesFromCargateApi(): Promise<Vehicle[]> {
 
   const allItems: unknown[] = [];
   const vehiclePerPage = 100;
+  const maxPages = 20; // Sicherheit: nicht endlos paginieren
   let page = 1;
   let hasMore = true;
 
   try {
-    while (hasMore) {
+    while (hasMore && page <= maxPages) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
 
@@ -2173,21 +2174,50 @@ export async function fetchVehiclesFromCargateApi(): Promise<Vehicle[]> {
       }
 
       let items: unknown[] = [];
+      let totalCount: number | null = null;
 
       if (Array.isArray(data)) {
         items = data;
       } else if (data && typeof data === "object") {
         const d = data as Record<string, unknown>;
-        if (Array.isArray(d.Vehicles)) items = d.Vehicles;
-        else if (Array.isArray(d.vehicles)) items = d.vehicles;
-        else if (Array.isArray(d.GetVehicleListResult)) items = d.GetVehicleListResult;
-        else if (d.GetVehicleListResult && typeof d.GetVehicleListResult === "object" && Array.isArray((d.GetVehicleListResult as Record<string, unknown>).Vehicles)) {
-          items = (d.GetVehicleListResult as { Vehicles: unknown[] }).Vehicles;
-        } else if (Array.isArray(d.data)) items = d.data;
+        // TotalCount ggf. am Root (API-Varianten: TotalCount, totalCount, Total, Count)
+        const rootTotal =
+          typeof d.TotalCount === "number" ? d.TotalCount
+          : typeof d.totalCount === "number" ? d.totalCount
+          : typeof d.Total === "number" ? d.Total
+          : typeof d.Count === "number" ? d.Count
+          : null;
+        if (Array.isArray(d.Vehicles)) {
+          items = d.Vehicles;
+          totalCount = rootTotal;
+        } else if (Array.isArray(d.vehicles)) {
+          items = d.vehicles;
+          totalCount = rootTotal;
+        } else if (Array.isArray(d.GetVehicleListResult)) {
+          items = d.GetVehicleListResult;
+          totalCount = rootTotal;
+        } else if (d.GetVehicleListResult && typeof d.GetVehicleListResult === "object") {
+          const result = d.GetVehicleListResult as Record<string, unknown>;
+          if (Array.isArray(result.Vehicles)) items = result.Vehicles;
+          totalCount = typeof result.TotalCount === "number" ? result.TotalCount : typeof result.totalCount === "number" ? result.totalCount : rootTotal;
+        } else if (Array.isArray(d.data)) {
+          items = d.data;
+          totalCount = rootTotal;
+        }
+        // Einmalig Antwortstruktur loggen (nur Seite 1), um TotalCount/Seitengröße zu prüfen
+        if (page === 1 && Object.keys(d).length > 0) {
+          const topKeys = Object.keys(d).join(", ");
+          console.log(`📋 Carzilla GetVehicleList Antwort (Seite 1): Root-Keys: ${topKeys}; TotalCount/Total/Count: ${d.TotalCount ?? d.totalCount ?? d.Total ?? d.Count ?? "nicht gesetzt"}`);
+        }
       }
 
       allItems.push(...items);
-      hasMore = items.length >= vehiclePerPage;
+      // Weiter paginieren: volle Seite (100) ODER Total bekannt und noch nicht alle ODER unvolle Seite mit Einträgen (dann nächste Seite probieren)
+      const gotFullPage = items.length >= vehiclePerPage;
+      const moreByTotal = totalCount != null && allItems.length < totalCount;
+      const partialPageWithItems = items.length > 0 && items.length < vehiclePerPage;
+      hasMore = gotFullPage || moreByTotal || partialPageWithItems;
+      console.log(`📋 Carzilla GetVehicleList Seite ${page}: ${items.length} Fahrzeuge, gesamt bisher: ${allItems.length}${totalCount != null ? `, Total laut API: ${totalCount}` : ""}`);
       page += 1;
     }
   } catch (err) {
