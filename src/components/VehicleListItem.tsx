@@ -13,6 +13,8 @@ import { formatPrice } from "@/lib/utils";
 
 interface VehicleListItemProps extends Vehicle {
   isFirst?: boolean; // Optional prop to mark first item
+  /** Wird vor dem Navigieren zur Detailseite aufgerufen (z. B. um Filter für Zurück-Kommen zu speichern) */
+  onNavigateToDetail?: () => void;
 }
 
 const VehicleListItem = ({
@@ -41,6 +43,7 @@ const VehicleListItem = ({
   productionSeries,
   modelVariant: modelVariantProp,
   isFirst = false,
+  onNavigateToDetail,
 }: VehicleListItemProps) => {
   const displayTitle = getVehicleDisplayName(brand, model, productionSeries, title);
 
@@ -169,6 +172,7 @@ const VehicleListItem = ({
           onMouseEnter={handlePrefetch}
           onFocus={handlePrefetch}
           onTouchStart={handlePrefetch}
+          onClick={() => onNavigateToDetail?.()}
         >
           <div className="relative w-full aspect-[4/3] p-1 bg-white">
             {isNew && (
@@ -239,7 +243,7 @@ const VehicleListItem = ({
               <div className="text-xs text-primary mt-1">
                 {vatDisplayable === false ? "MwSt. nicht ausweisbar" : "inkl. MwSt."}
               </div>
-              <Link to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`} className="mt-3 inline-block">
+              <Link to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`} className="mt-3 inline-block" onClick={() => onNavigateToDetail?.()}>
                 <Button
                   variant="default"
                   className="bg-primary hover:bg-primary/90 text-white font-semibold"
@@ -344,7 +348,7 @@ const VehicleListItem = ({
           {/* Actions */}
           <div className="flex flex-col gap-3 mt-auto pt-4 border-t border-border lg:hidden">
             <div className="grid grid-cols-2 gap-2">
-              <Link to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}#kaufanfrage`} className="w-full">
+              <Link to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}#kaufanfrage`} className="w-full" onClick={() => onNavigateToDetail?.()}>
                 <Button variant="default" size="sm" className="w-full bg-primary hover:bg-primary/90 text-white">
                   Kaufanfrage
                 </Button>

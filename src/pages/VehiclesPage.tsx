@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useVehicles } from "@/hooks/useVehicles";
 import VehicleListItem from "@/components/VehicleListItem";
@@ -16,6 +16,8 @@ import { getBaseModelName, groupModelsBySeries, getVehicleType, isKleinwagenMode
 import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
 import SEO from "@/components/SEO";
 import { getVehiclesPageSEO, generateCollectionPageSchema } from "@/utils/seo";
+
+const VEHICLES_PAGE_RETURN_STATE_KEY = "vehiclesPage_returnState";
 
 export interface VehicleFiltersState {
   internalNumber: string; // 3-stellige Kennnummer (Angebotsnummer)
@@ -95,6 +97,61 @@ const VehiclesPage = () => {
   const [itemsPerPage, setItemsPerPage] = useState<number>(20);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortBy, setSortBy] = useState<string>("price-desc");
+
+  // Gespeicherte Filter/Sortierung/Seite wiederherstellen (z. B. nach Zurück von Detailseite oder erneutem Klick auf Fahrzeugsuche).
+  const hasRestoredReturnStateRef = useRef(false);
+  useEffect(() => {
+    if (hasRestoredReturnStateRef.current) return;
+    try {
+      const raw = sessionStorage.getItem(VEHICLES_PAGE_RETURN_STATE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        filters?: VehicleFiltersState;
+        sortBy?: string;
+        currentPage?: number;
+        itemsPerPage?: number;
+      };
+      if (!parsed?.filters) return;
+      hasRestoredReturnStateRef.current = true;
+      sessionStorage.removeItem(VEHICLES_PAGE_RETURN_STATE_KEY);
+      const f = parsed.filters;
+      setFilters({
+        ...f,
+        priceRange: [
+          Math.max(minPrice, Math.min(f.priceRange?.[0] ?? minPrice, maxPrice)),
+          Math.min(maxPrice, Math.max(f.priceRange?.[1] ?? maxPrice, minPrice)),
+        ],
+        yearRange: [
+          Math.max(minYear, Math.min(f.yearRange?.[0] ?? minYear, maxYear)),
+          Math.min(maxYear, Math.max(f.yearRange?.[1] ?? maxYear, minYear)),
+        ],
+      });
+      if (parsed.sortBy != null) setSortBy(parsed.sortBy);
+      if (typeof parsed.currentPage === "number" && parsed.currentPage >= 1) setCurrentPage(parsed.currentPage);
+      if (typeof parsed.itemsPerPage === "number" && parsed.itemsPerPage >= 1) setItemsPerPage(parsed.itemsPerPage);
+    } catch {
+      sessionStorage.removeItem(VEHICLES_PAGE_RETURN_STATE_KEY);
+    }
+  }, [minPrice, maxPrice, minYear, maxYear]);
+
+  const saveFiltersForReturn = useCallback(
+    (currentFilters: VehicleFiltersState, currentSortBy: string, currentPageNum: number, currentItemsPerPage: number) => {
+      try {
+        sessionStorage.setItem(
+          VEHICLES_PAGE_RETURN_STATE_KEY,
+          JSON.stringify({
+            filters: currentFilters,
+            sortBy: currentSortBy,
+            currentPage: currentPageNum,
+            itemsPerPage: currentItemsPerPage,
+          })
+        );
+      } catch {
+        // ignore
+      }
+    },
+    []
+  );
 
   // Get available filter options from vehicles
   // This MUST be defined before the useEffect that uses it
@@ -809,7 +866,11 @@ const VehiclesPage = () => {
                     <div className="space-y-4 mb-8">
                       {paginatedVehicles.map((vehicle, index) => (
                         <div key={vehicle.id} className="h-full">
-                          <VehicleListItem {...vehicle} isFirst={index === 0} />
+                          <VehicleListItem
+                            {...vehicle}
+                            isFirst={index === 0}
+                            onNavigateToDetail={() => saveFiltersForReturn(filters, sortBy, currentPage, itemsPerPage)}
+                          />
                         </div>
                       ))}
                     </div>
