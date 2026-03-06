@@ -4,6 +4,7 @@
  */
 
 import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
+import { formatPrice } from "@/lib/utils";
 
 export interface SEOData {
   title: string;
@@ -57,7 +58,7 @@ export function getVehicleSEO(
   const powerKw = options?.powerKw ?? 0;
   const powerPs = options?.power ?? 0;
   const fuel = (options?.fuel ?? "").trim() || "–";
-  const priceStr = price > 0 ? price.toLocaleString("de-DE") : "";
+  const priceStr = price > 0 ? formatPrice(price) : "";
   const title = priceStr
     ? `${brand} ${model} für ${priceStr} € | GS Automobile Rheinland`
     : generateTitle(`${brand} ${model} ${year} | Gebrauchtwagen`);

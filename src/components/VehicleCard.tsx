@@ -8,6 +8,7 @@ import { ShareVehicleButton } from "@/components/ShareVehicleButton";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
 import { formatFuelType, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
+import { formatPrice } from "@/lib/utils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 
 interface VehicleCardProps extends Vehicle {
@@ -224,7 +225,7 @@ const VehicleCard = ({
         {/* Price - visuell dominanter */}
         <div className="mb-4">
           <div className="font-display text-3xl font-bold text-primary">
-            {price.toLocaleString("de-DE")} €
+            {formatPrice(price)} €
           </div>
           {vatDisplayable !== undefined && (
             <div className="text-sm text-muted-foreground mt-1">

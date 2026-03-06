@@ -12,7 +12,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Search, ChevronDown, Check, ChevronsUpDown, SlidersHorizontal } from "lucide-react";
 import type { VehicleFiltersState } from "@/pages/VehiclesPage";
 import { getColorHex } from "@/lib/colorUtils";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import { groupModelsBySeries } from "@/lib/vehicleNameUtils";
 import { getVehicleTypeIcon } from "@/lib/vehicleTypeIcons";
 
@@ -276,7 +276,7 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
       {/* Price Range - PRIMARY FILTER */}
       <div className="mb-6">
         <Label className="mb-4 block font-medium">
-          Preis: {filters.priceRange[0].toLocaleString("de-DE")} € - {filters.priceRange[1].toLocaleString("de-DE")} €
+          Preis: {formatPrice(filters.priceRange[0])} € - {formatPrice(filters.priceRange[1])} €
         </Label>
         <Slider
           value={filters.priceRange}
@@ -287,8 +287,8 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
           className="w-full"
         />
         <div className="flex justify-between text-xs text-muted-foreground mt-2">
-          <span>{minPrice.toLocaleString("de-DE")} €</span>
-          <span>{maxPrice.toLocaleString("de-DE")} €</span>
+          <span>{formatPrice(minPrice)} €</span>
+          <span>{formatPrice(maxPrice)} €</span>
         </div>
       </div>
 

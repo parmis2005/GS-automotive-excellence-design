@@ -7,6 +7,7 @@ import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getVehicleSEO, generateVehicleSchema } from "@/utils/seo";
+import { formatPrice } from "@/lib/utils";
 import { 
   Loader2, 
   AlertCircle, 
@@ -835,7 +836,7 @@ const VehicleDetailPage = () => {
                                     as="h3"
                                   />
                                   <div className="text-sm font-bold text-primary">
-                                    {similarVehicle.price.toLocaleString("de-DE")} €
+                                    {formatPrice(similarVehicle.price)} €
                                   </div>
                                   <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                                     {similarVehicle.mileage > 0 && (
@@ -939,7 +940,7 @@ const VehicleDetailPage = () => {
                   <div>
                     <span className="text-sm text-muted-foreground">Preis</span>
                     <div className="text-4xl font-display font-bold text-primary">
-                      {vehicle.price.toLocaleString("de-DE")} €
+                      {formatPrice(vehicle.price)} €
                     </div>
                     {vehicle.vatDisplayable !== undefined && (
                       <div className="text-sm text-muted-foreground mt-1">

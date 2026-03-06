@@ -9,6 +9,7 @@ import { getVehicleType, formatFuelType, getVehicleDisplayName } from "@/lib/veh
 import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
 import { VehicleTitle } from "@/components/VehicleTitle";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
+import { formatPrice } from "@/lib/utils";
 
 interface VehicleListItemProps extends Vehicle {
   isFirst?: boolean; // Optional prop to mark first item
@@ -221,7 +222,7 @@ const VehicleListItem = ({
                 </div>
                 <div className="lg:hidden text-right shrink-0">
                   <div className="font-display text-3xl sm:text-4xl font-bold text-primary leading-none">
-                    {price.toLocaleString("de-DE")} €
+                    {formatPrice(price)} €
                   </div>
                   <div className="text-[10px] text-primary mt-1">
                     {vatDisplayable === false ? "MwSt. nicht ausweisbar" : "inkl. MwSt."}
@@ -233,7 +234,7 @@ const VehicleListItem = ({
             {/* Price */}
             <div className="hidden lg:block text-right">
               <div className="font-display text-3xl md:text-4xl font-bold text-primary">
-                {price.toLocaleString("de-DE")} €
+                {formatPrice(price)} €
               </div>
               <div className="text-xs text-primary mt-1">
                 {vatDisplayable === false ? "MwSt. nicht ausweisbar" : "inkl. MwSt."}
