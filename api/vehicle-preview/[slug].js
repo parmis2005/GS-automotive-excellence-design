@@ -135,6 +135,7 @@ export default async function handler(req, res) {
   const safeDesc = escapeMeta(description);
 
   html = html
+    .replace(/<head>/, `<head>\n<!-- vehicle-preview: ${escapeMeta(slug)} -->`)
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${safeTitle}</title>`)
     .replace(
       /<meta name="description" content="[^"]*"/,
@@ -187,5 +188,7 @@ export default async function handler(req, res) {
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "public, max-age=300, s-maxage=300");
+  res.setHeader("X-Vehicle-Preview", "1");
+  res.setHeader("X-Vehicle-Slug", slug);
   res.status(200).send(html);
 }
