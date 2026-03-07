@@ -1,11 +1,14 @@
 /**
- * Vercel Serverless Function: returns index.html with vehicle-specific Open Graph
- * meta tags so crawlers (WhatsApp, Facebook, etc.) show the correct preview.
- * Used via vercel.json rewrite: /fahrzeuge/:slug → this function.
+ * Vercel Serverless Function: returns HTML with vehicle-specific Open Graph
+ * meta tags so WhatsApp, Facebook, etc. show the correct link preview:
+ * - First vehicle image (or Cargate fallback by ID), not the logo
+ * - Vehicle-specific title (e.g. "Mini Cooper für 19.500 €")
+ * - Vehicle-specific description (km, kW/PS, fuel)
  *
- * Wichtig: gsauto.de muss in diesem Vercel-Projekt als Production-Domain eingetragen
- * sein, damit die Rewrites greifen. Sonst liefert der alte Host weiter die gleiche
- * index.html für alle URLs.
+ * Used via vercel.json rewrite: /fahrzeuge/:slug → this function.
+ * Wichtig: gsauto.de muss in diesem Vercel-Projekt als Production-Domain
+ * eingetragen sein. Nach Deploy: WhatsApp/Facebook cache ggf. mit dem
+ * Facebook Sharing Debugger (developers.facebook.com/tools/debug/) neu laden.
  */
 export const config = { maxDuration: 25 };
 
@@ -26,12 +29,25 @@ function getVehicleIdFromSlug(slug) {
   return segment || "";
 }
 
-function ensureAbsoluteImageUrl(image) {
-  if (!image || !image.trim()) return `${BASE_URL}/logo.png`;
-  let url = image.startsWith("http") ? image : `${BASE_URL}${image}`;
-  if (url.includes("cargate360")) url = url.replace(/format=[^&]*/i, "format=xl");
-  if (url.includes("carzilla-services.com")) url = url.replace(/format=[^&]*/i, "format=l");
-  return url;
+/** Preis ohne Cent (z. B. 19.500) für Titel */
+function formatPrice(price) {
+  const n = Number(price);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return Math.round(n).toLocaleString("de-DE", { maximumFractionDigits: 0, minimumFractionDigits: 0 });
+}
+
+/** Erstes Fahrzeugbild: aus vehicle.image oder Fallback Cargate/Carzilla-URL aus vehicleId */
+function ensureAbsoluteImageUrl(image, vehicleId) {
+  if (image && image.trim()) {
+    let url = image.startsWith("http") ? image : `${BASE_URL}${image}`;
+    if (url.includes("cargate360")) url = url.replace(/format=[^&]*/i, "format=xl");
+    if (url.includes("carzilla-services.com")) url = url.replace(/format=[^&]*/i, "format=l");
+    return url;
+  }
+  if (vehicleId && String(vehicleId).trim()) {
+    return `https://img.cargate360.de/default.aspx?vid=${encodeURIComponent(String(vehicleId).trim())}&bid=1790&format=xl&ino=1&app=Kiste-Default`;
+  }
+  return `${BASE_URL}/logo.png`;
 }
 
 function getSlugFromRequest(req) {
@@ -87,15 +103,15 @@ export default async function handler(req, res) {
   const fuel = (vehicle.fuel ?? "").trim() || "–";
   const powerKw = Number(vehicle.powerKw) || 0;
   const powerPs = Number(vehicle.power) || 0;
-  const image = ensureAbsoluteImageUrl(vehicle.image);
+  const image = ensureAbsoluteImageUrl(vehicle.image, vehicleId);
   const detailPath = `/fahrzeuge/${slug}`;
   const fullUrl = `${BASE_URL}${detailPath}`;
 
-  // mobile.de-Stil: "Ford Mustang für 14.990 €" / "Gebrauchtfahrzeug • 133.500 km • 228 kW (310 PS) • Benzin..."
-  const priceStr = price > 0 ? price.toLocaleString("de-DE") : "";
+  // Link-Vorschau: fahrzeugspezifischer Titel/Beschreibung/Bild (mobile.de-Stil)
+  const priceStr = formatPrice(price);
   const title = priceStr
-    ? `${brand} ${model} für ${priceStr} €`
-    : `${brand} ${model} ${year} | Gebrauchtwagen`;
+    ? `${brand} ${model} für ${priceStr} € | GS Automobile Rheinland`
+    : `${brand} ${model} ${year} | Gebrauchtwagen | GS Automobile Rheinland`;
   const parts = ["Gebrauchtfahrzeug"];
   if (mileage > 0) parts.push(`${mileage.toLocaleString("de-DE")} km`);
   if (powerKw > 0 && powerPs > 0) parts.push(`${powerKw} kW (${powerPs} PS)`);
