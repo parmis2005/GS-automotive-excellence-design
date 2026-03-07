@@ -7,7 +7,7 @@
 import { rewrite, next } from "@vercel/functions";
 
 export const config = {
-  matcher: "/fahrzeuge/:slug*",
+  matcher: ["/fahrzeuge/:slug", "/fahrzeuge/:slug/"],
 };
 
 export default function middleware(request) {
