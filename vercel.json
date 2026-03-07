@@ -24,6 +24,6 @@
     { "source": "/api/inquiries/:path*", "destination": "http://209.38.251.38:3001/api/inquiries/:path*" },
     { "source": "/api/stats/:path*", "destination": "http://209.38.251.38:3001/api/stats/:path*" },
     { "source": "/api/health", "destination": "http://209.38.251.38:3001/api/health" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
