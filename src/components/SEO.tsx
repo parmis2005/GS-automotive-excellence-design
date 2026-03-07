@@ -17,11 +17,13 @@ export default function SEO({ data, structuredData, breadcrumbs }: SEOProps) {
   const {
     title,
     description,
+    ogDescription,
     keywords,
     image,
     url,
     type = "website",
   } = data;
+  const socialDescription = ogDescription ?? description;
 
   const baseUrl = "https://gsauto.de";
   const fullImageUrl = image?.startsWith("http") ? image : `${baseUrl}${image}`;
@@ -59,7 +61,7 @@ export default function SEO({ data, structuredData, breadcrumbs }: SEOProps) {
       <meta property="og:type" content={type} />
       <meta property="og:url" content={fullUrl} />
       <meta property="og:title" content={title} />
-      <meta property="og:description" content={description} />
+      <meta property="og:description" content={socialDescription} />
       {fullImageUrl && <meta property="og:image" content={fullImageUrl} />}
       <meta property="og:locale" content="de_DE" />
       <meta property="og:site_name" content="GS Automobile Rheinland GmbH" />
@@ -67,7 +69,7 @@ export default function SEO({ data, structuredData, breadcrumbs }: SEOProps) {
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />
-      <meta name="twitter:description" content={description} />
+      <meta name="twitter:description" content={socialDescription} />
       {fullImageUrl && <meta name="twitter:image" content={fullImageUrl} />}
 
       {/* Preload hero image for faster first paint */}
