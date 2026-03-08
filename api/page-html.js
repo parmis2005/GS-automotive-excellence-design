@@ -101,13 +101,17 @@ export default async function handler(req, res) {
   const safeOgDesc = escapeMeta(config.ogDescription ?? config.description);
   const safeCanonical = escapeMeta(config.canonical);
 
-  // Pre-Render-Text für Crawler im HTML, für Besucher unsichtbar (visually hidden – kein Flash vor React-Load)
-  const visuallyHiddenStyle =
-    "<style>.seo-static-content{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>";
+  // Styling für Pre-Render-Block (sieht vor React-Load wie die Website aus)
+  const seoStaticStyles = `<style>
+.seo-static-content{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:48rem;margin:0 auto;padding:2rem 1rem;line-height:1.6;color:#1e293b;}
+.seo-static-content h1{font-size:1.75rem;font-weight:700;color:#1e5a9e;margin:0 0 1rem;letter-spacing:-0.02em;}
+.seo-static-content p{margin:0 0 0.75rem;font-size:0.9375rem;color:#475569;}
+.seo-static-content p:last-child{margin-bottom:0;}
+</style>`;
 
-  // Head anpassen
+  // Head anpassen (Pre-Render-Text bleibt sichtbar im ersten HTML – Google indexiert nur zuverlässig, wenn Inhalt sichtbar ist; React ersetzt #root nach Load)
   html = html
-    .replace(/<head>/, `<head>\n<!-- page-html: ${escapeMeta(routePath)} -->\n${visuallyHiddenStyle}`)
+    .replace(/<head>/, `<head>\n<!-- page-html: ${escapeMeta(routePath)} -->\n${seoStaticStyles}`)
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${safeTitle}</title>`)
     .replace(
       /<meta name="description" content="[^"]*"/,
