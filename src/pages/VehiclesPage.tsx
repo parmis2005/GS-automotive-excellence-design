@@ -661,7 +661,7 @@ const VehiclesPage = () => {
               Fahrzeugsuche
             </h1>
             <p className="text-muted-foreground text-sm max-w-2xl">
-              Unsere Gebrauchtwagen – Filter für Marke, Preis und Baujahr.
+              Durchsuchen Sie unsere Auswahl an Gebrauchtwagen und Jahreswagen – filtern Sie nach Marke, Preis, Baujahr und Kraftstoff.
             </p>
           </div>
 
