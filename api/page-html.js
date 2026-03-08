@@ -146,6 +146,14 @@ export default async function handler(req, res) {
   const rootWithContent = `<div id="root">${config.bodyContent}</div>`;
   html = html.replace(/<div id="root"\s*>\s*<\/div>/, rootWithContent);
 
+  // Mit ?raw=1 nur Pre-Render anzeigen (kein React), z. B. zum Prüfen: /api/page-html?path=/fahrzeuge&raw=1
+  const wantRaw = req.query?.raw === "1" || (Array.isArray(req.query?.raw) && req.query.raw[0] === "1");
+  if (wantRaw) {
+    html = html
+      .replace(/<script type="module"[\s\S]*?<\/script>/gi, "<!-- React app removed for raw preview -->")
+      .replace(/<link rel="stylesheet" crossorigin href="\/assets\/[^"]+"\s*>/gi, "<!-- App CSS removed -->");
+  }
+
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "public, max-age=300, s-maxage=300");
   res.setHeader("X-Page-HTML", "1");
