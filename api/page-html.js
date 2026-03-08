@@ -30,6 +30,8 @@ const ROUTE_CONFIG = {
     <main class="seo-static-content" aria-label="Fahrzeugsuche">
       <h1>Gebrauchtwagen Krefeld & Umgebung</h1>
       <p>Hier finden Sie unsere aktuelle Auswahl an Gebrauchtwagen und Jahreswagen: BMW, Opel, Mini und weitere Marken. Nutzen Sie die Filter für Marke, Preis, Baujahr und Kraftstoff. Bei Fragen einfach anfragen oder vorbeikommen – wir beraten Sie gerne in Krefeld.</p>
+      <p>GS Automobile Rheinland ist Ihr Autohaus am Niederrhein: geprüfte Qualität, faire Preise und persönliche Beratung. Ob Gebrauchtwagen oder Jahreswagen – wir betreuen Kunden aus Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch und Willich. Finanzierung und DEKRA-Gutachten auf Wunsch.</p>
+      <p>Unser Angebot umfasst unter anderem: BMW, Mini, Opel, Mercedes, Volkswagen, Ford und weitere Hersteller. Alle Fahrzeuge mit transparenten Angaben zu Kilometerstand, Ausstattung und Preis.</p>
     </main>`,
   },
   "/unternehmen": {
