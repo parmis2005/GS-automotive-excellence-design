@@ -10,8 +10,9 @@ Durch **serverseitig ausgeliefertes HTML** mit route-spezifischem Titel, Meta un
 ## Umgesetzte Lösung (ohne vollständige SSR-Migration)
 
 - **Pre-Rendering per API:** Die Routen `/`, `/fahrzeuge`, `/unternehmen` werden in der **Edge-Middleware** abgefangen. Statt der statischen `index.html` wird die **`/api/page-html`**-Funktion aufgerufen. Diese liefert die gleiche App-Shell, aber mit:
-  - angepasstem `<title>`, Meta-Description, Canonical, Open Graph
-  - **sichtbarem Inhalt im ersten HTML:** z.B. `<main class="seo-static-content"><h1>…</h1><p>…</p></main>` **innerhalb** von `<div id="root">`. Beim Mount ersetzt React diesen Block durch die echte App – für Crawler und Nutzer ohne JS ist sofort Text da.
+  - angepasstem `<title>`, Meta-Description, **Meta-Keywords** (routenspezifisch), Canonical, Open Graph, Twitter
+  - **JSON-LD:** Auf `/fahrzeuge` werden **ItemList** (Liste der Gebrauchtwagen mit Namen und URL) und **BreadcrumbList** eingefügt; auf `/unternehmen` **BreadcrumbList**. So erkennt Google die Seite als strukturierte Liste und die Navigation.
+  - **sichtbarem Inhalt im ersten HTML:** z.B. `<main class="seo-static-content"><h1>…</h1><p>…</p></main>` sowie auf `/fahrzeuge` eine **Sektion** mit H2 „Aktuelle Gebrauchtwagen“ und bis zu 80 Fahrzeuglinks (Marke, Modell, Baujahr, Preis, km, Kraftstoff). Beim Mount ersetzt React diesen Block durch die echte App – für Crawler und Nutzer ohne JS ist sofort Text da.
 - **Fahrzeug-Detailseiten:** Bereits umgesetzt über **`/api/vehicle-preview/[slug]`** (Link-Vorschau + fahrzeugspezifisches HTML).
 - **404:** Ungültige Pfade (nicht in der Liste der bekannten Routen) liefern **HTTP 404** und eine feste 404-HTML-Seite aus der Middleware. Die React-NotFound-Seite bleibt für den Fall, dass doch einmal eine unbekannte URL zur App durchgereicht wird (mit noindex).
 

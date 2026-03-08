@@ -30,6 +30,20 @@ function getVehicleDetailSlug(id, brand, model) {
   return [safeId, marke, modell].filter(Boolean).join("-");
 }
 
+/** Preis ohne Cent für Anzeige (z. B. 25.000) */
+function formatPrice(price) {
+  const n = Number(price);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return Math.round(n).toLocaleString("de-DE", { maximumFractionDigits: 0, minimumFractionDigits: 0 });
+}
+
+/** Kilometerstand formatiert (z. B. 50.000 km) */
+function formatMileage(km) {
+  const n = Number(km);
+  if (!Number.isFinite(n) || n < 0) return "";
+  return n.toLocaleString("de-DE", { maximumFractionDigits: 0 }) + " km";
+}
+
 const ROUTE_CONFIG = {
   "/": {
     title: "GS Automobile Rheinland GmbH | Autohaus in Krefeld – Gebrauchtwagen, BMW, Opel",
@@ -37,6 +51,8 @@ const ROUTE_CONFIG = {
       "GS Automobile Rheinland GmbH: Autohaus mit Standort in Krefeld – Kunden aus Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch, Willich und Umgebung. Gebrauchtwagen, BMW, Opel. Finanzierung, DEKRA, Garantie. GS Auto am Niederrhein.",
     ogDescription: "Gebrauchtwagen, BMW und Opel in Krefeld. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
     canonical: BASE_URL + "/",
+    keywords:
+      "Autohaus Krefeld, Autohaus Düsseldorf, Gebrauchtwagen Krefeld, BMW Krefeld, Opel Krefeld, Jahreswagen, Finanzierung Krefeld, DEKRA, GS Automobile Rheinland",
     bodyContent: `
     <main class="seo-static-content" aria-label="Inhalt">
       <h1>GS Automobile Rheinland – Autohaus in Krefeld</h1>
@@ -49,6 +65,8 @@ const ROUTE_CONFIG = {
       "Gebrauchtwagen in Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch, Willich: BMW, Opel und mehr bei GS Automobile Rheinland. Große Auswahl, faire Preise. Jetzt Traumauto finden!",
     ogDescription: "Gebrauchtwagen bei GS Automobile Rheinland in Krefeld. Große Auswahl, faire Preise. Jetzt Traumauto finden!",
     canonical: BASE_URL + "/fahrzeuge",
+    keywords:
+      "Gebrauchtwagen Krefeld, Gebrauchtwagen Düsseldorf, Gebrauchtwagen Neuss, Gebrauchtwagen Mönchengladbach, Fahrzeugsuche, BMW Krefeld, Opel Krefeld, Autohaus Krefeld, GS Auto, Gebrauchtwagen kaufen",
     bodyContent: `
     <main class="seo-static-content" aria-label="Fahrzeugsuche">
       <h1>Gebrauchtwagen Krefeld & Umgebung</h1>
@@ -63,6 +81,7 @@ const ROUTE_CONFIG = {
       "GS Automobile Rheinland: fair, transparent, effizient. Schneller Bestand, attraktive Marktpreise und geprüfte Qualität.",
     ogDescription: "GS Automobile Rheinland: fair, transparent, effizient. Geprüfte Gebrauchtwagen in Krefeld.",
     canonical: BASE_URL + "/unternehmen",
+    keywords: "GS Automobile Rheinland, Autohaus Krefeld, Gebrauchtwagen Krefeld, DEKRA, Leasingrückläufer",
     bodyContent: `
     <main class="seo-static-content" aria-label="Unternehmen">
       <h1>Unternehmen</h1>
@@ -109,6 +128,8 @@ export default async function handler(req, res) {
 
   // Für /fahrzeuge: Fahrzeugliste serverseitig laden und ins Pre-Render einbauen (SEO)
   let bodyContentToUse = config.bodyContent;
+  /** Für JSON-LD ItemList (nur /fahrzeuge mit Fahrzeugen) */
+  let vehiclesForSchema = [];
   if (routePath === "/fahrzeuge") {
     try {
       const vehiclesRes = await fetch(`${BACKEND_API}/api/vehicles`, {
@@ -118,12 +139,18 @@ export default async function handler(req, res) {
       if (vehiclesRes.ok) {
         const vehiclesData = await vehiclesRes.json().catch(() => null);
         const list = vehiclesData?.data ?? (vehiclesData?.vehicles ?? []);
-        const vehicles = Array.isArray(list) ? list.slice(0, 40) : [];
+        const vehicles = Array.isArray(list) ? list.slice(0, 80) : [];
+        vehiclesForSchema = vehicles;
         if (vehicles.length > 0) {
           const listItems = vehicles
             .map((v) => {
               const slug = getVehicleDetailSlug(v.id, v.brand, v.model);
-              const label = [v.brand, v.model, v.year].filter(Boolean).join(" ") || slug;
+              const title = [v.brand, v.model, v.year].filter(Boolean).join(" ") || slug;
+              const priceStr = formatPrice(v.price);
+              const kmStr = formatMileage(v.mileage);
+              const fuelStr = (v.fuel || "").trim() || "–";
+              const parts = [title, priceStr ? priceStr + " €" : "", kmStr, fuelStr].filter(Boolean);
+              const label = parts.join(" · ");
               const safeLabel = escapeMeta(label);
               const href = `${BASE_URL}/fahrzeuge/${slug}`;
               return `<li><a href="${escapeMeta(href)}">${safeLabel}</a></li>`;
@@ -132,10 +159,12 @@ export default async function handler(req, res) {
           bodyContentToUse = config.bodyContent.replace(
             "</main>",
             `
-      <h2 class="seo-static-content__list-title">Aktuelle Gebrauchtwagen</h2>
-      <ul class="seo-static-content__list">
+      <section class="seo-static-content__section" aria-label="Aktuelle Gebrauchtwagen">
+        <h2 class="seo-static-content__list-title">Aktuelle Gebrauchtwagen</h2>
+        <ul class="seo-static-content__list">
           ${listItems}
-      </ul>
+        </ul>
+      </section>
     </main>`
           );
         }
@@ -143,6 +172,49 @@ export default async function handler(req, res) {
     } catch (e) {
       // Fallback: nur statischer Intro-Text ohne Liste
     }
+  }
+
+  // JSON-LD für SEO: ItemList (Fahrzeugliste) + BreadcrumbList
+  const jsonLdScripts = [];
+  if (routePath === "/fahrzeuge" && vehiclesForSchema.length > 0) {
+    const itemList = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: "Gebrauchtwagen bei GS Automobile Rheinland Krefeld",
+      description: "Aktuelle Gebrauchtwagen und Jahreswagen: BMW, Opel, Mini und weitere Marken in Krefeld und Umgebung.",
+      numberOfItems: vehiclesForSchema.length,
+      itemListElement: vehiclesForSchema.map((v, i) => {
+        const slug = getVehicleDetailSlug(v.id, v.brand, v.model);
+        const name = [v.brand, v.model, v.year].filter(Boolean).join(" ") || slug;
+        return {
+          "@type": "ListItem",
+          position: i + 1,
+          name,
+          url: `${BASE_URL}/fahrzeuge/${slug}`,
+        };
+      }),
+    };
+    jsonLdScripts.push(itemList);
+  }
+  if (routePath === "/fahrzeuge") {
+    jsonLdScripts.push({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Startseite", item: { "@id": BASE_URL + "/" } },
+        { "@type": "ListItem", position: 2, name: "Gebrauchtwagen", item: { "@id": BASE_URL + "/fahrzeuge" } },
+      ],
+    });
+  }
+  if (routePath === "/unternehmen") {
+    jsonLdScripts.push({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Startseite", item: { "@id": BASE_URL + "/" } },
+        { "@type": "ListItem", position: 2, name: "Unternehmen", item: { "@id": BASE_URL + "/unternehmen" } },
+      ],
+    });
   }
 
   // /index.html abrufen, damit die Middleware nicht erneut page-html für / liefert (Rekursion)
@@ -168,16 +240,30 @@ export default async function handler(req, res) {
 .seo-static-content h1{font-size:1.75rem;font-weight:700;color:#1e5a9e;margin:0 0 1rem;letter-spacing:-0.02em;}
 .seo-static-content p{margin:0 0 0.75rem;font-size:0.9375rem;color:#475569;}
 .seo-static-content p:last-child{margin-bottom:0;}
+.seo-static-content__section{margin-top:1.5rem;}
 .seo-static-content__list-title{font-size:1.125rem;font-weight:600;color:#1e293b;margin:1.25rem 0 0.5rem;}
 .seo-static-content__list{margin:0;padding-left:1.25rem;list-style:disc;}
 .seo-static-content__list li{margin-bottom:0.25rem;}
 .seo-static-content__list a{color:#1e5a9e;text-decoration:none;}
 .seo-static-content__list a:hover{text-decoration:underline;}
 </style>`;
+  const jsonLdHtml =
+    jsonLdScripts.length > 0
+      ? jsonLdScripts
+          .map(
+            (obj) =>
+              `<script type="application/ld+json">${JSON.stringify(obj).replace(/<\/script/gi, "<\\/script")}</script>`
+          )
+          .join("\n")
+      : "";
 
+  const safeKeywords = config.keywords ? escapeMeta(config.keywords) : null;
   // Head anpassen (Pre-Render-Text bleibt sichtbar im ersten HTML – Google indexiert nur zuverlässig, wenn Inhalt sichtbar ist; React ersetzt #root nach Load)
   html = html
-    .replace(/<head>/, `<head>\n<!-- page-html: ${escapeMeta(routePath)} -->\n${seoStaticStyles}`)
+    .replace(
+      /<head>/,
+      `<head>\n<!-- page-html: ${escapeMeta(routePath)} -->\n${seoStaticStyles}\n${jsonLdHtml}`
+    )
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${safeTitle}</title>`)
     .replace(
       /<meta name="description" content="[^"]*"/,
@@ -207,6 +293,12 @@ export default async function handler(req, res) {
       /<meta name="twitter:description" content="[^"]*"/,
       `<meta name="twitter:description" content="${safeOgDesc}"`
     );
+  if (safeKeywords) {
+    html = html.replace(
+      /<meta name="keywords" content="[^"]*"/,
+      `<meta name="keywords" content="${safeKeywords}"`
+    );
+  }
 
   // Sichtbaren Content in #root injizieren (wird von React beim Mount ersetzt)
   const rootWithContent = `<div id="root">${bodyContentToUse}</div>`;
