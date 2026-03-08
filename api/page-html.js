@@ -147,11 +147,15 @@ export default async function handler(req, res) {
   html = html.replace(/<div id="root"\s*>\s*<\/div>/, rootWithContent);
 
   // Mit ?raw=1 nur Pre-Render anzeigen (kein React), z. B. zum Prüfen: /api/page-html?path=/fahrzeuge&raw=1
-  const wantRaw = req.query?.raw === "1" || (Array.isArray(req.query?.raw) && req.query.raw[0] === "1");
+  const rawParam = req.query?.raw;
+  const wantRaw =
+    rawParam === "1" ||
+    rawParam === "true" ||
+    (Array.isArray(rawParam) && (rawParam[0] === "1" || rawParam[0] === "true"));
   if (wantRaw) {
-    html = html
-      .replace(/<script type="module"[\s\S]*?<\/script>/gi, "<!-- React app removed for raw preview -->")
-      .replace(/<link rel="stylesheet" crossorigin href="\/assets\/[^"]+"\s*>/gi, "<!-- App CSS removed -->");
+    // Nur App-Bundle entfernen (script mit src=…/assets/…), nicht JSON-LD
+    html = html.replace(/<script[\s\S]*?src="\/assets\/[^"]+\.js"[\s\S]*?><\/script>/gi, "<!-- React app removed for raw preview -->");
+    html = html.replace(/<link[\s\S]*?href="\/assets\/[^"]+\.css"[\s\S]*?>/gi, "<!-- App CSS removed -->");
   }
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
