@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /kontakt-erfolgreich
 
 # Sitemaps
 Sitemap: https://gsauto.de/sitemap.xml
