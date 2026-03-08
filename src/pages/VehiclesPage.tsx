@@ -655,14 +655,15 @@ const VehiclesPage = () => {
       <Navbar />
       <main className="pt-8 pb-20">
         <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
-          {/* Header – nur Titel, wenn (noch) keine Fahrzeuge geladen */}
-          {(!vehicles || isLoading) && (
-            <div className="mb-6">
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-                Fahrzeugsuche
-              </h1>
-            </div>
-          )}
+          {/* Immer sichtbar: gleicher H1/Intro wie Pre-Render, damit Google nach JS keine „dünne“ Seite sieht (Soft-404) */}
+          <div className="mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+              Gebrauchtwagen Krefeld & Umgebung
+            </h1>
+            <p className="text-muted-foreground text-sm max-w-2xl">
+              Gebrauchtwagen und Jahreswagen bei GS Automobile Rheinland – große Auswahl, faire Preise. Filter für Marke, Preis und Baujahr.
+            </p>
+          </div>
 
           {/* Loading State */}
           {isLoading && (
@@ -693,13 +694,9 @@ const VehiclesPage = () => {
                 </div>
               )}
 
-              {/* Titel | Pagination | Sortierung – alle auf gleicher Höhe */}
+              {/* Pagination | Sortierung – H1 steht oben */}
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
-                {/* Links: Titel + Fahrzeuganzahl */}
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-                    Fahrzeugsuche
-                  </h1>
                   {vehicles && (
                     <p className="text-muted-foreground">
                       {filteredAndSortedVehicles.length} {filteredAndSortedVehicles.length === 1 ? "Fahrzeug" : "Fahrzeuge"} gefunden
