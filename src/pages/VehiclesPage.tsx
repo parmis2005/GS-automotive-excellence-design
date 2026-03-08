@@ -655,18 +655,14 @@ const VehiclesPage = () => {
       <Navbar />
       <main className="pt-8 pb-20">
         <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
-          {/* SEO-Intro: immer sichtbar, damit Crawler (z. B. Google) nach JS-Load klaren Inhalt sehen – reduziert Soft-404-Risiko */}
-          <section className="mb-6" aria-label="Fahrzeugsuche">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Gebrauchtwagen Krefeld & Umgebung
-            </h1>
-            <p className="text-muted-foreground max-w-3xl mb-2">
-              Hier finden Sie unsere aktuelle Auswahl an Gebrauchtwagen und Jahreswagen: BMW, Opel, Mini und weitere Marken. Nutzen Sie die Filter für Marke, Preis, Baujahr und Kraftstoff. Bei Fragen einfach anfragen oder vorbeikommen – wir beraten Sie gerne in Krefeld.
-            </p>
-            <p className="text-muted-foreground max-w-3xl text-sm">
-              GS Automobile Rheinland am Niederrhein: geprüfte Qualität, faire Preise, persönliche Beratung. Kunden aus Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch und Willich.
-            </p>
-          </section>
+          {/* Header – nur Titel, wenn (noch) keine Fahrzeuge geladen */}
+          {(!vehicles || isLoading) && (
+            <div className="mb-6">
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+                Fahrzeugsuche
+              </h1>
+            </div>
+          )}
 
           {/* Loading State */}
           {isLoading && (
@@ -697,10 +693,13 @@ const VehiclesPage = () => {
                 </div>
               )}
 
-              {/* Titel | Pagination | Sortierung – alle auf gleicher Höhe (H1 steht oben im SEO-Intro) */}
+              {/* Titel | Pagination | Sortierung – alle auf gleicher Höhe */}
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
-                {/* Links: Fahrzeuganzahl */}
+                {/* Links: Titel + Fahrzeuganzahl */}
                 <div>
+                  <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+                    Fahrzeugsuche
+                  </h1>
                   {vehicles && (
                     <p className="text-muted-foreground">
                       {filteredAndSortedVehicles.length} {filteredAndSortedVehicles.length === 1 ? "Fahrzeug" : "Fahrzeuge"} gefunden
