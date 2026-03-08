@@ -101,9 +101,13 @@ export default async function handler(req, res) {
   const safeOgDesc = escapeMeta(config.ogDescription ?? config.description);
   const safeCanonical = escapeMeta(config.canonical);
 
+  // Pre-Render-Text für Crawler im HTML, für Besucher unsichtbar (visually hidden – kein Flash vor React-Load)
+  const visuallyHiddenStyle =
+    "<style>.seo-static-content{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>";
+
   // Head anpassen
   html = html
-    .replace(/<head>/, `<head>\n<!-- page-html: ${escapeMeta(routePath)} -->`)
+    .replace(/<head>/, `<head>\n<!-- page-html: ${escapeMeta(routePath)} -->\n${visuallyHiddenStyle}`)
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${safeTitle}</title>`)
     .replace(
       /<meta name="description" content="[^"]*"/,
