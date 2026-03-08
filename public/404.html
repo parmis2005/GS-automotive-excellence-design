@@ -8,14 +8,85 @@
   <link rel="canonical" href="https://gsauto.de/" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 600px; line-height: 1.5; }
-    h1 { font-size: 1.5rem; }
-    a { color: #0f172a; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      line-height: 1.6;
+    }
+    .wrap {
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      background: #fff;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 2.5rem 2rem;
+    }
+    .logo { display: block; margin-bottom: 2rem; }
+    .logo img { height: 40px; width: auto; display: block; margin: 0 auto; }
+    .code {
+      font-size: 4rem;
+      font-weight: 700;
+      color: #1e5a9e;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin: 0 0 0.75rem;
+      color: #1e293b;
+    }
+    .text {
+      font-size: 0.95rem;
+      color: #64748b;
+      margin: 0 0 1.75rem;
+    }
+    .links { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
+    .btn {
+      display: inline-block;
+      padding: 0.65rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-primary {
+      background: #1e5a9e;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #16467a; color: #fff; }
+    .btn-outline {
+      background: transparent;
+      color: #1e5a9e;
+      border: 1px solid #1e5a9e;
+    }
+    .btn-outline:hover { background: #eef4fc; }
   </style>
 </head>
 <body>
-  <h1>Seite nicht gefunden</h1>
-  <p>Die angeforderte Seite existiert nicht. Sie wurden möglicherweise auf eine veraltete oder falsche Adresse weitergeleitet.</p>
-  <p><a href="https://gsauto.de/">Zur Startseite</a> · <a href="https://gsauto.de/fahrzeuge">Zu den Gebrauchtwagen</a></p>
+  <div class="wrap">
+    <a href="https://gsauto.de/" class="logo" aria-label="GS Automobile Rheinland Startseite">
+      <img src="/logo.png" alt="GS Automobile Rheinland" width="160" height="40" />
+    </a>
+    <div class="code">404</div>
+    <h1>Seite nicht gefunden</h1>
+    <p class="text">Die angeforderte Seite existiert nicht. Möglicherweise wurde sie verschoben oder die Adresse ist fehlerhaft.</p>
+    <div class="links">
+      <a href="https://gsauto.de/" class="btn btn-primary">Zur Startseite</a>
+      <a href="https://gsauto.de/fahrzeuge" class="btn btn-outline">Zu den Gebrauchtwagen</a>
+    </div>
+  </div>
 </body>
 </html>
