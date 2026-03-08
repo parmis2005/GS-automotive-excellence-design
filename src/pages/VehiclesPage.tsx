@@ -655,13 +655,13 @@ const VehiclesPage = () => {
       <Navbar />
       <main className="pt-8 pb-20">
         <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
-          {/* Immer sichtbar: gleicher H1/Intro wie Pre-Render, damit Google nach JS keine „dünne“ Seite sieht (Soft-404) */}
+          {/* Kurzer sichtbarer Titel; ausführlicher SEO-Text steht im Pre-Render (page-html) */}
           <div className="mb-6">
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Gebrauchtwagen Krefeld & Umgebung
+              Fahrzeugsuche
             </h1>
             <p className="text-muted-foreground text-sm max-w-2xl">
-              Gebrauchtwagen und Jahreswagen bei GS Automobile Rheinland – große Auswahl, faire Preise. Filter für Marke, Preis und Baujahr.
+              Unsere Gebrauchtwagen – Filter für Marke, Preis und Baujahr.
             </p>
           </div>
 
