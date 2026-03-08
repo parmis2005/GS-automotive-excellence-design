@@ -6,6 +6,29 @@
 export const config = { maxDuration: 15 };
 
 const BASE_URL = "https://gsauto.de";
+const BACKEND_API = "http://209.38.251.38:3001";
+
+/** Slug für Detail-URL: id-marke-modell (wie in vehicleSlug.ts) */
+function slugify(text) {
+  if (!text || typeof text !== "string") return "";
+  return String(text)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "fahrzeug";
+}
+function getVehicleDetailSlug(id, brand, model) {
+  const safeId = (id || "").trim() || "0";
+  const marke = slugify(brand || "");
+  const modell = slugify(model || "");
+  return [safeId, marke, modell].filter(Boolean).join("-");
+}
 
 const ROUTE_CONFIG = {
   "/": {
@@ -84,6 +107,44 @@ export default async function handler(req, res) {
     return res.status(404).end();
   }
 
+  // Für /fahrzeuge: Fahrzeugliste serverseitig laden und ins Pre-Render einbauen (SEO)
+  let bodyContentToUse = config.bodyContent;
+  if (routePath === "/fahrzeuge") {
+    try {
+      const vehiclesRes = await fetch(`${BACKEND_API}/api/vehicles`, {
+        headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (vehiclesRes.ok) {
+        const vehiclesData = await vehiclesRes.json().catch(() => null);
+        const list = vehiclesData?.data ?? (vehiclesData?.vehicles ?? []);
+        const vehicles = Array.isArray(list) ? list.slice(0, 40) : [];
+        if (vehicles.length > 0) {
+          const listItems = vehicles
+            .map((v) => {
+              const slug = getVehicleDetailSlug(v.id, v.brand, v.model);
+              const label = [v.brand, v.model, v.year].filter(Boolean).join(" ") || slug;
+              const safeLabel = escapeMeta(label);
+              const href = `${BASE_URL}/fahrzeuge/${slug}`;
+              return `<li><a href="${escapeMeta(href)}">${safeLabel}</a></li>`;
+            })
+            .join("\n          ");
+          bodyContentToUse = config.bodyContent.replace(
+            "</main>",
+            `
+      <h2 class="seo-static-content__list-title">Aktuelle Gebrauchtwagen</h2>
+      <ul class="seo-static-content__list">
+          ${listItems}
+      </ul>
+    </main>`
+          );
+        }
+      }
+    } catch (e) {
+      // Fallback: nur statischer Intro-Text ohne Liste
+    }
+  }
+
   // /index.html abrufen, damit die Middleware nicht erneut page-html für / liefert (Rekursion)
   let html;
   try {
@@ -107,6 +168,11 @@ export default async function handler(req, res) {
 .seo-static-content h1{font-size:1.75rem;font-weight:700;color:#1e5a9e;margin:0 0 1rem;letter-spacing:-0.02em;}
 .seo-static-content p{margin:0 0 0.75rem;font-size:0.9375rem;color:#475569;}
 .seo-static-content p:last-child{margin-bottom:0;}
+.seo-static-content__list-title{font-size:1.125rem;font-weight:600;color:#1e293b;margin:1.25rem 0 0.5rem;}
+.seo-static-content__list{margin:0;padding-left:1.25rem;list-style:disc;}
+.seo-static-content__list li{margin-bottom:0.25rem;}
+.seo-static-content__list a{color:#1e5a9e;text-decoration:none;}
+.seo-static-content__list a:hover{text-decoration:underline;}
 </style>`;
 
   // Head anpassen (Pre-Render-Text bleibt sichtbar im ersten HTML – Google indexiert nur zuverlässig, wenn Inhalt sichtbar ist; React ersetzt #root nach Load)
@@ -143,7 +209,7 @@ export default async function handler(req, res) {
     );
 
   // Sichtbaren Content in #root injizieren (wird von React beim Mount ersetzt)
-  const rootWithContent = `<div id="root">${config.bodyContent}</div>`;
+  const rootWithContent = `<div id="root">${bodyContentToUse}</div>`;
   html = html.replace(/<div id="root"\s*>\s*<\/div>/, rootWithContent);
 
   // Mit ?raw=1 nur Pre-Render anzeigen (kein React), z. B. zum Prüfen: /api/page-html?path=/fahrzeuge&raw=1
