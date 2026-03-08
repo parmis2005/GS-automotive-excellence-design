@@ -655,13 +655,14 @@ const VehiclesPage = () => {
       <Navbar />
       <main className="pt-8 pb-20">
         <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
-          {/* Kurzer sichtbarer Titel; ausführlicher SEO-Text steht im Pre-Render (page-html) */}
+          {/* H1 + Intro wie im Pre-Render (page-html), damit nach JS keine Soft-404 entsteht; „Fahrzeugsuche“ als Nutzer-Label */}
           <div className="mb-6">
+            <p className="text-sm font-medium text-primary mb-1">Fahrzeugsuche</p>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Fahrzeugsuche
+              Gebrauchtwagen Krefeld & Umgebung
             </h1>
             <p className="text-muted-foreground text-sm max-w-2xl">
-              Durchsuchen Sie unsere Auswahl an Gebrauchtwagen und Jahreswagen – filtern Sie nach Marke, Preis, Baujahr und Kraftstoff.
+              Hier finden Sie unsere aktuelle Auswahl an Gebrauchtwagen und Jahreswagen: BMW, Opel, Mini und weitere Marken. Nutzen Sie die Filter für Marke, Preis, Baujahr und Kraftstoff.
             </p>
           </div>
 
