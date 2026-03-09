@@ -13,7 +13,7 @@ Durch **serverseitig ausgeliefertes HTML** mit route-spezifischem Titel, Meta un
   - angepasstem `<title>`, Meta-Description, **Meta-Keywords** (routenspezifisch), Canonical, Open Graph, Twitter
   - **JSON-LD:** Auf `/fahrzeuge` werden **ItemList** (Liste der Gebrauchtwagen mit Namen und URL) und **BreadcrumbList** eingefügt; auf `/unternehmen` **BreadcrumbList**. So erkennt Google die Seite als strukturierte Liste und die Navigation.
   - **sichtbarem Inhalt im ersten HTML:** z.B. `<main class="seo-static-content"><h1>…</h1><p>…</p></main>` sowie auf `/fahrzeuge` eine **Sektion** mit H2 „Aktuelle Gebrauchtwagen“ und bis zu 80 Fahrzeuglinks (Marke, Modell, Baujahr, Preis, km, Kraftstoff). Beim Mount ersetzt React diesen Block durch die echte App – für Crawler und Nutzer ohne JS ist sofort Text da.
-- **Fahrzeug-Detailseiten:** Bereits umgesetzt über **`/api/vehicle-preview/[slug]`** (Link-Vorschau + fahrzeugspezifisches HTML).
+- **Fahrzeug-Detailseiten:** **`/api/vehicle-preview/[slug]`** liefert vollständiges HTML: Meta-Tags **und** sichtbaren Body-Inhalt (H1, Preis, Specs, Bild, Kurzbeschreibung, JSON-LD Product). Fahrzeugdaten kommen **serverseitig** direkt vom Backend (mit Retry). Kein 200 mit Fehlerbox: Fahrzeug unbekannt → **404**, Backend nicht erreichbar → **503**.
 - **404:** Ungültige Pfade (nicht in der Liste der bekannten Routen) liefern **HTTP 404** und eine feste 404-HTML-Seite aus der Middleware. Die React-NotFound-Seite bleibt für den Fall, dass doch einmal eine unbekannte URL zur App durchgereicht wird (mit noindex).
 
 ## Geänderte/neu angelegte Dateien
@@ -21,7 +21,8 @@ Durch **serverseitig ausgeliefertes HTML** mit route-spezifischem Titel, Meta un
 | Datei | Änderung |
 |-------|----------|
 | `api/page-html.js` | **Neu.** Serverless-Funktion: liefert HTML für `/`, `/fahrzeuge`, `/unternehmen` mit angepasstem Head und statischem Intro-Block in `#root`. |
-| `middleware.js` | **Erweitert.** Ruft für `/`, `/fahrzeuge`, `/unternehmen` die page-html-API auf; für `/fahrzeuge/:slug` weiter vehicle-preview; für ungültige Pfade 404 mit Inline-HTML. |
+| `api/vehicle-preview/[slug].js` | **Erweitert.** Liefert für `/fahrzeuge/:slug` vollständiges HTML: Head (Meta, JSON-LD Product) + Body (H1, Preis, Specs, Bild, Kurzbeschreibung). Fahrzeug per BACKEND_API mit Retry; 404 wenn nicht gefunden, 503 bei Backend-Ausfall. |
+| `middleware.js` | **Erweitert.** Ruft für `/`, `/fahrzeuge`, `/unternehmen` die page-html-API auf; für `/fahrzeuge/:slug` weiter vehicle-preview (Status 200/404/503 wird durchgereicht); für ungültige Pfade 404 mit Inline-HTML. |
 | `public/404.html` | **Neu.** Statische 404-Seite (noindex), wird auch von der Middleware als 404-Body genutzt (Inline-Kopie). |
 | `src/pages/NotFound.tsx` | **Angepasst.** Deutscher Text, H1 „Seite nicht gefunden“, Helmet mit Titel, canonical, `noindex, nofollow`. |
 | `public/robots.txt` | **Angepasst.** `Disallow: /kontakt-erfolgreich` ergänzt. |
@@ -65,7 +66,43 @@ Durch **serverseitig ausgeliefertes HTML** mit route-spezifischem Titel, Meta un
 - Erwartung: **HTTP 404** (Status in DevTools → Network), Body mit „Seite nicht gefunden“ und noindex.
 - Optional: In der Middleware ist eine Inline-404-HTML; die statische `public/404.html` wird bei Bedarf von Vercel für 404 genutzt.
 
+## Fahrzeugdetailseiten (/fahrzeuge/:slug)
+
+### Serverseitige Render-Logik (vehicle-preview)
+
+1. **Slug parsen** → Fahrzeug-ID (erster Segment vor dem ersten `-`).
+2. **Fahrzeug laden:** `GET BACKEND_API/api/vehicles/:id` (direkt Backend, **nicht** gsauto.de – vermeidet 499/Timeouts). **Retry:** bis zu 2 Wiederholungen bei Fehlern, Timeout 10 s.
+3. **Nicht gefunden** (404 vom Backend oder leere Daten) → **HTTP 404** mit noindex-HTML „Fahrzeug nicht gefunden“, kein 200.
+4. **Backend-Fehler/Netzwerkfehler** nach Retry → **HTTP 503** mit noindex-HTML „Vorübergehend nicht verfügbar“, `Retry-After: 60`.
+5. **Bei Erfolg:** `index.html` von gsauto.de holen, dann:
+   - Head: Titel, Meta, Canonical, og:* / twitter:*, **JSON-LD Product** (Preis, Marke, Modell, Bild, Angebot).
+   - **Body:** `#root` mit vollständigem Inhalt füllen:
+     - **H1:** Marke Modell Baujahr
+     - **Preis** (oder „Preis auf Anfrage“)
+     - **Specs:** Erstzulassung, Kilometerstand, Kraftstoff, Leistung (dl/dt/dd)
+     - **Bild:** erstes Fahrzeugbild (absolut URL)
+     - **Kurzbeschreibung** (bis 300 Zeichen aus `description` oder generiert)
+     - Link „Weitere Gebrauchtwagen“
+6. **Logging:** `console.warn` bei 404, `console.error` bei Fetch-Fehlern (in Vercel Logs sichtbar).
+
+### Bisher clientseitig, jetzt nicht mehr nötig für Crawler
+
+- **Vorher:** Die Seite lieferte nur Meta im Head; der **Body** war leer (`<div id="root"></div>`). Beim Rendern lud die **React-App** das Fahrzeug per **clientseitigem** `fetch` (`useVehicle` → `fetchVehicleById` → `GET /api/vehicles/:id`). Schlug dieser Request fehl (499, Timeout, CORS, Bot-Block), wurde eine **Fehlerbox** gerendert → Google wertete das als Soft 404.
+- **Jetzt:** Der **vollständige Fahrzeuginhalt** steht bereits im ersten HTML. Google braucht keinen clientseitigen Fetch. Die React-App ersetzt beim Mount den Pre-Render-Block; wenn der spätere Client-Fetch fehlschlägt, sehen Nutzer ggf. noch die Fehlerbox, aber **Crawler sehen den serverseitigen Inhalt**.
+
+### Warum 499 / „4 von 11 Ressourcen“
+
+- **499 Client Closed Request:** Entstand u.a., wenn die Serverless-Funktion **gsauto.de** (die eigene Domain) aufrief (`GET https://gsauto.de/api/vehicles/:id`). Dabei kann die Verbindung vor Antwortende geschlossen werden (z.B. Timeout, Edge-Weiterleitung). **Abhilfe:** Fahrzeug wird jetzt **direkt** von `BACKEND_API` (209.38.251.38:3001) geladen – kein Aufruf der eigenen Domain nötig.
+- **4 von 11 Ressourcen:** Kann von externen Ressourcen kommen (Bilder, Scripts, Fonts). Wichtig: Der **wichtige Seiteninhalt** (H1, Preis, Daten, Beschreibung, ein Bild) steht im **HTML-Body**; fehlende Zusatzressourcen führen nicht mehr dazu, dass die Seite als Fehlerseite (Soft 404) gilt.
+
+### Prüfen: View-Source und 404
+
+- **View Source** auf einer echten Detail-URL, z.B. `https://gsauto.de/fahrzeuge/12345-bmw-320`:
+  - Im **Body** innerhalb von `<div id="root">` müssen sichtbar sein: **H1** (z.B. „BMW 320 2024“), **Preis**, **Erstzulassung/Kilometerstand/Kraftstoff**, **Beschreibung**, **img** mit Fahrzeugbild, **JSON-LD** im Head (`application/ld+json` Product).
+- **Nicht existierendes Fahrzeug:** z.B. `https://gsauto.de/fahrzeuge/99999999-xyz`:
+  - Erwartung: **HTTP 404** (Status in DevTools → Network), Body mit „Fahrzeug nicht gefunden“ und `noindex, nofollow`. Kein 200 mit Fehlerseite.
+
 ## Kurzfassung
 
-- **Ursache Soft 404:** Gleiche, fast leere `index.html` für alle URLs; kein sichtbarer, route-spezifischer Inhalt im ersten HTML.
-- **Lösung:** Pre-Rendering für `/`, `/fahrzeuge`, `/unternehmen` über `api/page-html.js` + Middleware; sichtbarer Intro-Block (H1 + Text) in `#root`; echte 404 für ungültige Pfade; noindex für NotFound und Erfolgsseiten.
+- **Ursache Soft 404:** Gleiche, fast leere `index.html` für alle URLs; kein sichtbarer, route-spezifischer Inhalt im ersten HTML. Bei Detailseiten: leerer Body + clientseitiger Fetch → bei Fehlern Fehlerbox → Soft 404.
+- **Lösung:** Pre-Rendering für `/`, `/fahrzeuge`, `/unternehmen` über `api/page-html.js`; für `/fahrzeuge/:slug` vollständiger Body-Inhalt über `api/vehicle-preview/[slug].js` (Backend-Direktaufruf, Retry, 404/503). Echte 404 für ungültige Pfade und nicht existierende Fahrzeuge; noindex für NotFound und Erfolgsseiten.
