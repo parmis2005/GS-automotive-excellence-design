@@ -655,22 +655,21 @@ const VehiclesPage = () => {
       <Navbar />
       <main className="pt-8 pb-20">
         <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
-          {/* H1 + Intro wie im Pre-Render (page-html), damit nach JS keine Soft-404 entsteht; „Fahrzeugsuche“ als Nutzer-Label */}
           <div className="mb-6">
-            <p className="text-sm font-medium text-primary mb-1">Fahrzeugsuche</p>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Gebrauchtwagen Krefeld & Umgebung
+              Fahrzeugsuche
             </h1>
             <p className="text-muted-foreground text-sm max-w-2xl">
-              Hier finden Sie unsere aktuelle Auswahl an Gebrauchtwagen und Jahreswagen: BMW, Opel, Mini und weitere Marken. Nutzen Sie die Filter für Marke, Preis, Baujahr und Kraftstoff.
+              Durchsuchen Sie unsere Auswahl an Gebrauchtwagen und Jahreswagen – filtern Sie nach Marke, Preis, Baujahr und Kraftstoff.
             </p>
           </div>
 
-          {/* Loading State */}
+          {/* Loading State – klarer Loading-Screen */}
           {isLoading && (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <span className="ml-3 text-muted-foreground">Fahrzeuge werden geladen...</span>
+            <div className="flex flex-col items-center justify-center min-h-[320px] rounded-xl border border-border/60 bg-muted/30 py-16 px-6">
+              <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" aria-hidden />
+              <p className="text-sm font-medium text-foreground">Fahrzeuge werden geladen...</p>
+              <p className="text-xs text-muted-foreground mt-1">Einen Moment bitte</p>
             </div>
           )}
 
