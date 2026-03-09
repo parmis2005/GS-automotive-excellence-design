@@ -29,18 +29,28 @@ export function useVehicles() {
 /**
  * React Query hook to fetch a single vehicle by ID.
  *
- * Plain-English explanation:
- * - `queryKey: ["vehicles", id]` creates a unique cache entry per vehicle.
- * - `queryFn` calls `fetchVehicleById(id)` to load that vehicle from the API.
- * - `enabled: !!id` prevents the request when `id` is empty.
- * - The same caching and timing rules apply as in `useVehicles()`.
+ * Wenn die Fahrzeugdetailseite serverseitig vorgerendert wurde (vehicle-preview),
+ * liegen die Daten in window.__PRELOADED_VEHICLE__. Dann wird KEIN Request an
+ * /api/vehicles/:id ausgelöst – wichtig für SEO, da robots.txt /api/ blockiert.
  */
+function getPreloadedVehicle(id: string): Vehicle | undefined {
+  if (typeof window === "undefined" || !id) return undefined;
+  const pre = window.__PRELOADED_VEHICLE__;
+  if (!pre || pre.id !== id) return undefined;
+  return pre;
+}
+
 export function useVehicle(id: string) {
+  const preloaded = getPreloadedVehicle(id);
   return useQuery<Vehicle>({
     queryKey: ["vehicles", id],
     queryFn: () => fetchVehicleById(id),
     enabled: !!id,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
+    initialData: preloaded,
+    // Bei Preload: kein Fetch (Googlebot darf /api/ nicht aufrufen)
+    refetchOnMount: !preloaded,
+    refetchOnWindowFocus: !preloaded,
+    staleTime: preloaded ? 10 * 60 * 1000 : 2 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 }

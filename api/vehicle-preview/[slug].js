@@ -259,6 +259,12 @@ export default async function handler(req, res) {
   };
   const jsonLdScript = `<script type="application/ld+json">${JSON.stringify(vehicleSchema).replace(/<\/script/gi, "<\\/script")}</script>`;
 
+  // Fahrzeugdaten für Hydration: React braucht keinen /api/vehicles-Request (wichtig bei robots.txt Disallow: /api/)
+  const preloadJson = JSON.stringify(vehicle).replace(/<\/script/gi, "\\u003c/script");
+  const preloadScript =
+    `<script type="application/json" id="__PRELOADED_VEHICLE__">${preloadJson}</script>` +
+    `<script>try{window.__PRELOADED_VEHICLE__=JSON.parse(document.getElementById("__PRELOADED_VEHICLE__").textContent);}catch(e){}</script>`;
+
   const seoStyles = `<style>
 .seo-static-content{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:48rem;margin:0 auto;padding:2rem 1rem;line-height:1.6;color:#1e293b;}
 .seo-static-content h1{font-size:1.75rem;font-weight:700;color:#1e5a9e;margin:0 0 0.5rem;}
@@ -292,7 +298,7 @@ export default async function handler(req, res) {
   const safeDesc = escapeMeta(metaDescription);
 
   html = html
-    .replace(/<head>/, `<head>\n<!-- vehicle-preview: ${escapeMeta(slug)} -->\n${seoStyles}\n${jsonLdScript}`)
+    .replace(/<head>/, `<head>\n<!-- vehicle-preview: ${escapeMeta(slug)} -->\n${seoStyles}\n${jsonLdScript}\n${preloadScript}`)
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${safeTitle}</title>`)
     .replace(/<meta name="description" content="[^"]*"/, `<meta name="description" content="${safeDesc}"`)
     .replace(/<link rel="canonical" href="[^"]*"/, `<link rel="canonical" href="${fullUrl}"`)

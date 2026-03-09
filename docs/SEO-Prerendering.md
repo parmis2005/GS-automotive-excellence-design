@@ -13,7 +13,7 @@ Durch **serverseitig ausgeliefertes HTML** mit route-spezifischem Titel, Meta un
   - angepasstem `<title>`, Meta-Description, **Meta-Keywords** (routenspezifisch), Canonical, Open Graph, Twitter
   - **JSON-LD:** Auf `/fahrzeuge` werden **ItemList** (Liste der Gebrauchtwagen mit Namen und URL) und **BreadcrumbList** eingefügt; auf `/unternehmen` **BreadcrumbList**. So erkennt Google die Seite als strukturierte Liste und die Navigation.
   - **sichtbarem Inhalt im ersten HTML:** z.B. `<main class="seo-static-content"><h1>…</h1><p>…</p></main>` sowie auf `/fahrzeuge` eine **Sektion** mit H2 „Aktuelle Gebrauchtwagen“ und bis zu 80 Fahrzeuglinks (Marke, Modell, Baujahr, Preis, km, Kraftstoff). Beim Mount ersetzt React diesen Block durch die echte App – für Crawler und Nutzer ohne JS ist sofort Text da.
-- **Fahrzeug-Detailseiten:** **`/api/vehicle-preview/[slug]`** liefert vollständiges HTML: Meta-Tags **und** sichtbaren Body-Inhalt (H1, Preis, Specs, Bild, Kurzbeschreibung, JSON-LD Product). Fahrzeugdaten kommen **serverseitig** direkt vom Backend (mit Retry). Kein 200 mit Fehlerbox: Fahrzeug unbekannt → **404**, Backend nicht erreichbar → **503**.
+- **Fahrzeug-Detailseiten:** **`/api/vehicle-preview/[slug]`** liefert vollständiges HTML: Meta-Tags **und** sichtbaren Body-Inhalt (H1, Preis, Specs, Bild, Kurzbeschreibung, JSON-LD Product). Fahrzeugdaten kommen **serverseitig** direkt vom Backend (mit Retry). Zusätzlich werden die Fahrzeugdaten als **`window.__PRELOADED_VEHICLE__`** ins HTML eingebettet; die React-App nutzt sie zur Hydration **ohne** Request an `/api/vehicles/:id`. So ist die indexierbare Darstellung unabhängig von robots.txt (Disallow: /api/). Kein 200 mit Fehlerbox: Fahrzeug unbekannt → **404**, Backend nicht erreichbar → **503**.
 - **404:** Ungültige Pfade (nicht in der Liste der bekannten Routen) liefern **HTTP 404** und eine feste 404-HTML-Seite aus der Middleware. Die React-NotFound-Seite bleibt für den Fall, dass doch einmal eine unbekannte URL zur App durchgereicht wird (mit noindex).
 
 ## Geänderte/neu angelegte Dateien
@@ -87,8 +87,8 @@ Durch **serverseitig ausgeliefertes HTML** mit route-spezifischem Titel, Meta un
 
 ### Bisher clientseitig, jetzt nicht mehr nötig für Crawler
 
-- **Vorher:** Die Seite lieferte nur Meta im Head; der **Body** war leer (`<div id="root"></div>`). Beim Rendern lud die **React-App** das Fahrzeug per **clientseitigem** `fetch` (`useVehicle` → `fetchVehicleById` → `GET /api/vehicles/:id`). Schlug dieser Request fehl (499, Timeout, CORS, Bot-Block), wurde eine **Fehlerbox** gerendert → Google wertete das als Soft 404.
-- **Jetzt:** Der **vollständige Fahrzeuginhalt** steht bereits im ersten HTML. Google braucht keinen clientseitigen Fetch. Die React-App ersetzt beim Mount den Pre-Render-Block; wenn der spätere Client-Fetch fehlschlägt, sehen Nutzer ggf. noch die Fehlerbox, aber **Crawler sehen den serverseitigen Inhalt**.
+- **Vorher:** Die Seite lieferte nur Meta im Head; der **Body** war leer. Beim Rendern lud die **React-App** das Fahrzeug per **clientseitigem** `fetch` (`useVehicle` → `GET /api/vehicles/:id`). robots.txt blockiert `/api/` für Googlebot → Request schlägt fehl → **Fehlerbox** im Rendered Screenshot → Soft 404.
+- **Jetzt:** (1) Der **vollständige Fahrzeuginhalt** steht im ersten HTML (Body in `#root`). (2) Die Fahrzeugdaten werden als **`window.__PRELOADED_VEHICLE__`** eingebettet; **`useVehicle(id)`** nutzt sie als `initialData` und führt **keinen** Request an `/api/vehicles/:id` aus, wenn Preload-Daten zur ID passen. Damit hängt die indexierbare Darstellung **nicht** von /api/ ab; robots.txt (Disallow: /api/) ist unkritisch.
 
 ### Warum 499 / „4 von 11 Ressourcen“
 
