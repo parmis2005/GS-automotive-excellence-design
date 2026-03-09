@@ -655,13 +655,8 @@ const VehiclesPage = () => {
       <Navbar />
       <main className="pt-8 pb-20">
         <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
-          <div className="mb-6">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Fahrzeugsuche
-            </h1>
-            <p className="text-muted-foreground text-sm max-w-2xl">
-              Durchsuchen Sie unsere Auswahl an Gebrauchtwagen und Jahreswagen – filtern Sie nach Marke, Preis, Baujahr und Kraftstoff.
-            </p>
+          <div className="mb-4">
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground">Fahrzeugsuche</h1>
           </div>
 
           {/* Loading State – klarer Loading-Screen */}
