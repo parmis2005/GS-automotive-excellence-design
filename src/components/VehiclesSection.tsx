@@ -262,11 +262,31 @@ const VehiclesSection = () => {
           </p>
         </div>
 
-        {/* Loading State */}
+        {/* Loading State – Skeleton reserviert gleichen Platz wie Karten-Grid, reduziert CLS */}
         {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="ml-3 text-muted-foreground">Fahrzeuge werden geladen...</span>
+          <div className="min-h-[320px] md:min-h-[520px]" aria-busy="true">
+            <div className="grid grid-cols-1 md:hidden gap-6 mb-6">
+              {[1, 2].map((i) => (
+                <div key={i} className="rounded-lg overflow-hidden border border-border bg-muted/50 h-full min-h-[280px]">
+                  <div className="aspect-[4/3] bg-muted animate-pulse" />
+                  <div className="p-4 space-y-2">
+                    <div className="h-5 bg-muted rounded w-3/4 animate-pulse" />
+                    <div className="h-8 bg-muted rounded w-1/2 animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="rounded-lg overflow-hidden border border-border bg-muted/50 h-full min-h-[320px]">
+                  <div className="aspect-[4/3] bg-muted animate-pulse" />
+                  <div className="p-4 space-y-2">
+                    <div className="h-5 bg-muted rounded w-3/4 animate-pulse" />
+                    <div className="h-8 bg-muted rounded w-1/2 animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

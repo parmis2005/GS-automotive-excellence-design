@@ -167,6 +167,8 @@ const Navbar = () => {
                 <img 
                   src="/logo.png" 
                   alt="GS Automobile Rheinland" 
+                  width={200}
+                  height={72}
                   className="h-12 sm:h-16 lg:h-16 xl:h-[72px] 2xl:h-20 w-auto max-w-[155px] sm:max-w-[200px] lg:max-w-[200px] xl:max-w-[240px] 2xl:max-w-none object-contain"
                 />
               </Link>

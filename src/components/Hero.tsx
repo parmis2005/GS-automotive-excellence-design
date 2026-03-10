@@ -26,6 +26,7 @@ const Hero = () => {
           }}
           loading="eager"
           fetchPriority="high"
+          decoding="async"
         />
         {/* Leichter Übergang – Mobile: weniger, ab md: etwas mehr */}
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent via-background/0 to-background/40 md:hidden" />

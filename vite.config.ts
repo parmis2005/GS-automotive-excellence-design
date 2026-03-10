@@ -17,6 +17,19 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/")) return "react";
+          if (id.includes("node_modules/react-router")) return "router";
+          if (id.includes("node_modules/@tanstack/react-query")) return "query";
+        },
+      },
+    },
+    cssCodeSplit: true,
+    minify: "esbuild",
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
