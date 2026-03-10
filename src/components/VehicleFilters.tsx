@@ -85,6 +85,8 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(true);
   const [showFuelTypes, setShowFuelTypes] = useState(true);
   const [showVehicleTypes, setShowVehicleTypes] = useState(true);
+  const [showEquipment, setShowEquipment] = useState(true);
+  const [showExteriorColors, setShowExteriorColors] = useState(true);
   const currentYear = new Date().getFullYear();
   
   // Calculate min/max price and year from vehicles
@@ -791,13 +793,26 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
                 </div>
               </div>
 
-          {/* Exterior Colors */}
+          {/* Außenfarbe – aufklappbar, standardmäßig zugeklappt */}
           {filterOptions.exteriorColors && filterOptions.exteriorColors.length > 0 && (
             <>
               <Separator className="mb-6" />
-              <div className="mb-6">
-                <Label className="mb-3 block">Außenfarbe</Label>
-                <div className="space-y-3">
+              <Collapsible open={showExteriorColors} onOpenChange={setShowExteriorColors} className="mb-6">
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between p-0 h-auto font-medium text-sm hover:text-foreground mb-3"
+                >
+                  <span>Außenfarbe</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      showExteriorColors ? "transform rotate-180" : ""
+                    }`}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-3 pt-1">
                   {filterOptions.exteriorColors.map((color) => (
                     <div key={color} className="flex items-center space-x-2">
                       <Checkbox
@@ -805,7 +820,7 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
                         checked={filters.exteriorColors.includes(color)}
                         onCheckedChange={() => toggleExteriorColor(color)}
                       />
-                      <div 
+                      <div
                         className="w-4 h-4 rounded-full border border-border flex-shrink-0"
                         style={{ backgroundColor: getColorHex(color) }}
                       />
@@ -818,11 +833,12 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
                     </div>
                   ))}
                 </div>
-              </div>
+              </CollapsibleContent>
+            </Collapsible>
             </>
           )}
 
-          {/* Equipment - kategorisch sortiert */}
+          {/* Ausstattung – aufklappbar, standardmäßig zugeklappt */}
           {filterOptions.equipment && filterOptions.equipment.length > 0 && (() => {
             const categoriesWithItems = EQUIPMENT_FILTER_CATEGORIES
               .map((cat) => ({
@@ -838,33 +854,49 @@ const VehicleFilters = ({ filters, setFilters, filterOptions, vehicles }: Vehicl
             return (
               <>
                 <Separator className="mb-6" />
-                <div className="mb-6 space-y-5">
-                  <Label className="mb-3 block">Ausstattung</Label>
-                  {categoriesWithItems.map((category) => (
-                    <div key={category.label}>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {category.label}
-                      </p>
-                      <div className="space-y-2">
-                        {category.items.map((eq) => (
-                          <div key={eq} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`equipment-${eq}`}
-                              checked={filters.equipment.includes(eq)}
-                              onCheckedChange={() => toggleEquipment(eq)}
-                            />
-                            <Label
-                              htmlFor={`equipment-${eq}`}
-                              className="text-sm font-normal cursor-pointer flex-1"
-                            >
-                              {eq}
-                            </Label>
-                          </div>
-                        ))}
+                <Collapsible open={showEquipment} onOpenChange={setShowEquipment} className="mb-6">
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-between p-0 h-auto font-medium text-sm hover:text-foreground mb-3"
+                  >
+                    <span>Ausstattung</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        showEquipment ? "transform rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="space-y-5 pt-1">
+                    {categoriesWithItems.map((category) => (
+                      <div key={category.label}>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {category.label}
+                        </p>
+                        <div className="space-y-2">
+                          {category.items.map((eq) => (
+                            <div key={eq} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`equipment-${eq}`}
+                                checked={filters.equipment.includes(eq)}
+                                onCheckedChange={() => toggleEquipment(eq)}
+                              />
+                              <Label
+                                htmlFor={`equipment-${eq}`}
+                                className="text-sm font-normal cursor-pointer flex-1"
+                              >
+                                {eq}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
               </>
             );
           })()}

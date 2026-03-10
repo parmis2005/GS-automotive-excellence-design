@@ -360,9 +360,9 @@ const VehicleListItem = ({
               </Link>
             </div>
           </div>
-          <div className="hidden lg:flex flex-col sm:flex-row gap-3 mt-auto pt-4 border-t border-border">
-            <Link to={inzahlungnahmeLink} className="flex-1">
-              <Button variant="outline" className="w-full">
+          <div className="hidden lg:flex flex-wrap gap-2 xl:gap-3 mt-auto pt-4 border-t border-border">
+            <Link to={inzahlungnahmeLink} className="flex-shrink-0 xl:flex-1 min-w-[10.5rem]">
+              <Button variant="outline" size="sm" className="text-xs xl:text-sm whitespace-nowrap w-full min-w-[10.5rem] xl:h-10 xl:py-2">
                 Inzahlungnahme
               </Button>
             </Link>
@@ -370,29 +370,32 @@ const VehicleListItem = ({
               vehicleUrl={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`}
               label="Teilen"
               variant="outline"
-              className="flex-shrink-0"
+              size="sm"
+              className="flex-shrink-0 xl:flex-1 xl:min-w-0 xl:w-full xl:h-10 xl:py-2 text-xs xl:text-sm [&_svg]:w-3.5 [&_svg]:h-3.5 xl:[&_svg]:w-4 xl:[&_svg]:h-4"
               onClick={(e) => e.stopPropagation()}
             />
             <Button
               variant="outline"
-              className="flex-shrink-0"
+              size="sm"
+              className="flex-shrink-0 xl:flex-1 xl:min-w-0 xl:w-full xl:h-10 xl:py-2 text-xs xl:text-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 window.location.href = "tel:021519422262";
               }}
             >
-              <Phone className="w-4 h-4 mr-2" />
+              <Phone className="w-3.5 h-3.5 xl:w-4 xl:h-4 mr-1.5 xl:mr-2" />
               Anrufen
             </Button>
             <Button
               variant="outline"
-              className="flex-shrink-0"
+              size="sm"
+              className="flex-shrink-0 xl:flex-1 xl:min-w-0 xl:w-full xl:h-10 xl:py-2 text-xs xl:text-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 window.location.href = `mailto:info@gsauto.de?subject=Anfrage zu ${encodeURIComponent(displayTitle)}`;
               }}
             >
-              <Mail className="w-4 h-4 mr-2" />
+              <Mail className="w-3.5 h-3.5 xl:w-4 xl:h-4 mr-1.5 xl:mr-2" />
               E-Mail
             </Button>
           </div>

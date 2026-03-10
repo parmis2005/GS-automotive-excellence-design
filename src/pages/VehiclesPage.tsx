@@ -656,9 +656,9 @@ const VehiclesPage = () => {
       <Navbar />
       <main className="pt-8 pb-20">
         <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
-          {/* Eine Zeile: links Fahrzeugsuche + Anzahl, rechts Zeige/Pagination/Sort (wie im Screenshot) */}
-          <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-6">
-            <div>
+          {/* Eine Zeile: links Fahrzeugsuche, Mitte Pagination zentriert, rechts Sortierung */}
+          <div className="flex flex-col xl:flex-row xl:items-start gap-4 mb-6">
+            <div className="flex-shrink-0">
               <h1 className="text-3xl md:text-4xl font-bold text-foreground">Fahrzeugsuche</h1>
               {vehicles && !isLoading && (
                 <p className="text-muted-foreground mt-1">
@@ -671,15 +671,15 @@ const VehiclesPage = () => {
                 </p>
               )}
             </div>
-            {/* Rechts: Zeige X–Y von Z, Pagination, Sortierung (nur wenn Inhalte da) */}
             {vehicles && !isLoading && filteredAndSortedVehicles.length > 0 && (
-              <div className="flex flex-col items-stretch xl:items-end gap-2 w-full xl:w-auto">
-                <p className="text-sm text-muted-foreground">
-                  Zeige {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedVehicles.length)} von {filteredAndSortedVehicles.length} Fahrzeugen
-                </p>
-                <div className="flex flex-wrap items-center justify-end gap-2">
+              <>
+                {/* Mitte: Zeige X–Y von Z + Pagination zentriert zwischen Titel und Sortierung */}
+                <div className="xl:flex-1 xl:flex xl:flex-col xl:items-center xl:justify-center xl:min-w-0">
+                  <p className="text-sm text-muted-foreground text-center xl:mb-1">
+                    Zeige {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedVehicles.length)} von {filteredAndSortedVehicles.length} Fahrzeugen
+                  </p>
                   {totalPages > 1 && (
-                    <div className="hidden md:flex items-center gap-2">
+                    <div className="hidden md:flex items-center justify-center gap-2">
                       <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1}>
                         <ChevronLeft className="w-4 h-4 mr-1" /> Zurück
                       </Button>
@@ -698,9 +698,12 @@ const VehiclesPage = () => {
                       </Button>
                     </div>
                   )}
+                </div>
+                {/* Rechts: Filtern (mobil) + Sortierung + Pro Seite – verkleinerte Version zentriert, mobil volle Breite */}
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center xl:justify-end gap-2 flex-shrink-0 w-full sm:w-auto">
                   <Sheet open={isMobileFiltersOpen} onOpenChange={setIsMobileFiltersOpen}>
                     <SheetTrigger asChild>
-                      <Button variant="outline" className="xl:hidden flex items-center gap-2">
+                      <Button variant="outline" className="xl:hidden flex items-center justify-center gap-2 w-full sm:w-auto">
                         <Filter className="w-4 h-4" /> Filtern
                         {activeFilterCount > 0 && <span className="ml-1 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-bold rounded-full">{activeFilterCount}</span>}
                       </Button>
@@ -716,7 +719,7 @@ const VehiclesPage = () => {
                     </SheetContent>
                   </Sheet>
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Sortieren nach" /></SelectTrigger>
+                    <SelectTrigger className="w-full min-w-0 sm:w-[200px]"><SelectValue placeholder="Sortieren nach" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="arrival-desc">Neueste Zugänge</SelectItem>
                       <SelectItem value="price-desc">Preis: Höchste zuerst</SelectItem>
@@ -731,7 +734,7 @@ const VehiclesPage = () => {
                     </SelectContent>
                   </Select>
                   <Select value={String(itemsPerPage)} onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
-                    <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Pro Seite" /></SelectTrigger>
+                    <SelectTrigger className="w-full min-w-0 sm:w-[150px]"><SelectValue placeholder="Pro Seite" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="10">10 pro Seite</SelectItem>
                       <SelectItem value="20">20 pro Seite</SelectItem>
@@ -740,7 +743,7 @@ const VehiclesPage = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
@@ -768,7 +771,7 @@ const VehiclesPage = () => {
           {vehicles && !isLoading && (
             <div className="flex flex-col">
               <div className="flex flex-col xl:flex-row gap-8 min-w-0">
-                {/* Filters Sidebar – erst ab xl (1280px), darunter Mobile-Sheet damit nichts abgeschnitten wird */}
+                {/* Filter-Sidebar erst ab xl (1280px); darunter volle Breite für Liste, damit Buttons nicht umbrechen */}
                 <aside className="hidden xl:block xl:w-72 flex-shrink-0">
                   <VehicleFilters
                     filters={filters}
