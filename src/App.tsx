@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,22 +8,23 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
-import VehiclesPage from "./pages/VehiclesPage";
-import VehicleDetailPage from "./pages/VehicleDetailPage";
-import VehiclePurchasePage from "./pages/VehiclePurchasePage";
-import ImpressumPage from "./pages/ImpressumPage";
-import DatenschutzPage from "./pages/DatenschutzPage";
-import HaftungsausschlussPage from "./pages/HaftungsausschlussPage";
-import FinanzierungPage from "./pages/FinanzierungPage";
-import GarantiePage from "./pages/GarantiePage";
-import ZulassungPage from "./pages/ZulassungPage";
-import DekraTuvPage from "./pages/DekraTuvPage";
-import OelwechselPage from "./pages/OelwechselPage";
-import UnternehmenPage from "./pages/UnternehmenPage";
-import KontaktErfolgreichPage from "./pages/KontaktErfolgreichPage";
-import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
 import CookieBanner from "./components/CookieBanner";
+
+const VehiclesPage = lazy(() => import("./pages/VehiclesPage"));
+const VehicleDetailPage = lazy(() => import("./pages/VehicleDetailPage"));
+const VehiclePurchasePage = lazy(() => import("./pages/VehiclePurchasePage"));
+const ImpressumPage = lazy(() => import("./pages/ImpressumPage"));
+const DatenschutzPage = lazy(() => import("./pages/DatenschutzPage"));
+const HaftungsausschlussPage = lazy(() => import("./pages/HaftungsausschlussPage"));
+const FinanzierungPage = lazy(() => import("./pages/FinanzierungPage"));
+const GarantiePage = lazy(() => import("./pages/GarantiePage"));
+const ZulassungPage = lazy(() => import("./pages/ZulassungPage"));
+const DekraTuvPage = lazy(() => import("./pages/DekraTuvPage"));
+const OelwechselPage = lazy(() => import("./pages/OelwechselPage"));
+const UnternehmenPage = lazy(() => import("./pages/UnternehmenPage"));
+const KontaktErfolgreichPage = lazy(() => import("./pages/KontaktErfolgreichPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +50,7 @@ const App = () => (
           <BrowserRouter>
             <ScrollToTop />
             <CookieBanner />
+            <Suspense fallback={<div className="min-h-[60vh]" aria-hidden />}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/fahrzeuge" element={<VehiclesPage />} />
@@ -66,6 +69,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
           <Analytics />
         </TooltipProvider>

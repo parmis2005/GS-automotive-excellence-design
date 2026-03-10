@@ -8,19 +8,21 @@ const Hero = () => {
       className="relative overflow-hidden"
       aria-label="Hero Section"
     >
-      {/* Background Image */}
-      <div className="relative z-0 w-full overflow-hidden">
+      {/* Background Image – reservierter Platz (aspect-ratio) reduziert CLS, Optik unverändert */}
+      <div
+        className="relative z-0 w-full overflow-hidden"
+        style={{ aspectRatio: "21/9" }}
+      >
         <img
           src={backgroundImage}
           alt="GS Automobile Rheinland Autohaus mit Fahrzeugen"
-          className="w-full h-auto block"
-          style={{ 
-            width: '100%', 
-            height: 'auto',
-            display: 'block',
-            clipPath: 'inset(60px 0 10px 0)',
-            marginTop: '-60px',
-            marginBottom: '-10px'
+          width={1920}
+          height={828}
+          className="block w-full h-full object-cover object-center"
+          style={{
+            clipPath: "inset(60px 0 10px 0)",
+            marginTop: "-60px",
+            marginBottom: "-10px",
           }}
           loading="eager"
           fetchPriority="high"
