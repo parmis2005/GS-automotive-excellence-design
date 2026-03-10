@@ -8,6 +8,7 @@ import { BadgeCheck, CheckCircle2, Shield, Users } from "lucide-react";
 import { generateTitle } from "@/utils/seo";
 import { useVehicles } from "@/hooks/useVehicles";
 import { brandLogos } from "@/lib/brandLogos";
+import { slugify } from "@/lib/vehicleSlug";
 
 const heroImageUrl =
   "https://cagteuhomtoqniqpirly.supabase.co/storage/v1/object/public/Gs-Auto/ChatGPT%20Image%20Feb%208,%202026,%2002_18_40%20AM.png";
@@ -294,7 +295,7 @@ const UnternehmenPage = () => {
                   return (
                     <Link
                       key={brand}
-                      to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
+                      to={`/fahrzeuge?marke=${slugify(brand)}`}
                       className="group bg-white rounded-xl border border-border/60 p-4 flex items-center justify-center h-24 shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
                     >
                       <div className="text-muted-foreground group-hover:text-primary transition-colors w-full h-full flex items-center justify-center">

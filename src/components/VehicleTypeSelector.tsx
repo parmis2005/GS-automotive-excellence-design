@@ -8,6 +8,7 @@ import {
   CabrioIcon,
   SUVIcon,
 } from "@/lib/vehicleTypeIcons";
+import { slugify } from "@/lib/vehicleSlug";
 
 interface VehicleType {
   id: string;
@@ -64,7 +65,7 @@ const VehicleTypeSelector = () => {
           {vehicleTypes.map((type) => (
             <Link
               key={type.id}
-              to={`/fahrzeuge?vehicleType=${encodeURIComponent(type.id)}`}
+              to={`/fahrzeuge?typ=${slugify(type.id)}`}
               className="group flex flex-col items-center justify-center p-6 md:p-8 border-2 border-gray-200 rounded-lg bg-white hover:border-primary hover:shadow-lg transition-all duration-300 cursor-pointer"
             >
               <div className="text-primary mb-4 group-hover:scale-110 transition-transform duration-300">

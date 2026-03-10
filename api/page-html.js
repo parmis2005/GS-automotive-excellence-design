@@ -46,11 +46,11 @@ function formatMileage(km) {
 
 const ROUTE_CONFIG = {
   "/": {
-    title: "GS Automobile Rheinland GmbH | Autohaus Krefeld – Gebrauchtwagen",
+    title: "GS Automobile Rheinland GmbH | Gebrauchtwagen Krefeld",
     description:
       "Autohaus in Krefeld: Gebrauchtwagen, BMW, Opel. Für Kunden aus Düsseldorf, Neuss, Mönchengladbach. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
     ogDescription: "Gebrauchtwagen, BMW und Opel in Krefeld. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
-    canonical: BASE_URL + "/",
+    canonical: BASE_URL,
     keywords:
       "Autohaus Krefeld, Autohaus Düsseldorf, Gebrauchtwagen Krefeld, BMW Krefeld, Opel Krefeld, Jahreswagen, Finanzierung Krefeld, DEKRA, GS Automobile Rheinland",
     bodyContent: `
@@ -279,7 +279,7 @@ export default async function handler(req, res) {
   html = html
     .replace(
       /<head>/,
-      `<head>\n<!-- page-html: ${escapeMeta(routePath)} -->\n${seoStaticStyles}\n${jsonLdHtml}`
+      `<head>\n<link rel="canonical" href="${safeCanonical}" />\n<!-- page-html: ${escapeMeta(routePath)} -->\n${seoStaticStyles}\n${jsonLdHtml}`
     )
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${safeTitle}</title>`)
     .replace(

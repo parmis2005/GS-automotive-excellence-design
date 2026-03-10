@@ -39,3 +39,11 @@ export function getVehicleIdFromSlug(slug: string): string {
   const segment = slug.trim().split("-")[0];
   return segment || "";
 }
+
+/** Findet einen Wert aus einer Liste, dessen slugify() mit dem angegebenen Slug übereinstimmt (für lesbare URL-Parameter). */
+export function slugToOption(slug: string, options: string[]): string | null {
+  if (!slug || !Array.isArray(options) || options.length === 0) return null;
+  const s = slug.trim().toLowerCase();
+  const found = options.find((opt) => slugify(opt) === s || opt.toLowerCase() === s);
+  return found ?? null;
+}

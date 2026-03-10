@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useVehicles } from "@/hooks/useVehicles";
 import { brandLogos } from "@/lib/brandLogos";
+import { slugify } from "@/lib/vehicleSlug";
 
 const BrandSelector = () => {
   const { data: vehicles, isLoading } = useVehicles();
@@ -108,7 +109,7 @@ const BrandSelector = () => {
                 className="flex-shrink-0 md:mr-[28px] mr-[15px]"
               >
                 <Link
-                  to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
+                  to={`/fahrzeuge?marke=${slugify(brand)}`}
                   className="group flex flex-col items-center justify-center transition-all duration-300 hover:scale-110 md:h-[120px] md:min-h-[120px] md:w-[120px] md:pt-5 md:pb-5 h-[70px] min-h-[70px] w-[70px] pt-3 pb-3"
                 >
                   <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full flex items-center justify-center md:scale-[1.1] scale-[1.0]" style={{ overflow: "visible" }}>
@@ -129,7 +130,7 @@ const BrandSelector = () => {
                 className="flex-shrink-0 md:mr-[28px] mr-[15px]"
               >
                 <Link
-                  to={`/fahrzeuge?brand=${encodeURIComponent(brand)}`}
+                  to={`/fahrzeuge?marke=${slugify(brand)}`}
                   className="group flex flex-col items-center justify-center transition-all duration-300 hover:scale-110 md:h-[120px] md:min-h-[120px] md:w-[120px] md:pt-5 md:pb-5 h-[70px] min-h-[70px] w-[70px] pt-3 pb-3"
                 >
                   <div className="text-gray-600 group-hover:text-primary transition-colors w-full h-full flex items-center justify-center md:scale-[1.1] scale-[1.0]" style={{ overflow: "visible" }}>

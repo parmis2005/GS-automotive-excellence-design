@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import type { Vehicle } from "@/types/vehicle";
 import { normalizeColorToBasic, BASIC_COLORS } from "@/lib/colorUtils";
 import { getBaseModelName, groupModelsBySeries, getVehicleType, isKleinwagenModel, START_PAGE_VEHICLE_TYPES } from "@/lib/vehicleNameUtils";
-import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
+import { getVehicleDetailSlug, slugify, slugToOption } from "@/lib/vehicleSlug";
 import SEO from "@/components/SEO";
 import { getVehiclesPageSEO, generateCollectionPageSchema } from "@/utils/seo";
 
@@ -39,9 +39,10 @@ const VehiclesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   
-  // Initialize filters from URL parameters
-  const initialVehicleType = searchParams.get("vehicleType");
-  const initialBrand = searchParams.get("brand");
+  // Initialize filters from URL parameters (support friendly params: typ, marke, modell, max; resolution in useEffect)
+  const initialVehicleType = searchParams.get("typ") || searchParams.get("vehicleType");
+  const initialBrand = searchParams.get("marke") || searchParams.get("brand");
+  const hasUrlFilterParams = !!(initialVehicleType || initialBrand || searchParams.get("modell") || searchParams.get("model") || searchParams.get("max") || searchParams.get("maxPrice"));
   
   // Calculate min/max price and year from vehicles
   const { minPrice, maxPrice, minYear, maxYear } = useMemo(() => {
@@ -72,13 +73,13 @@ const VehiclesPage = () => {
 
   const [filters, setFilters] = useState<VehicleFiltersState>({
     internalNumber: "",
-    brands: initialBrand ? [initialBrand] : [],
+    brands: hasUrlFilterParams ? [] : (initialBrand ? [initialBrand] : []),
     models: [],
     priceRange: [minPrice, maxPrice],
     yearRange: [minYear, maxYear],
     fuelTypes: [],
     transmissionTypes: [],
-    vehicleTypes: initialVehicleType ? [initialVehicleType] : [],
+    vehicleTypes: hasUrlFilterParams ? [] : (initialVehicleType ? [initialVehicleType] : []),
     exteriorColors: [],
     equipment: [],
     vatDisplayable: null, // null = alle anzeigen
@@ -253,36 +254,39 @@ const VehiclesPage = () => {
   // This needs to run after filterOptions is available for BMW series validation
   useEffect(() => {
     try {
-      const vehicleTypeParam = searchParams.get("vehicleType");
-      const brandParam = searchParams.get("brand");
-      const modelParam = searchParams.get("model");
-      const maxPriceParam = searchParams.get("maxPrice");
+      const vehicleTypeParam = searchParams.get("typ") || searchParams.get("vehicleType");
+      const brandParam = searchParams.get("marke") || searchParams.get("brand");
+      const modelParam = searchParams.get("modell") || searchParams.get("model");
+      const maxPriceParam = searchParams.get("max") || searchParams.get("maxPrice");
       
       if (vehicleTypeParam || brandParam || modelParam || maxPriceParam) {
         // Only apply if we have vehicles loaded (so filterOptions is ready)
         if (vehicles && vehicles.length > 0 && filterOptions) {
-          // filterOptions is a value from useMemo, not a function
           const opts = filterOptions;
+          const resolvedVehicleType = vehicleTypeParam ? (slugToOption(vehicleTypeParam, opts.vehicleTypes) || vehicleTypeParam) : null;
+          const resolvedBrand = brandParam ? (slugToOption(brandParam, opts.brands) || brandParam) : null;
+          const resolvedModel = modelParam ? (slugToOption(modelParam, opts.models) || modelParam) : null;
+
           setFilters((prev) => {
             try {
               const updates: Partial<VehicleFiltersState> = {};
-              
-              if (vehicleTypeParam) updates.vehicleTypes = [vehicleTypeParam];
-              if (brandParam) updates.brands = [brandParam];
+              if (resolvedVehicleType) updates.vehicleTypes = [resolvedVehicleType];
+              if (resolvedBrand) updates.brands = [resolvedBrand];
               
               // For model, we need to validate it exists in filterOptions
-              if (modelParam) {
-                const isBMW = brandParam === "BMW";
+              if (resolvedModel || modelParam) {
+                const modelToUse = resolvedModel || modelParam;
+                const isBMW = resolvedBrand === "BMW" || brandParam === "BMW";
                 
                 // Check if it's a BMW series selection like "1er (alle)"
-                if (isBMW && modelParam.endsWith(" (alle)")) {
-                  const series = modelParam.replace(" (alle)", "");
+                if (isBMW && modelToUse?.endsWith(" (alle)")) {
+                  const series = modelToUse.replace(" (alle)", "");
                   const grouped = groupModelsBySeries(opts.models);
                   if (grouped.has(series)) {
-                    updates.models = [modelParam];
+                    updates.models = [modelToUse];
                   }
-                } else if (opts.models && Array.isArray(opts.models) && opts.models.includes(modelParam)) {
-                  updates.models = [modelParam];
+                } else if (modelToUse && opts.models && Array.isArray(opts.models) && opts.models.includes(modelToUse)) {
+                  updates.models = [modelToUse];
                 }
               }
               
@@ -304,12 +308,9 @@ const VehiclesPage = () => {
             }
           });
           
-          // Clean up URL parameters after applying filters
+          // Clean up URL parameters after applying filters (both old and friendly param names)
           const newSearchParams = new URLSearchParams(searchParams);
-          if (vehicleTypeParam) newSearchParams.delete("vehicleType");
-          if (brandParam) newSearchParams.delete("brand");
-          if (modelParam) newSearchParams.delete("model");
-          if (maxPriceParam) newSearchParams.delete("maxPrice");
+          ["typ", "vehicleType", "marke", "brand", "modell", "model", "max", "maxPrice"].forEach((p) => newSearchParams.delete(p));
           setSearchParams(newSearchParams, { replace: true });
         }
       }
