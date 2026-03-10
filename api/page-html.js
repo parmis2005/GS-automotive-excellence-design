@@ -55,8 +55,25 @@ const ROUTE_CONFIG = {
       "Autohaus Krefeld, Autohaus Düsseldorf, Gebrauchtwagen Krefeld, BMW Krefeld, Opel Krefeld, Jahreswagen, Finanzierung Krefeld, DEKRA, GS Automobile Rheinland",
     bodyContent: `
     <main class="seo-static-content" aria-label="Inhalt">
-      <h1>GS Automobile Rheinland – Autohaus in Krefeld</h1>
-      <p>Ihr Ansprechpartner für Gebrauchtwagen, Jahreswagen, BMW und Opel am Niederrhein. Wir betreuen Kunden aus Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch und Willich. Finanzierung, DEKRA-Gutachten und Garantie – fair und transparent.</p>
+      <h1>GS Automobile Rheinland GmbH – Autohaus Krefeld</h1>
+      <p>Ihr Ansprechpartner für Gebrauchtwagen, Jahreswagen, BMW und Opel am Niederrhein. Die GS Automobile Rheinland GmbH betreut Kunden aus Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch und Willich. Finanzierung, DEKRA-Gutachten und Garantie – fair und transparent.</p>
+
+      <h2>Gebrauchtwagen und Jahreswagen in Krefeld</h2>
+      <p>Bei der GS Automobile Rheinland GmbH finden Sie eine große Auswahl an geprüften Gebrauchtwagen und jungen Jahreswagen. Ob BMW, Opel, Mini oder andere Marken: Wir legen Wert auf einwandfreie Historie, DEKRA-Check und faire Preise. Unser Autohaus in Krefeld ist gut erreichbar für Kunden aus dem gesamten Rheinland – von Düsseldorf über Neuss und Mönchengladbach bis Duisburg, Moers, Meerbusch, Willich, Kempen und Tönisvorst.</p>
+      <p>Alle Fahrzeuge werden mit transparenten Angaben zu Kilometerstand, Ausstattung und Preis präsentiert. Nutzen Sie unsere Online-Fahrzeugsuche für eine erste Übersicht oder besuchen Sie uns direkt vor Ort – wir beraten Sie gerne zu Ihrem Wunschfahrzeug.</p>
+
+      <h2>Warum Gebrauchtwagen beim Autohaus GS Automobile Rheinland?</h2>
+      <p>Langjährige Partnerschaften mit Leasinggesellschaften und Flottenanbietern ermöglichen uns, hochwertige Fahrzeuge zu attraktiven Konditionen anzubieten. Transparente Beratung, ausgezeichnetes Preis-Leistungs-Verhältnis und die Möglichkeit einer Finanzierung über die BMW Bank gehören zu unserem Service. Auf Wunsch organisieren wir DEKRA und TÜV direkt vor Ort. Inzahlungnahme Ihres Altfahrzeugs und Garantie-Optionen runden das Angebot ab.</p>
+      <p>Viele unserer Gebrauchtwagen und Jahreswagen stammen aus Leasingrückläufern mit lückenloser Historie. So können Sie in Krefeld und Umgebung mit gutem Gewissen Ihr nächstes Auto finden – beim Autohaus GS Automobile Rheinland GmbH.</p>
+
+      <h2>Service und Finanzierung für Kunden aus Krefeld und Umgebung</h2>
+      <p>Ob Sie aus Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch, Willich oder Kempen kommen: Wir beraten Sie persönlich zu Gebrauchtwagen, Jahreswagen, Finanzierung und Garantie. Besuchen Sie uns in Krefeld an der Kuhleshütte 149 oder nutzen Sie unsere Fahrzeugsuche online. Wir freuen uns auf Ihre Anfrage.</p>
+
+      <h2>DEKRA, TÜV und Garantie beim Gebrauchtwagen-Kauf</h2>
+      <p>Für maximale Sicherheit arbeiten wir mit DEKRA und TÜV Rheinland zusammen – viele Prüfungen finden direkt bei uns vor Ort statt. So erhalten Sie transparente Gutachten und können beruhigt Ihren Gebrauchtwagen oder Jahreswagen wählen. Optional bieten wir eine Gebrauchtwagengarantie mit 12 bis 24 Monaten Laufzeit. So sind Sie auch nach dem Kauf beim Autohaus GS Automobile Rheinland GmbH in Krefeld abgesichert.</p>
+
+      <h2>Kontakt und Anfahrt zum Autohaus in Krefeld</h2>
+      <p>Die GS Automobile Rheinland GmbH hat ihren Standort in Krefeld, Kuhleshütte 149, 47809 Krefeld. Wir sind von Montag bis Freitag sowie samstags für Sie da. Vereinbaren Sie einen Termin zur Probefahrt oder kommen Sie vorbei und überzeugen Sie sich von unserer Auswahl an Gebrauchtwagen und Jahreswagen. Wir freuen uns auf Ihren Besuch – ob aus Krefeld, Düsseldorf, Neuss, Mönchengladbach oder der weiteren Region am Niederrhein. Gern beantworten wir Ihre Fragen zu Finanzierung, Inzahlungnahme oder Garantie auch per Telefon oder E-Mail. Ihr Autohaus für Gebrauchtwagen in Krefeld – GS Automobile Rheinland GmbH.</p>
     </main>`,
   },
   "/fahrzeuge": {
