@@ -16,7 +16,7 @@ const AboutSection = () => {
         {/* Section Header */}
         <div className="text-center mb-12">
           <h2 className="font-display text-3xl md:text-4xl text-primary mb-4">
-            Willkommen bei GS Automobile Rheinland
+            Willkommen bei GS Automobile Rheinland GmbH
           </h2>
           <div className="section-divider mb-4" />
         </div>
@@ -25,11 +25,11 @@ const AboutSection = () => {
           {/* Main Text */}
           <div className="prose prose-lg max-w-none text-center mb-12">
             <p className="text-muted-foreground text-lg leading-relaxed mb-6">
-              <strong className="text-foreground">Warum sich der Fahrzeugkauf bei GS Automobile Rheinland für Sie lohnt?</strong>
+              <strong className="text-foreground">Warum sich der Fahrzeugkauf bei der GS Automobile Rheinland GmbH für Sie lohnt?</strong>
             </p>
             <p className="text-muted-foreground leading-relaxed mb-6">
               Als <strong className="text-foreground">Autohaus mit Standort in Krefeld</strong> und Ansprechpartner für 
-              Kunden aus <strong className="text-foreground">Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch, Willich, Kempen, Tönisvorst und Umgebung</strong> steht GS Automobile Rheinland 
+              Kunden aus <strong className="text-foreground">Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch, Willich, Kempen, Tönisvorst und Umgebung</strong> steht die GS Automobile Rheinland GmbH 
               seit vielen Jahren für Kompetenz, Verlässlichkeit und ein ausgezeichnetes Preis-Leistungs-Verhältnis 
               bei <strong className="text-foreground">Gebrauchtwagen</strong> und Jahreswagen.
             </p>

@@ -34,9 +34,10 @@ const AREA_CITIES = ["Krefeld", "Meerbusch", "Willich", "Kempen", "Tönisvorst",
 
 export function getDefaultSEO(): SEOData {
   return {
-    title: "GS Automobile Rheinland GmbH | Autohaus in Krefeld – Gebrauchtwagen, BMW, Opel",
-    description: `GS Automobile Rheinland GmbH (GS Auto): Autohaus mit Standort in Krefeld – Kunden aus ${AREA_CITIES.slice(1).join(", ")} und Umgebung. Gebrauchtwagen, Jahreswagen, BMW und Opel. Finanzierung, DEKRA, Garantie.`,
-    ogDescription: "Gebrauchtwagen, Jahreswagen, BMW und Opel in Krefeld. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
+    title: "GS Automobile Rheinland GmbH | Autohaus Krefeld – Gebrauchtwagen",
+    description:
+      "Autohaus in Krefeld: Gebrauchtwagen, BMW, Opel. Für Kunden aus Düsseldorf, Neuss, Mönchengladbach. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
+    ogDescription: "Gebrauchtwagen, BMW und Opel in Krefeld. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
     keywords: "Autohaus Krefeld, Autohaus Düsseldorf, Autohaus Neuss, Autohaus Mönchengladbach, Autohaus Duisburg, Autohaus Moers, Autohaus Meerbusch, Autohaus Willich, Autohaus Kempen, Autohaus Tönisvorst, GS Automobile GmbH, GS Auto, Gebrauchtwagen Krefeld, Gebrauchtwagen Düsseldorf, BMW Krefeld, Opel Krefeld, Jahreswagen, Finanzierung Krefeld, Inzahlungnahme, Fahrzeugankauf",
     image: `${BASE_URL}/logo.png`,
     url: BASE_URL,
@@ -117,7 +118,7 @@ export function generateLocalBusinessSchema() {
     "alternateName": ["GS Automobile GmbH", "GS Auto", "GS Automobile Rheinland"],
     "image": `${BASE_URL}/logo.png`,
     "url": BASE_URL,
-    "description": "Autohaus mit Standort in Krefeld. Kunden aus Düsseldorf, Duisburg, Moers, Neuss, Mönchengladbach, Meerbusch, Willich, Kempen, Tönisvorst und Umgebung. Gebrauchtwagen, Jahreswagen, BMW, Opel. GS Automobile Rheinland GmbH.",
+    "description": "Autohaus in Krefeld: Gebrauchtwagen, BMW, Opel. Für Kunden aus Düsseldorf, Neuss, Mönchengladbach. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
     "telephone": "+4921519422262",
     "email": "info@gsauto.de",
     "address": {
@@ -159,7 +160,7 @@ export function generateLocalBusinessSchema() {
       }
     ],
     "priceRange": "€€",
-    "slogan": "Autohaus mit Standort in Krefeld – Kunden aus Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers und Umgebung. Gebrauchtwagen, BMW, Opel."
+    "slogan": "Autohaus Krefeld: Gebrauchtwagen, BMW, Opel. Finanzierung, DEKRA, Garantie."
   };
 }
 

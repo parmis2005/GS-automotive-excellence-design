@@ -46,9 +46,9 @@ function formatMileage(km) {
 
 const ROUTE_CONFIG = {
   "/": {
-    title: "GS Automobile Rheinland GmbH | Autohaus in Krefeld – Gebrauchtwagen, BMW, Opel",
+    title: "GS Automobile Rheinland GmbH | Autohaus Krefeld – Gebrauchtwagen",
     description:
-      "GS Automobile Rheinland GmbH: Autohaus mit Standort in Krefeld – Kunden aus Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch, Willich und Umgebung. Gebrauchtwagen, BMW, Opel. Finanzierung, DEKRA, Garantie. GS Auto am Niederrhein.",
+      "Autohaus in Krefeld: Gebrauchtwagen, BMW, Opel. Für Kunden aus Düsseldorf, Neuss, Mönchengladbach. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
     ogDescription: "Gebrauchtwagen, BMW und Opel in Krefeld. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
     canonical: BASE_URL + "/",
     keywords:
@@ -257,21 +257,12 @@ export default async function handler(req, res) {
           .join("\n")
       : "";
 
-  // Für /fahrzeuge: Fahrzeugliste für Hydration einbetten, damit kein /api/vehicles-Request nötig ist (SEO, robots.txt)
-  let preloadVehiclesHtml = "";
-  if (routePath === "/fahrzeuge" && vehiclesForSchema.length > 0) {
-    const preloadJson = JSON.stringify(vehiclesForSchema).replace(/<\/script/gi, "\\u003c/script");
-    preloadVehiclesHtml =
-      `<script type="application/json" id="__PRELOADED_VEHICLES__">${preloadJson}</script>` +
-      `<script>try{window.__PRELOADED_VEHICLES__=JSON.parse(document.getElementById("__PRELOADED_VEHICLES__").textContent);}catch(e){}</script>`;
-  }
-
   const safeKeywords = config.keywords ? escapeMeta(config.keywords) : null;
   // Head anpassen (Pre-Render-Text bleibt sichtbar im ersten HTML – Google indexiert nur zuverlässig, wenn Inhalt sichtbar ist; React ersetzt #root nach Load)
   html = html
     .replace(
       /<head>/,
-      `<head>\n<!-- page-html: ${escapeMeta(routePath)} -->\n${seoStaticStyles}\n${jsonLdHtml}\n${preloadVehiclesHtml}`
+      `<head>\n<!-- page-html: ${escapeMeta(routePath)} -->\n${seoStaticStyles}\n${jsonLdHtml}`
     )
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${safeTitle}</title>`)
     .replace(
