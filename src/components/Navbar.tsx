@@ -228,16 +228,16 @@ const Navbar = () => {
                 })}
               </div>
 
-              {/* Mobile/Tablet: Fahrzeugsuche-Button mittig – nur unter lg */}
-              <div className="lg:hidden flex-1 flex justify-center items-center min-w-0 pr-2">
+              {/* Mobile/Tablet: Fahrzeugsuche-Button mittig – nur unter lg; auf sehr schmalen Screens (< 380px) ausblenden, um Überlappung mit Logo zu vermeiden (Fahrzeugsuche bleibt im Hamburger-Menü) */}
+              <div className="lg:hidden max-[380px]:hidden flex-1 flex justify-center items-center min-w-0 pr-2">
                 <Link to="/fahrzeuge" className="h-full flex items-center">
                   <Button 
                     variant="default"
                     size="default"
-                    className="font-display font-semibold tracking-wide text-sm sm:text-base bg-primary hover:bg-primary/90 text-white shadow-md transition-all h-full min-h-[44px] rounded-xl px-5 sm:px-6 py-3 sm:py-4 whitespace-nowrap"
+                    className="font-display font-semibold tracking-wide text-sm sm:text-base bg-primary hover:bg-primary/90 text-white shadow-md transition-all h-full min-h-[44px] rounded-xl px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap min-w-0"
                   >
                     Fahrzeugsuche
-                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 inline" />
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-1.5 sm:ml-2 inline flex-shrink-0" />
                   </Button>
                 </Link>
               </div>
