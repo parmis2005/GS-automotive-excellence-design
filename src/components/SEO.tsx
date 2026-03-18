@@ -22,6 +22,7 @@ export default function SEO({ data, structuredData, breadcrumbs }: SEOProps) {
     image,
     url,
     type = "website",
+    robots,
   } = data;
   const socialDescription = ogDescription ?? description;
 
@@ -53,6 +54,7 @@ export default function SEO({ data, structuredData, breadcrumbs }: SEOProps) {
     <Helmet>
       {/* Basic Meta Tags */}
       <title>{title}</title>
+      {robots && <meta name="robots" content={robots} />}
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
       <link rel="canonical" href={fullUrl} />

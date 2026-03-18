@@ -54,6 +54,10 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/fahrzeuge" element={<VehiclesPage />} />
+              {/* SEO-Landingpages (statische Einstiegsseiten) */}
+              <Route path="/fahrzeuge/marke/:marke" element={<VehiclesPage />} />
+              <Route path="/fahrzeuge/typ/:typ" element={<VehiclesPage />} />
+              <Route path="/fahrzeuge/marke/:marke/:modell" element={<VehiclesPage />} />
               <Route path="/fahrzeuge/:slug" element={<VehicleDetailPage />} />
               <Route path="/fahrzeugankauf" element={<VehiclePurchasePage />} />
               <Route path="/impressum" element={<ImpressumPage />} />

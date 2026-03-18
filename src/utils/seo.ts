@@ -15,6 +15,8 @@ export interface SEOData {
   image?: string;
   url: string;
   type?: "website" | "product" | "article";
+  /** Optional robots directive (z. B. "noindex,follow") */
+  robots?: string;
 }
 
 const BASE_URL = "https://gsauto.de";
@@ -104,6 +106,52 @@ export function getVehiclesPageSEO(): SEOData {
     image: `${BASE_URL}/logo.png`,
     url: `${BASE_URL}/fahrzeuge`,
     type: "website",
+  };
+}
+
+export function getVehiclesLandingPageSEO(args: {
+  path: string; // z. B. "/fahrzeuge/marke/peugeot"
+  brand?: string | null;
+  model?: string | null;
+  vehicleType?: string | null;
+  robots?: string;
+}): SEOData {
+  const brand = args.brand?.trim() || null;
+  const model = args.model?.trim() || null;
+  const vehicleType = args.vehicleType?.trim() || null;
+
+  let topic = "Gebrauchtwagen";
+  if (brand && model) topic = `${brand} ${model} Gebrauchtwagen`;
+  else if (brand) topic = `${brand} Gebrauchtwagen`;
+  else if (vehicleType) topic = `${vehicleType} Gebrauchtwagen`;
+
+  const pageTitle = `${topic} in Krefeld | Fahrzeugsuche`;
+  const descriptionParts = [
+    `${topic} in Krefeld & Umgebung: große Auswahl bei GS Automobile Rheinland.`,
+    "Transparente Preise, geprüfte Fahrzeuge, Finanzierung & Inzahlungnahme möglich.",
+  ];
+
+  const keywords = [
+    topic,
+    `${topic} Krefeld`,
+    brand ? `${brand} Krefeld` : null,
+    model && brand ? `${brand} ${model} Krefeld` : null,
+    "Gebrauchtwagen kaufen",
+    "Autohaus Krefeld",
+    "GS Automobile Rheinland",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return {
+    title: generateTitle(pageTitle),
+    description: descriptionParts.join(" "),
+    ogDescription: `${topic} bei GS Automobile Rheinland in Krefeld. Jetzt passende Fahrzeuge entdecken.`,
+    keywords,
+    image: `${BASE_URL}/logo.png`,
+    url: `${BASE_URL}${args.path.startsWith("/") ? "" : "/"}${args.path}`,
+    type: "website",
+    robots: args.robots,
   };
 }
 

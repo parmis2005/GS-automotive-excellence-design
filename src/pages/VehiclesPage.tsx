@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useVehicles } from "@/hooks/useVehicles";
 import VehicleListItem from "@/components/VehicleListItem";
 import VehicleFilters from "@/components/VehicleFilters";
@@ -15,7 +15,7 @@ import { normalizeColorToBasic, BASIC_COLORS } from "@/lib/colorUtils";
 import { getBaseModelName, groupModelsBySeries, getVehicleType, isKleinwagenModel, START_PAGE_VEHICLE_TYPES } from "@/lib/vehicleNameUtils";
 import { getVehicleDetailSlug, slugify, slugToOption } from "@/lib/vehicleSlug";
 import SEO from "@/components/SEO";
-import { getVehiclesPageSEO, generateCollectionPageSchema } from "@/utils/seo";
+import { getVehiclesLandingPageSEO, getVehiclesPageSEO, generateCollectionPageSchema } from "@/utils/seo";
 
 const VEHICLES_PAGE_RETURN_STATE_KEY = "vehiclesPage_returnState";
 
@@ -38,7 +38,32 @@ const VehiclesPage = () => {
   const { data: vehicles, isLoading, error } = useVehicles();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-  
+  const { marke, typ, modell } = useParams<{
+    marke?: string;
+    typ?: string;
+    modell?: string;
+  }>();
+
+  // SEO-Landingpages: /fahrzeuge/marke/:marke, /fahrzeuge/typ/:typ, /fahrzeuge/marke/:marke/:modell
+  // -> einmalig in bestehende Query-Params spiegeln, damit die vorhandene Filter-Logik greift
+  const lastLandingSignatureRef = useRef<string | null>(null);
+  const landingSignature = `${marke ?? ""}|${typ ?? ""}|${modell ?? ""}`;
+  useEffect(() => {
+    if (!marke && !typ && !modell) {
+      lastLandingSignatureRef.current = null;
+      return;
+    }
+    if (lastLandingSignatureRef.current === landingSignature) return;
+    lastLandingSignatureRef.current = landingSignature;
+
+    const next = new URLSearchParams(searchParams);
+    if (typ && !next.get("typ") && !next.get("vehicleType")) next.set("typ", typ);
+    if (marke && !next.get("marke") && !next.get("brand")) next.set("marke", marke);
+    if (modell && !next.get("modell") && !next.get("model")) next.set("modell", modell);
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [landingSignature]);
+
   // Initialize filters from URL parameters (support friendly params: typ, marke, modell, max; resolution in useEffect)
   const initialVehicleType = searchParams.get("typ") || searchParams.get("vehicleType");
   const initialBrand = searchParams.get("marke") || searchParams.get("brand");
@@ -634,7 +659,27 @@ const VehiclesPage = () => {
     setCurrentPage(1);
   };
   
-  const seoData = getVehiclesPageSEO();
+  const isLandingRoute = !!(marke || typ || modell);
+  const canonicalPath = typ
+    ? `/fahrzeuge/typ/${typ}`
+    : marke && modell
+      ? `/fahrzeuge/marke/${marke}/${modell}`
+      : marke
+        ? `/fahrzeuge/marke/${marke}`
+        : "/fahrzeuge";
+
+  // Index nur für "Hauptseiten" (Basis oder 1-Dimension-Landingpages). Stark gefilterte Kombinationen -> noindex.
+  const robots = activeFilterCount >= 2 ? "noindex,follow" : "index,follow";
+
+  const seoData = isLandingRoute
+    ? getVehiclesLandingPageSEO({
+        path: canonicalPath,
+        brand: filters.brands[0] ?? null,
+        model: filters.models[0] ?? null,
+        vehicleType: filters.vehicleTypes[0] ?? null,
+        robots,
+      })
+    : { ...getVehiclesPageSEO(), robots };
   const vehicleUrls = (filteredAndSortedVehicles ?? [])
     .slice(0, 20)
     .map((v) => `https://gsauto.de/fahrzeuge/${getVehicleDetailSlug(v.id, v.brand, v.model)}`);
@@ -651,7 +696,12 @@ const VehiclesPage = () => {
       <SEO
         data={seoData}
         structuredData={collectionSchema}
-        breadcrumbs={[{ name: "Startseite", url: "/" }, { name: "Fahrzeugsuche", url: "/fahrzeuge" }]}
+        breadcrumbs={[
+          { name: "Startseite", url: "/" },
+          { name: "Fahrzeugsuche", url: canonicalPath || "/fahrzeuge" },
+          ...(filters.brands[0] ? [{ name: filters.brands[0], url: marke ? `/fahrzeuge/marke/${marke}` : "/fahrzeuge" }] : []),
+          ...(filters.models[0] && marke && modell ? [{ name: filters.models[0], url: `/fahrzeuge/marke/${marke}/${modell}` }] : []),
+        ]}
       />
       <Navbar />
       <main className="pt-8 pb-20">
