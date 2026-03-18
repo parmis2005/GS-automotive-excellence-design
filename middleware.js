@@ -135,8 +135,17 @@ function isValidPath(pathname) {
   const normalized = pathname.replace(/\/+$/, "") || "/";
   if (VALID_SPA_PATHS.has(normalized)) return true;
   if (normalized === "/fahrzeuge") return true;
-  // /fahrzeuge/:slug (genau ein Segment)
+
+  // SEO-Landingpages für Fahrzeugsuche:
+  // - /fahrzeuge/marke/:marke
+  // - /fahrzeuge/marke/:marke/:modell
+  // - /fahrzeuge/typ/:typ
   const parts = normalized.split("/").filter(Boolean);
+  if (parts.length === 3 && parts[0] === "fahrzeuge" && parts[1] === "marke") return true;
+  if (parts.length === 4 && parts[0] === "fahrzeuge" && parts[1] === "marke") return true;
+  if (parts.length === 3 && parts[0] === "fahrzeuge" && parts[1] === "typ") return true;
+
+  // /fahrzeuge/:slug (genau ein Segment)
   if (parts.length === 2 && parts[0] === "fahrzeuge" && isVehicleSlug(parts[1])) return true;
   return false;
 }
