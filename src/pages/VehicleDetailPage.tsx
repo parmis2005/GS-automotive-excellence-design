@@ -50,6 +50,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import SantanderKreditWidget from "@/components/SantanderKreditWidget";
 import { type CarouselApi, Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { getPlaceholderImage, getVehicleImageWithFallback } from "@/lib/vehicleImage";
 import { ShareVehicleButton } from "@/components/ShareVehicleButton";
@@ -937,16 +938,22 @@ const VehicleDetailPage = () => {
               )}
               <div className="mb-6">
                 <div className="space-y-4">
-                  <div>
-                    <span className="text-sm text-muted-foreground">Preis</span>
-                    <div className="text-4xl font-display font-bold text-primary">
-                      {formatPrice(vehicle.price)} €
-                    </div>
-                    {vehicle.vatDisplayable !== undefined && (
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {vehicle.vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
+                  {/* Preis + Santander Kredit Widget (Desktop rechts, Mobile untereinander) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 items-start">
+                    <div>
+                      <span className="text-sm text-muted-foreground">Preis</span>
+                      <div className="text-4xl font-display font-bold text-primary">
+                        {formatPrice(vehicle.price)} €
                       </div>
-                    )}
+                      {vehicle.vatDisplayable !== undefined && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {vehicle.vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
+                        </div>
+                      )}
+                    </div>
+                    <div className="lg:pt-1">
+                      <SantanderKreditWidget vehicle={vehicle} />
+                    </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
