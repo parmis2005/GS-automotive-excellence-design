@@ -7,6 +7,7 @@ import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { generateTitle } from "@/utils/seo";
 import VehiclePurchaseForm from "@/components/VehiclePurchaseForm";
+import { normalizeInterestDigitsForPurchase } from "@/lib/vehiclePurchaseDraft";
 
 const heroImageUrl =
   "https://cagteuhomtoqniqpirly.supabase.co/storage/v1/object/public/Gs-Auto/4ccb78a6-4be4-4836-b271-138491733554.jpg";
@@ -156,7 +157,10 @@ const VehiclePurchasePage = () => {
           </div>
         </section>
 
-        <VehiclePurchaseForm initialInterestNumber={kennnr} />
+        <VehiclePurchaseForm
+          key={normalizeInterestDigitsForPurchase(kennnr) || "default"}
+          initialInterestNumber={kennnr}
+        />
 
         <section className="py-20">
           <div className="container mx-auto px-6">

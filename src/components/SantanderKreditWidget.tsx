@@ -82,9 +82,7 @@ export default function SantanderKreditWidget({ vehicle }: SantanderKreditWidget
     firstScript?.parentNode?.insertBefore(s, firstScript);
   }, [akz, dealerNr, vehicle.id]);
 
-  if (!akz || !dealerNr) {
-    return null;
-  }
+  if (!akz || !dealerNr) return null;
 
   return (
     <div className="w-full">

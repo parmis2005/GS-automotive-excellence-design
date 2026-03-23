@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  clearVehiclePurchaseDraft,
+  loadDraftFiles,
+  loadDraftForVehicleInterestFromUrl,
+  saveDraftFiles,
+  saveDraftToSession,
+} from "@/lib/vehiclePurchaseDraft";
 import { Link, useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
@@ -18,6 +25,7 @@ import { VehicleTitle } from "@/components/VehicleTitle";
 import { getColorHex, BASIC_COLORS } from "@/lib/colorUtils";
 import { useModels } from "@/hooks/useModels";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
@@ -349,7 +357,76 @@ type FormData = {
   contactCity: string;
   /** Optionale Nachricht (z. B. Hinweise, Wünsche) – nur in Kontakt-Slide */
   contactMessage: string;
+  /** Pflicht: Datenschutz zur Kenntnis genommen + Kontakt mit Bewertung (E-Mail/Anruf) */
+  contactPrivacyConsent: boolean;
 };
+
+/** Anzahl der Wizard-Schritte (Indices 0 … n-1) – für Entwurf wiederherstellen */
+const VEHICLE_PURCHASE_STEP_COUNT = 17;
+
+const clampPurchaseStep = (step: number) =>
+  Math.max(0, Math.min(Math.floor(step), VEHICLE_PURCHASE_STEP_COUNT - 1));
+
+const interestDigitsFromProp = (initialInterest: string) => {
+  const digits = (initialInterest || "").replace(/\D/g, "").slice(0, 3);
+  return digits ? digits.padStart(3, "0") : "";
+};
+
+const createInitialFormData = (initialInterest: string): FormData => ({
+  make: "",
+  model: "",
+  trimLine: "",
+  bodyType: "",
+  fuelType: "",
+  power: null,
+  firstRegistrationMonth: "",
+  firstRegistrationYear: "",
+  mileage: null,
+  ownersCount: null,
+  serviceBook: null,
+  lastServiceMonth: "",
+  lastServiceYear: "",
+  huMonth: "",
+  huYear: "",
+  huExpired: false,
+  exteriorColor: "",
+  transmission: "",
+  driveType: "",
+  equipment: [],
+  generalCondition: "",
+  smoker: null,
+  accident: null,
+  accidentRepaired: null,
+  accidentDescription: "",
+  accidentAmount: "",
+  vin: "",
+  priceExpectation: "",
+  interestNumber: interestDigitsFromProp(initialInterest),
+  contactFirstName: "",
+  contactLastName: "",
+  contactPhone: "",
+  contactEmail: "",
+  contactPlz: "",
+  contactCity: "",
+  contactMessage: "",
+  contactPrivacyConsent: false,
+});
+
+function mergeFormDataFromDraft(base: FormData, raw: Record<string, unknown>): FormData {
+  const o = raw as Partial<FormData>;
+  const merged: FormData = { ...base, ...o };
+  if (!Array.isArray(merged.equipment)) merged.equipment = base.equipment;
+  return merged;
+}
+
+/** Wenn die URL eine Kennnummer hat, aber der Entwurf keine – URL setzen */
+function mergeInterestFromUrl(formData: FormData, initialInterest: string): FormData {
+  const fromUrl = interestDigitsFromProp(initialInterest);
+  if (!fromUrl) return formData;
+  const fromDraft = formData.interestNumber.replace(/\D/g, "");
+  if (fromDraft.length === 3) return formData;
+  return { ...formData, interestNumber: fromUrl };
+}
 
 type Labels = {
   title: string;
@@ -460,9 +537,16 @@ const VehiclePurchaseForm = ({
   initialInterestNumber: initialInterest = "",
 }: VehiclePurchaseFormProps) => {
   const mergedLabels = { ...defaultLabels, ...labels };
-  const [currentStep, setCurrentStep] = useState(0);
+  /** Einmal pro Mount: gespeicherter Entwurf (localStorage, alle Tabs) */
+  const bootDraft = useMemo(
+    () => loadDraftForVehicleInterestFromUrl(initialInterest),
+    [initialInterest],
+  );
+  const [currentStep, setCurrentStep] = useState(() =>
+    bootDraft ? clampPurchaseStep(bootDraft.currentStep) : 0,
+  );
   const isInitialMount = useRef(true);
-  const [mileageInput, setMileageInput] = useState("");
+  const [mileageInput, setMileageInput] = useState(() => bootDraft?.mileageInput ?? "");
   const [mileageFocus, setMileageFocus] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoError, setPhotoError] = useState("");
@@ -474,48 +558,17 @@ const VehiclePurchaseForm = ({
   const [plzLookup, setPlzLookup] = useState<"idle" | "loading" | { city: string } | "not_found">("idle");
   const plzLookupAbortRef = useRef<AbortController | null>(null);
   const navigate = useNavigate();
+  /** true, sobald gespeicherte Dateien aus IndexedDB geladen sind – verhindert Überschreiben beim ersten Speichern */
+  const [draftFilesHydrated, setDraftFilesHydrated] = useState(false);
 
-  const [formData, setFormData] = useState<FormData>({
-    make: "",
-    model: "",
-    trimLine: "",
-    bodyType: "",
-    fuelType: "",
-    power: null,
-    firstRegistrationMonth: "",
-    firstRegistrationYear: "",
-    mileage: null,
-    ownersCount: null,
-    serviceBook: null,
-    lastServiceMonth: "",
-    lastServiceYear: "",
-    huMonth: "",
-    huYear: "",
-    huExpired: false,
-    exteriorColor: "",
-    transmission: "",
-    driveType: "",
-    equipment: [],
-    generalCondition: "",
-    smoker: null,
-    accident: null,
-    accidentRepaired: null,
-    accidentDescription: "",
-    accidentAmount: "",
-    vin: "",
-    priceExpectation: "",
-    interestNumber: (() => {
-      const digits = (initialInterest || "").replace(/\D/g, "").slice(0, 3);
-      return digits ? digits.padStart(3, "0") : "";
-    })(),
-    contactFirstName: "",
-    contactLastName: "",
-    contactPhone: "",
-    contactEmail: "",
-    contactPlz: "",
-    contactCity: "",
-    contactMessage: "",
-  });
+  const [formData, setFormData] = useState<FormData>(() =>
+    bootDraft
+      ? mergeInterestFromUrl(
+          mergeFormDataFromDraft(createInitialFormData(initialInterest), bootDraft.formData),
+          initialInterest,
+        )
+      : createInitialFormData(initialInterest),
+  );
 
   const { data: vehicles = [] } = useVehicles();
   const {
@@ -627,6 +680,98 @@ const VehiclePurchaseForm = ({
       plzLookupAbortRef.current?.abort();
     };
   }, [plzDigits]);
+
+  /** Immer aktuell für Unmount / visibility (SPA-Navigation triggert kein zuverlässiges pagehide mit alter Closure) */
+  const draftStateRef = useRef({
+    formData,
+    currentStep,
+    mileageInput,
+    photoFiles,
+    accidentFiles,
+    draftFilesHydrated,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    loadDraftFiles()
+      .then(({ photos, accidents }) => {
+        if (cancelled) return;
+        if (photos.length) setPhotoFiles(photos);
+        if (accidents.length) setAccidentFiles(accidents);
+      })
+      .finally(() => {
+        if (!cancelled) setDraftFilesHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** Ref für Unmount / visibility – immer vollständig */
+  useLayoutEffect(() => {
+    draftStateRef.current = {
+      formData,
+      currentStep,
+      mileageInput,
+      photoFiles,
+      accidentFiles,
+      draftFilesHydrated,
+    };
+  }, [formData, currentStep, mileageInput, photoFiles, accidentFiles, draftFilesHydrated]);
+
+  /**
+   * Entwurf synchron vor Paint (localStorage, gilt für alle Tabs).
+   * useLayoutEffect: letzte Eingabe gespeichert, bevor z. B. in einem neuen Tab navigiert wird.
+   */
+  useLayoutEffect(() => {
+    saveDraftToSession({
+      v: 1,
+      formData: formData as unknown as Record<string, unknown>,
+      currentStep,
+      mileageInput,
+    });
+  }, [formData, currentStep, mileageInput]);
+
+  const fileSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!draftFilesHydrated) return;
+    if (fileSaveTimerRef.current) clearTimeout(fileSaveTimerRef.current);
+    fileSaveTimerRef.current = setTimeout(() => {
+      fileSaveTimerRef.current = null;
+      void saveDraftFiles(photoFiles, accidentFiles);
+    }, 400);
+    return () => {
+      if (fileSaveTimerRef.current) clearTimeout(fileSaveTimerRef.current);
+    };
+  }, [photoFiles, accidentFiles, draftFilesHydrated]);
+
+  /** Beim Verlassen der Seite / Tab: letzten Stand sichern (wichtig für Client-Routing) */
+  useEffect(() => {
+    const flushAll = () => {
+      const s = draftStateRef.current;
+      saveDraftToSession({
+        v: 1,
+        formData: s.formData as unknown as Record<string, unknown>,
+        currentStep: s.currentStep,
+        mileageInput: s.mileageInput,
+      });
+      if (s.draftFilesHydrated) {
+        void saveDraftFiles(s.photoFiles, s.accidentFiles);
+      }
+    };
+    const onVis = () => {
+      if (document.visibilityState === "hidden") flushAll();
+    };
+    window.addEventListener("pagehide", flushAll);
+    window.addEventListener("beforeunload", flushAll);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      flushAll();
+      window.removeEventListener("pagehide", flushAll);
+      window.removeEventListener("beforeunload", flushAll);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
 
   const clearPhotos = () => {
     setPhotoFiles([]);
@@ -784,6 +929,7 @@ const VehiclePurchaseForm = ({
     if (!email.includes("@")) return false;
     if (phoneDigits.length < 6) return false;
     if (plzDigits.length !== 5) return false;
+    if (!formData.contactPrivacyConsent) return false;
     return true;
   };
 
@@ -1973,6 +2119,36 @@ const VehiclePurchaseForm = ({
                 rows={4}
               />
             </div>
+            <div className="rounded-lg border border-border bg-muted/30 p-4">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="contact-privacy-consent"
+                  checked={formData.contactPrivacyConsent}
+                  onCheckedChange={(checked) =>
+                    updateField("contactPrivacyConsent", checked === true)
+                  }
+                  className="mt-0.5"
+                  aria-required="true"
+                />
+                <label
+                  htmlFor="contact-privacy-consent"
+                  className="text-sm leading-relaxed text-foreground cursor-pointer select-none"
+                >
+                  <span className="font-semibold text-primary">Pflichtfeld:</span> Ich habe die{" "}
+                  <Link
+                    to="/datenschutz"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-2 hover:text-primary/90"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Datenschutzerklärung
+                  </Link>{" "}
+                  zur Kenntnis genommen und bin damit einverstanden, dass ich per E-Mail oder
+                  telefonisch mit der Bewertung meines Fahrzeugs kontaktiert werde.
+                </label>
+              </div>
+            </div>
           </div>
         ),
       },
@@ -2094,6 +2270,7 @@ const VehiclePurchaseForm = ({
     ensureInput("contactPlz", data.contactPlz);
     ensureInput("contactCity", data.contactCity);
     ensureInput("contactMessage", data.contactMessage);
+    ensureInput("contactPrivacyConsent", data.contactPrivacyConsent ? "Ja" : "");
   };
 
   const handleSubmit = () => {
@@ -2150,6 +2327,7 @@ const VehiclePurchaseForm = ({
       contactPlz: formData.contactPlz,
       contactCity: formData.contactCity,
       contactMessage: formData.contactMessage.trim() || "",
+      contactPrivacyConsent: formData.contactPrivacyConsent ? "Ja" : "Nein",
     };
 
     setIsSubmitting(true);
@@ -2175,6 +2353,7 @@ const VehiclePurchaseForm = ({
       })
       .then(() => {
         setSubmitSuccess(true);
+        clearVehiclePurchaseDraft();
         navigate("/kontakt-erfolgreich", { replace: true });
       })
       .catch(() => {

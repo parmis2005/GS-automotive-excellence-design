@@ -212,7 +212,7 @@ const Navbar = () => {
                       to={link.to}
                       onClick={link.label === "STARTSEITE"
                         ? handleHomeClick
-                        : link.label === "FAHRZEUGANKAUF"
+                        : link.label === "INZAHLUNGNAHME"
                         ? handleAnkaufClick
                         : link.isHash
                         ? (e) => handleHashNavClick(e, link.hash!)
@@ -315,7 +315,7 @@ const Navbar = () => {
                             handleHomeClick(e);
                             setIsMobileMenuOpen(false);
                           }
-                        : link.label === "FAHRZEUGANKAUF"
+                        : link.label === "INZAHLUNGNAHME"
                         ? (e) => {
                             handleAnkaufClick(e);
                             setIsMobileMenuOpen(false);

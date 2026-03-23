@@ -939,10 +939,10 @@ const VehicleDetailPage = () => {
               <div className="mb-6">
                 <div className="space-y-4">
                   {/* Preis + Santander Kredit Widget (Desktop rechts, Mobile untereinander) */}
-                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 items-start">
-                    <div>
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
                       <span className="text-sm text-muted-foreground">Preis</span>
-                      <div className="text-4xl font-display font-bold text-primary">
+                      <div className="text-4xl font-display font-bold text-primary whitespace-nowrap leading-none">
                         {formatPrice(vehicle.price)} €
                       </div>
                       {vehicle.vatDisplayable !== undefined && (
@@ -951,7 +951,7 @@ const VehicleDetailPage = () => {
                         </div>
                       )}
                     </div>
-                    <div className="lg:pt-1">
+                    <div className="lg:pt-1 lg:pl-4 lg:flex lg:items-center lg:justify-end flex-shrink-0">
                       <SantanderKreditWidget vehicle={vehicle} />
                     </div>
                   </div>
