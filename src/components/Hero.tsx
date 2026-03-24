@@ -18,12 +18,7 @@ const Hero = () => {
           alt="GS Automobile Rheinland Autohaus mit Fahrzeugen"
           width={1920}
           height={828}
-          className="block w-full h-full object-cover object-center"
-          style={{
-            clipPath: "inset(60px 0 10px 0)",
-            marginTop: "-60px",
-            marginBottom: "-10px",
-          }}
+          className="block w-full h-full object-contain lg:object-cover object-center lg:[clip-path:inset(60px_0_10px_0)] lg:-mt-[60px] lg:-mb-[10px]"
           loading="eager"
           fetchPriority="high"
           decoding="async"
@@ -36,9 +31,8 @@ const Hero = () => {
 
         {/* Text-Block – tiefer gesetzt, näher an der Schnellsuche */}
         <div 
-          className="absolute z-10 left-1/2 transform -translate-x-1/2 text-center"
+          className="absolute z-10 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 lg:top-[32%] lg:translate-y-0 text-center"
           style={{
-            top: '32%',
             maxWidth: '90%',
             padding: '0 clamp(16px, 2vw, 24px)',
             width: '100%'
