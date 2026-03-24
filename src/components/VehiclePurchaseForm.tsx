@@ -537,7 +537,7 @@ const VehiclePurchaseForm = ({
   initialInterestNumber: initialInterest = "",
 }: VehiclePurchaseFormProps) => {
   const mergedLabels = { ...defaultLabels, ...labels };
-  /** Einmal pro Mount: gespeicherter Entwurf (localStorage, alle Tabs) */
+  /** Einmal pro Mount: gespeicherter Entwurf (sessionStorage, nur aktueller Tab) */
   const bootDraft = useMemo(
     () => loadDraftForVehicleInterestFromUrl(initialInterest),
     [initialInterest],
@@ -720,8 +720,8 @@ const VehiclePurchaseForm = ({
   }, [formData, currentStep, mileageInput, photoFiles, accidentFiles, draftFilesHydrated]);
 
   /**
-   * Entwurf synchron vor Paint (localStorage, gilt für alle Tabs).
-   * useLayoutEffect: letzte Eingabe gespeichert, bevor z. B. in einem neuen Tab navigiert wird.
+   * Entwurf synchron vor Paint (sessionStorage, nur aktueller Tab).
+   * useLayoutEffect: letzte Eingabe bleibt beim Seitenwechsel im selben Tab erhalten.
    */
   useLayoutEffect(() => {
     saveDraftToSession({
@@ -2137,8 +2137,6 @@ const VehiclePurchaseForm = ({
                   <span className="font-semibold text-primary">Pflichtfeld:</span> Ich habe die{" "}
                   <Link
                     to="/datenschutz"
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="text-primary underline underline-offset-2 hover:text-primary/90"
                     onClick={(e) => e.stopPropagation()}
                   >

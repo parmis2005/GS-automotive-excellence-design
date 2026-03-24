@@ -2,8 +2,7 @@
  * Entwurf für das Ankauf-/Inzahlungsnahme-Formular: bleibt erhalten,
  * wenn Nutzer z. B. zur Datenschutzerklärung navigieren und zurückkehren.
  *
- * - Felder & Schritt: **localStorage** (gleiche Origin, alle Tabs – wichtig, weil der
- *   Datenschutz-Link oft per `target="_blank"` einen neuen Tab öffnet; sessionStorage wäre dort leer)
+ * - Felder & Schritt: **sessionStorage** (pro Tab/Fenster)
  * - Hochgeladene Dateien: IndexedDB (asynchron, große Blobs)
  */
 
@@ -13,6 +12,7 @@ const IDB_VERSION = 1;
 const STORE = "files";
 const KEY_PHOTOS = "photos";
 const KEY_ACCIDENTS = "accidents";
+let didResetDraftOnThisPageLoad = false;
 
 export type VehiclePurchaseDraftSession = {
   v: 1;
@@ -57,6 +57,14 @@ export function normalizeInterestDigitsForPurchase(value: string): string {
 export function loadDraftForVehicleInterestFromUrl(
   initialInterestFromUrl: string,
 ): VehiclePurchaseDraftSession | null {
+  // Bei Neustart/Reload der Website einmalig immer frisch starten.
+  // Bei reiner SPA-Navigation im gleichen Lauf bleibt der Entwurf erhalten.
+  if (!didResetDraftOnThisPageLoad) {
+    didResetDraftOnThisPageLoad = true;
+    clearVehiclePurchaseDraft();
+    return null;
+  }
+
   const draft = loadDraftFromSession();
   if (!draft) return null;
 
@@ -79,22 +87,13 @@ export function loadDraftForVehicleInterestFromUrl(
 export function loadDraftFromSession(): VehiclePurchaseDraftSession | null {
   if (typeof window === "undefined") return null;
   try {
-    let raw = localStorage.getItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY);
-    if (!raw) {
-      raw = sessionStorage.getItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY);
-      if (raw) {
-        try {
-          localStorage.setItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY, raw);
-        } catch {
-          /* ignore */
-        }
-        try {
-          sessionStorage.removeItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY);
-        } catch {
-          /* ignore */
-        }
-      }
+    // Falls von früheren Versionen noch localStorage-Reste existieren: verwerfen.
+    try {
+      localStorage.removeItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY);
+    } catch {
+      /* ignore */
     }
+    const raw = sessionStorage.getItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as VehiclePurchaseDraftSession;
     if (parsed?.v !== 1 || typeof parsed.formData !== "object" || parsed.formData === null) {
@@ -109,23 +108,22 @@ export function loadDraftFromSession(): VehiclePurchaseDraftSession | null {
 export function saveDraftToSession(draft: VehiclePurchaseDraftSession): void {
   if (typeof window === "undefined") return;
   try {
-    const str = JSON.stringify(draft);
-    localStorage.setItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY, str);
+    sessionStorage.setItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY, JSON.stringify(draft));
     try {
-      sessionStorage.removeItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY);
+      localStorage.removeItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY);
     } catch {
       /* ignore */
     }
   } catch (e) {
-    console.warn("Ankauf-Entwurf (localStorage) konnte nicht gespeichert werden:", e);
+    console.warn("Ankauf-Entwurf (sessionStorage) konnte nicht gespeichert werden:", e);
   }
 }
 
 export function clearDraftSession(): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.removeItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY);
     sessionStorage.removeItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY);
+    localStorage.removeItem(VEHICLE_PURCHASE_DRAFT_SESSION_KEY);
   } catch {
     /* ignore */
   }
