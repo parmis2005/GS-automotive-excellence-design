@@ -137,19 +137,20 @@ purchaseInquiryRouter.post("/", maybeUpload, async (req, res) => {
       payload.accidentFiles = accidentLinks.map((file) => file.url).join(", ");
     }
 
-    // Immer in der Datenbank speichern (landet sofort)
+    // Datenbank ist nur Backup: Falls DB fehlschlägt, soll das Frontend trotzdem Erfolg sehen.
+    let dbSaved = false;
+    let dbId: number | null = null;
     try {
       const id = await insertPurchaseInquiry(payload);
+      dbSaved = true;
+      dbId = id;
       console.log(`✅ Ankauf-Anfrage #${id} gespeichert`);
     } catch (dbError) {
-      console.error("Fehler beim Speichern in DB:", dbError);
-      return res.status(500).json({
-        success: false,
-        error: "Fehler beim Speichern der Anfrage",
-      });
+      console.error("DB-Fehler (Anfrage trotzdem weiterverarbeiten):", dbError);
     }
 
     // Optional: E-Mail senden, wenn Resend konfiguriert ist
+    let emailSent = false;
     if (resendApiKey) {
       const resend = new Resend(resendApiKey);
       const now = new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -308,6 +309,7 @@ purchaseInquiryRouter.post("/", maybeUpload, async (req, res) => {
           text,
         });
         console.log(`📧 E-Mail an ${resendTo} gesendet`);
+        emailSent = true;
       } catch (emailError) {
         console.error("E-Mail-Versand fehlgeschlagen (Anfrage ist in DB gespeichert):", emailError);
       }
@@ -315,7 +317,13 @@ purchaseInquiryRouter.post("/", maybeUpload, async (req, res) => {
       console.warn("RESEND_API_KEY nicht gesetzt – E-Mail wurde nicht versendet. Anfrage ist in der Datenbank gespeichert.");
     }
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      dbSaved,
+      dbId,
+      emailSent,
+      note: "DB war optional (Backup) – Anfrage wurde weiterverarbeitet.",
+    });
   } catch (error) {
     console.error("Failed to send purchase inquiry:", error);
     res.status(500).json({

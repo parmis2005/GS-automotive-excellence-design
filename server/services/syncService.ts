@@ -10,6 +10,13 @@ import type { Vehicle } from "../types/vehicle.js";
 
 let syncInterval: NodeJS.Timeout | null = null;
 let isSyncing = false;
+let lastDbPersistAt = 0;
+const configuredPersistMinutes = parseInt(process.env.DB_PERSIST_INTERVAL_MINUTES || "60", 10);
+const dbPersistIntervalMinutes =
+  Number.isFinite(configuredPersistMinutes) && configuredPersistMinutes > 0
+    ? configuredPersistMinutes
+    : 60;
+const dbPersistIntervalMs = dbPersistIntervalMinutes * 60 * 1000;
 
 /**
  * Sync vehicles into the database.
@@ -17,7 +24,9 @@ let isSyncing = false;
  * otherwise falls back to scraping the GS Auto website.
  * If the sync fails, the old data remains in the database (graceful degradation).
  */
-export async function syncVehicles(): Promise<{ success: boolean; count: number; error?: string }> {
+export async function syncVehicles(
+  options?: { forcePersist?: boolean },
+): Promise<{ success: boolean; count: number; error?: string; persistedToDb?: boolean }> {
   // Prevent concurrent syncs
   if (isSyncing) {
     console.log("⏳ Sync already in progress, skipping...");
@@ -78,16 +87,30 @@ export async function syncVehicles(): Promise<{ success: boolean; count: number;
       }
     }
 
-    // Update database with new vehicles
-    await upsertVehicles(vehicles);
+    const now = Date.now();
+    const shouldPersistToDb =
+      options?.forcePersist === true ||
+      lastDbPersistAt === 0 ||
+      now - lastDbPersistAt >= dbPersistIntervalMs;
 
-    // Delete vehicles that are no longer in the source
-    await deleteOldVehicles(vehicles.map((v) => v.id));
+    if (shouldPersistToDb) {
+      // Update database with new vehicles
+      await upsertVehicles(vehicles);
+
+      // Delete vehicles that are no longer in the source
+      await deleteOldVehicles(vehicles.map((v) => v.id));
+      lastDbPersistAt = now;
+      console.log(`💾 Database persisted (${vehicles.length} Fahrzeuge)`);
+    } else {
+      const waitMs = dbPersistIntervalMs - (now - lastDbPersistAt);
+      const waitMin = Math.max(1, Math.ceil(waitMs / 60000));
+      console.log(`⏭️ DB write skipped (next persist in ~${waitMin} min)`);
+    }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`✅ Sync completed successfully in ${duration}s (${vehicles.length} vehicles)`);
 
-    return { success: true, count: vehicles.length };
+    return { success: true, count: vehicles.length, persistedToDb: shouldPersistToDb };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("❌ Error during sync:", errorMessage);
@@ -113,9 +136,10 @@ export function startSyncJob(intervalMinutes: number = 30): void {
   const intervalMs = intervalMinutes * 60 * 1000;
   
   console.log(`🔄 Starting background sync job (every ${intervalMinutes} minutes)`);
+  console.log(`💾 DB persist interval: every ${dbPersistIntervalMinutes} minutes`);
   
   // Run initial sync immediately
-  syncVehicles().catch((error) => {
+  syncVehicles({ forcePersist: true }).catch((error) => {
     console.error("❌ Error in initial sync:", error);
     console.log("💡 Website will use existing data from database");
   });
