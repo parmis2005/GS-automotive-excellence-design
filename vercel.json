@@ -19,6 +19,7 @@
     { "source": "/", "destination": "/api/page-html?path=/" },
     { "source": "/fahrzeuge", "destination": "/api/page-html?path=/fahrzeuge" },
     { "source": "/unternehmen", "destination": "/api/page-html?path=/unternehmen" },
+    { "source": "/kontakt", "destination": "/api/page-html?path=/kontakt" },
     { "source": "/fahrzeuge/:slug", "destination": "/api/vehicle-preview/:slug" },
     { "source": "/api/vehicles/:path*", "destination": "http://209.38.251.38:3001/api/vehicles/:path*" },
     { "source": "/api/brands/:path*", "destination": "http://209.38.251.38:3001/api/brands/:path*" },

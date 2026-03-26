@@ -105,6 +105,21 @@ const ROUTE_CONFIG = {
       <p>GS Automobile Rheinland steht für faire Preise, geprüfte Qualität und persönliche Beratung. Überwiegend Leasingrückläufer mit lückenloser Historie, DEKRA-Gutachten und attraktive Auswahl führender Hersteller – von der ersten Anfrage bis zur Schlüsselübergabe.</p>
     </main>`,
   },
+  "/kontakt": {
+    title: "Kontakt | GS Automobile Rheinland",
+    description:
+      "Kontaktieren Sie GS Automobile Rheinland in Krefeld. Beratung zu Fahrzeugen, Finanzierung und Inzahlungnahme. Telefon, E-Mail und Standort.",
+    ogDescription: "Kontakt GS Automobile Rheinland in Krefeld. Beratung zu Fahrzeugen, Finanzierung und Inzahlungnahme.",
+    canonical: BASE_URL + "/kontakt",
+    keywords: "Kontakt Autohaus Krefeld, GS Automobile Rheinland, Telefon, E-Mail, Standort",
+    bodyContent: `
+    <main class="seo-static-content" aria-label="Kontakt">
+      <h1>Kontakt</h1>
+      <p>Sie haben Fragen zu Fahrzeugen, Finanzierung oder Inzahlungnahme? Wir beraten Sie gerne persönlich.</p>
+      <p><strong>GS Automobile Rheinland GmbH</strong><br>Kuhleshütte 149<br>47809 Krefeld</p>
+      <p>Telefon: 02151 94 222 62<br>E-Mail: info@gsauto.de</p>
+    </main>`,
+  },
 };
 
 function escapeMeta(s) {
