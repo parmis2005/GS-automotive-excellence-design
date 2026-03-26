@@ -23,6 +23,7 @@ const ZulassungPage = lazy(() => import("./pages/ZulassungPage"));
 const DekraTuvPage = lazy(() => import("./pages/DekraTuvPage"));
 const OelwechselPage = lazy(() => import("./pages/OelwechselPage"));
 const UnternehmenPage = lazy(() => import("./pages/UnternehmenPage"));
+const KontaktPage = lazy(() => import("./pages/KontaktPage"));
 const KontaktErfolgreichPage = lazy(() => import("./pages/KontaktErfolgreichPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="/dekra-tuev" element={<DekraTuvPage />} />
               <Route path="/oelwechsel" element={<OelwechselPage />} />
               <Route path="/unternehmen" element={<UnternehmenPage />} />
+              <Route path="/kontakt" element={<KontaktPage />} />
               <Route path="/kontakt-erfolgreich" element={<KontaktErfolgreichPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
