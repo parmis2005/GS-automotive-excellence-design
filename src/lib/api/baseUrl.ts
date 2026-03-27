@@ -34,4 +34,9 @@ export function getPurchaseInquiryUrl(): string {
   return `${getApiBaseUrl()}/purchase-inquiry`;
 }
 
+/** Ankauf: `prepare-uploads` / `complete` (kleine JSON-Requests – Vercel-ok; Dateien gehen direkt zu Supabase). */
+export function getPurchaseInquirySubUrl(subpath: "prepare-uploads" | "complete"): string {
+  return `${getPurchaseInquiryUrl()}/${subpath}`;
+}
+
 export const API_BASE_URL = getApiBaseUrl();

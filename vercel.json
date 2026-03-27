@@ -24,6 +24,8 @@
     { "source": "/api/vehicles/:path*", "destination": "http://209.38.251.38:3001/api/vehicles/:path*" },
     { "source": "/api/brands/:path*", "destination": "http://209.38.251.38:3001/api/brands/:path*" },
     { "source": "/api/models/:path*", "destination": "http://209.38.251.38:3001/api/models/:path*" },
+    { "source": "/api/purchase-inquiry/prepare-uploads", "destination": "http://209.38.251.38:3001/api/purchase-inquiry/prepare-uploads" },
+    { "source": "/api/purchase-inquiry/complete", "destination": "http://209.38.251.38:3001/api/purchase-inquiry/complete" },
     { "source": "/api/purchase-inquiry", "destination": "http://209.38.251.38:3001/api/purchase-inquiry" },
     { "source": "/api/inquiries/:path*", "destination": "http://209.38.251.38:3001/api/inquiries/:path*" },
     { "source": "/api/stats/:path*", "destination": "http://209.38.251.38:3001/api/stats/:path*" },

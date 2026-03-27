@@ -24,7 +24,7 @@ import { getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 import { getColorHex, BASIC_COLORS } from "@/lib/colorUtils";
 import { useModels } from "@/hooks/useModels";
-import { getPurchaseInquiryUrl } from "@/lib/api/baseUrl";
+import { getPurchaseInquirySubUrl, getPurchaseInquiryUrl } from "@/lib/api/baseUrl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -2427,69 +2427,169 @@ const VehiclePurchaseForm = ({
     setSubmitError("");
     setSubmitSuccess(false);
 
-    const formDataToSend = new FormData();
-    Object.entries(payload).forEach(([key, value]) => {
-      formDataToSend.append(key, value ?? "");
-    });
-    photoFiles.forEach((file) => formDataToSend.append("photoFiles", file, file.name));
-    accidentFiles.forEach((file) => formDataToSend.append("accidentFiles", file, file.name));
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), submitRequestTimeoutMs);
 
-    const purchaseInquiryUrl = getPurchaseInquiryUrl();
+    const postMultipart = () => {
+      const formDataToSend = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        formDataToSend.append(key, value ?? "");
+      });
+      photoFiles.forEach((file) => formDataToSend.append("photoFiles", file, file.name));
+      accidentFiles.forEach((file) => formDataToSend.append("accidentFiles", file, file.name));
+      return fetch(getPurchaseInquiryUrl(), {
+        method: "POST",
+        body: formDataToSend,
+        signal: controller.signal,
+      });
+    };
 
-    fetch(purchaseInquiryUrl, {
-      method: "POST",
-      body: formDataToSend,
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const contentType = response.headers.get("content-type") ?? "";
-        const payload = contentType.includes("application/json")
-          ? await response.json().catch(() => null)
-          : null;
-        if (!response.ok) {
-          const apiError = typeof payload?.error === "string" ? payload.error.trim() : "";
-          const serverSaysFileSize =
-            /zu groß|MB|Datei/i.test(apiError) && response.status === 413;
-          if (response.status === 413) {
-            throw new Error(
-              serverSaysFileSize
-                ? apiError
-                : "Die Fotos konnten leider nicht übermittelt werden. Bitte weniger Bilder auswählen oder die Dateien verkleinern und es erneut versuchen.",
-            );
-          }
-          if (response.status >= 500) {
-            throw new Error(
-              apiError || "Der Dienst ist gerade nicht erreichbar. Bitte versuchen Sie es später erneut.",
-            );
-          }
-          throw new Error(apiError || "Die Anfrage konnte nicht gesendet werden. Bitte prüfen Sie Ihre Angaben und versuchen Sie es erneut.");
+    const handleResponse = async (response: Response) => {
+      const contentType = response.headers.get("content-type") ?? "";
+      const jsonPayload = contentType.includes("application/json")
+        ? await response.json().catch(() => null)
+        : null;
+      if (!response.ok) {
+        const apiError = typeof jsonPayload?.error === "string" ? jsonPayload.error.trim() : "";
+        const serverSaysFileSize = /zu groß|MB|Datei/i.test(apiError) && response.status === 413;
+        if (response.status === 413) {
+          throw new Error(
+            serverSaysFileSize
+              ? apiError
+              : "Die Fotos konnten leider nicht übermittelt werden. Bitte weniger Bilder auswählen oder die Dateien verkleinern und es erneut versuchen.",
+          );
         }
-        return payload;
-      })
-      .then(() => {
+        if (response.status >= 500) {
+          throw new Error(
+            apiError || "Der Dienst ist gerade nicht erreichbar. Bitte versuchen Sie es später erneut.",
+          );
+        }
+        throw new Error(
+          apiError || "Die Anfrage konnte nicht gesendet werden. Bitte prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
+        );
+      }
+      return jsonPayload;
+    };
+
+    void (async () => {
+      try {
+        let response: Response;
+        const hasFiles = photoFiles.length > 0 || accidentFiles.length > 0;
+
+        if (hasFiles) {
+          const filesMeta = [
+            ...photoFiles.map((f) => ({
+              kind: "photo" as const,
+              name: f.name,
+              size: f.size,
+              contentType: f.type || "application/octet-stream",
+            })),
+            ...accidentFiles.map((f) => ({
+              kind: "accident" as const,
+              name: f.name,
+              size: f.size,
+              contentType: f.type || "application/octet-stream",
+            })),
+          ];
+
+          const prepRes = await fetch(getPurchaseInquirySubUrl("prepare-uploads"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ files: filesMeta }),
+            signal: controller.signal,
+          });
+
+          if (prepRes.ok) {
+            const prep = (await prepRes.json()) as {
+              success?: boolean;
+              sessionId?: string;
+              slots?: Array<{
+                path: string;
+                signedUrl: string;
+                token: string;
+                originalName: string;
+                kind: "photo" | "accident";
+              }>;
+            };
+            if (!prep.success || !prep.sessionId || !prep.slots?.length) {
+              throw new Error("Upload-Vorbereitung fehlgeschlagen. Bitte erneut versuchen.");
+            }
+
+            const orderedFiles: File[] = [...photoFiles, ...accidentFiles];
+            const parallel = 4;
+            for (let i = 0; i < prep.slots.length; i += parallel) {
+              const chunk = prep.slots.slice(i, i + parallel);
+              await Promise.all(
+                chunk.map(async (slot, j) => {
+                  const file = orderedFiles[i + j];
+                  const put = await fetch(slot.signedUrl, {
+                    method: "PUT",
+                    body: file,
+                    headers: {
+                      "Content-Type": file.type || "application/octet-stream",
+                      Authorization: `Bearer ${slot.token}`,
+                    },
+                    signal: controller.signal,
+                  });
+                  if (!put.ok) {
+                    throw new Error(`Die Datei „${file.name}“ konnte nicht hochgeladen werden.`);
+                  }
+                }),
+              );
+            }
+
+            const uploaded = prep.slots.map((s) => ({
+              path: s.path,
+              originalName: s.originalName,
+              kind: s.kind,
+            }));
+
+            response = await fetch(getPurchaseInquirySubUrl("complete"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                sessionId: prep.sessionId,
+                uploaded,
+                ...payload,
+              }),
+              signal: controller.signal,
+            });
+          } else if (prepRes.status === 503) {
+            response = await postMultipart();
+          } else {
+            const errBody = await prepRes.json().catch(() => null);
+            const apiError = typeof errBody?.error === "string" ? errBody.error.trim() : "";
+            throw new Error(
+              apiError || "Die Fotos konnten nicht vorbereitet werden. Bitte erneut versuchen.",
+            );
+          }
+        } else {
+          response = await postMultipart();
+        }
+
+        await handleResponse(response);
+
         skipDraftPersistenceRef.current = true;
         clearVehiclePurchaseDraft();
         setSubmitSuccess(true);
         navigate("/kontakt-erfolgreich", { replace: true });
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         let message = error instanceof Error ? error.message : "";
         if (error instanceof DOMException && error.name === "AbortError") {
-          setSubmitError("Die Anfrage hat zu lange gedauert. Bitte erneut versuchen (ggf. weniger/kleinere Dateien).");
+          setSubmitError(
+            "Die Anfrage hat zu lange gedauert. Bitte erneut versuchen (ggf. weniger/kleinere Dateien).",
+          );
           return;
         }
         if (message === "Failed to fetch" || message.includes("NetworkError")) {
           message = "Keine Verbindung zum Server. Bitte Internet prüfen und erneut versuchen.";
         }
         setSubmitError(message || "Senden fehlgeschlagen. Bitte erneut versuchen.");
-      })
-      .finally(() => {
+      } finally {
         clearTimeout(timeout);
         setIsSubmitting(false);
-      });
+      }
+    })();
   };
 
   return (
