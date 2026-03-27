@@ -24,6 +24,7 @@ import { getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 import { getColorHex, BASIC_COLORS } from "@/lib/colorUtils";
 import { useModels } from "@/hooks/useModels";
+import { getApiBaseUrl } from "@/lib/api/baseUrl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -2373,7 +2374,9 @@ const VehiclePurchaseForm = ({
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), submitRequestTimeoutMs);
 
-    fetch("/api/purchase-inquiry", {
+    const purchaseInquiryUrl = `${getApiBaseUrl()}/purchase-inquiry`;
+
+    fetch(purchaseInquiryUrl, {
       method: "POST",
       body: formDataToSend,
       signal: controller.signal,
@@ -2385,6 +2388,12 @@ const VehiclePurchaseForm = ({
           : null;
         if (!response.ok) {
           const apiError = typeof payload?.error === "string" ? payload.error : "";
+          if (response.status === 413) {
+            throw new Error(
+              apiError ||
+                "Die Dateien sind zu groß (max. 25 MB insgesamt) oder die Verbindung begrenzt die Größe. Bitte weniger oder kleinere Bilder – ggf. warten Sie auf ein Update der Website-Konfiguration.",
+            );
+          }
           throw new Error(apiError || `Request failed (${response.status})`);
         }
         return payload;

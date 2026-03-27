@@ -1,42 +1,5 @@
 import type { Vehicle } from "@/types/vehicle";
-
-// API base URL - uses environment variable if set, otherwise falls back to /api (for proxy)
-/**
- * Builds the base API URL for all vehicle requests.
- *
- * Explanation for non-TypeScript readers:
- * - We first check if an environment variable called `VITE_API_URL` exists.
- * - If it does NOT exist, we use `/api`, which is a local proxy path.
- * - If it exists, we clean it up (remove a trailing slash).
- * - If it does not end with `/api`, we append `/api` so every request hits the API.
- * - The returned string is later used like: `${API_BASE_URL}/vehicles`.
- */
-const getApiBaseUrl = (): string => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  
-  // If no env variable, use /api (for local proxy)
-  if (!envUrl) {
-    return "/api";
-  }
-  
-  // Remove trailing slash if present
-  const baseUrl = envUrl.endsWith("/") ? envUrl.slice(0, -1) : envUrl;
-  
-  // If URL doesn't end with /api, add it
-  if (!baseUrl.endsWith("/api")) {
-    return `${baseUrl}/api`;
-  }
-  
-  return baseUrl;
-};
-
-/**
- * Final API base URL used by all fetch calls in this file.
- * Example values:
- * - "/api"
- * - "https://example.com/api"
- */
-const API_BASE_URL = getApiBaseUrl();
+import { API_BASE_URL } from "./baseUrl";
 
 // Debug logging - always log in production for troubleshooting
 console.log("🔗 API Base URL:", API_BASE_URL);

@@ -1,16 +1,4 @@
-const getApiBaseUrl = (): string => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (!envUrl) {
-    return "/api";
-  }
-  const baseUrl = envUrl.endsWith("/") ? envUrl.slice(0, -1) : envUrl;
-  if (!baseUrl.endsWith("/api")) {
-    return `${baseUrl}/api`;
-  }
-  return baseUrl;
-};
-
-const API_BASE_URL = getApiBaseUrl();
+import { API_BASE_URL } from "./baseUrl";
 
 export interface BrandsResponse {
   success: boolean;
