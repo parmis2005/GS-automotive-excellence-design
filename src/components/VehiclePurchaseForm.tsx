@@ -2396,7 +2396,7 @@ const VehiclePurchaseForm = ({
           if (response.status === 413) {
             throw new Error(
               apiError ||
-                "Die Dateien sind zu groß (max. 25 MB insgesamt) oder die Verbindung begrenzt die Größe. Bitte weniger oder kleinere Bilder – ggf. warten Sie auf ein Update der Website-Konfiguration.",
+                "Upload abgelehnt. Maximal 25 MB gesamt und 5 MB pro Datei. Wenn es lokal mit denselben Dateien klappt, aber online nicht, begrenzt meist die Live-Infrastruktur die Größe—das ist serverseitig einstellbar (direkte API-URL, nginx).",
             );
           }
           throw new Error(apiError || `Request failed (${response.status})`);
