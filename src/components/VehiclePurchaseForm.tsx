@@ -569,6 +569,8 @@ const VehiclePurchaseForm = ({
   const [plzLookup, setPlzLookup] = useState<"idle" | "loading" | { city: string } | "not_found">("idle");
   const plzLookupAbortRef = useRef<AbortController | null>(null);
   const navigate = useNavigate();
+  /** Nach erfolgreichem Absenden: keinen Entwurf mehr speichern (Unmount-Cleanup würde sonst die letzte Slide wieder in sessionStorage schreiben). */
+  const skipDraftPersistenceRef = useRef(false);
   /** true, sobald gespeicherte Dateien aus IndexedDB geladen sind – verhindert Überschreiben beim ersten Speichern */
   const [draftFilesHydrated, setDraftFilesHydrated] = useState(false);
 
@@ -735,6 +737,7 @@ const VehiclePurchaseForm = ({
    * useLayoutEffect: letzte Eingabe bleibt beim Seitenwechsel im selben Tab erhalten.
    */
   useLayoutEffect(() => {
+    if (skipDraftPersistenceRef.current) return;
     saveDraftToSession({
       v: 1,
       formData: formData as unknown as Record<string, unknown>,
@@ -745,10 +748,11 @@ const VehiclePurchaseForm = ({
 
   const fileSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!draftFilesHydrated) return;
+    if (!draftFilesHydrated || skipDraftPersistenceRef.current) return;
     if (fileSaveTimerRef.current) clearTimeout(fileSaveTimerRef.current);
     fileSaveTimerRef.current = setTimeout(() => {
       fileSaveTimerRef.current = null;
+      if (skipDraftPersistenceRef.current) return;
       void saveDraftFiles(photoFiles, accidentFiles);
     }, 400);
     return () => {
@@ -759,6 +763,7 @@ const VehiclePurchaseForm = ({
   /** Beim Verlassen der Seite / Tab: letzten Stand sichern (wichtig für Client-Routing) */
   useEffect(() => {
     const flushAll = () => {
+      if (skipDraftPersistenceRef.current) return;
       const s = draftStateRef.current;
       saveDraftToSession({
         v: 1,
@@ -2399,8 +2404,9 @@ const VehiclePurchaseForm = ({
         return payload;
       })
       .then(() => {
-        setSubmitSuccess(true);
+        skipDraftPersistenceRef.current = true;
         clearVehiclePurchaseDraft();
+        setSubmitSuccess(true);
         navigate("/kontakt-erfolgreich", { replace: true });
       })
       .catch((error: unknown) => {
