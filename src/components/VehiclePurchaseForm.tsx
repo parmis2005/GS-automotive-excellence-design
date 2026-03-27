@@ -24,7 +24,7 @@ import { getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 import { getColorHex, BASIC_COLORS } from "@/lib/colorUtils";
 import { useModels } from "@/hooks/useModels";
-import { getApiBaseUrl } from "@/lib/api/baseUrl";
+import { getPurchaseInquiryUrl } from "@/lib/api/baseUrl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -2124,7 +2124,7 @@ const VehiclePurchaseForm = ({
       {
         id: "contact",
         title: "Kontaktdaten",
-        isValid: isContactValid,
+        isValid: () => isContactValid() && areUploadsValid(photoFiles, accidentFiles),
         render: () => (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -2235,6 +2235,8 @@ const VehiclePurchaseForm = ({
                 </label>
               </div>
             </div>
+
+            <UploadLimitsCallout photoFiles={photoFiles} accidentFiles={accidentFiles} />
           </div>
         ),
       },
@@ -2435,7 +2437,7 @@ const VehiclePurchaseForm = ({
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), submitRequestTimeoutMs);
 
-    const purchaseInquiryUrl = `${getApiBaseUrl()}/purchase-inquiry`;
+    const purchaseInquiryUrl = getPurchaseInquiryUrl();
 
     fetch(purchaseInquiryUrl, {
       method: "POST",
@@ -2448,14 +2450,22 @@ const VehiclePurchaseForm = ({
           ? await response.json().catch(() => null)
           : null;
         if (!response.ok) {
-          const apiError = typeof payload?.error === "string" ? payload.error : "";
+          const apiError = typeof payload?.error === "string" ? payload.error.trim() : "";
+          const serverSaysFileSize =
+            /zu groß|MB|Datei/i.test(apiError) && response.status === 413;
           if (response.status === 413) {
             throw new Error(
-              apiError ||
-                "Upload abgelehnt. Maximal 25 MB gesamt und 5 MB pro Datei. Wenn es lokal mit denselben Dateien klappt, aber online nicht, begrenzt meist die Live-Infrastruktur die Größe—das ist serverseitig einstellbar (direkte API-URL, nginx).",
+              serverSaysFileSize
+                ? apiError
+                : "Die Fotos konnten leider nicht übermittelt werden. Bitte weniger Bilder auswählen oder die Dateien verkleinern und es erneut versuchen.",
             );
           }
-          throw new Error(apiError || `Request failed (${response.status})`);
+          if (response.status >= 500) {
+            throw new Error(
+              apiError || "Der Dienst ist gerade nicht erreichbar. Bitte versuchen Sie es später erneut.",
+            );
+          }
+          throw new Error(apiError || "Die Anfrage konnte nicht gesendet werden. Bitte prüfen Sie Ihre Angaben und versuchen Sie es erneut.");
         }
         return payload;
       })
@@ -2466,10 +2476,13 @@ const VehiclePurchaseForm = ({
         navigate("/kontakt-erfolgreich", { replace: true });
       })
       .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : "";
+        let message = error instanceof Error ? error.message : "";
         if (error instanceof DOMException && error.name === "AbortError") {
           setSubmitError("Die Anfrage hat zu lange gedauert. Bitte erneut versuchen (ggf. weniger/kleinere Dateien).");
           return;
+        }
+        if (message === "Failed to fetch" || message.includes("NetworkError")) {
+          message = "Keine Verbindung zum Server. Bitte Internet prüfen und erneut versuchen.";
         }
         setSubmitError(message || "Senden fehlgeschlagen. Bitte erneut versuchen.");
       })
