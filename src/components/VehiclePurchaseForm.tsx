@@ -498,8 +498,64 @@ const getTotalUploadSizeMb = (photoFiles: File[], accidentFiles: File[]) =>
     accidentFiles.reduce((sum, file) => sum + file.size, 0)) /
   (1024 * 1024);
 
-const isUploadSizeValid = (photoFiles: File[], accidentFiles: File[]) =>
-  getTotalUploadSizeMb(photoFiles, accidentFiles) <= maxTotalUploadSizeMb;
+const maxUploadBytesPerFile = maxPhotoSizeMb * 1024 * 1024;
+
+/** Alle Limits: pro Datei + Summe (z. B. auch nach Entwurf aus IndexedDB). */
+const areUploadsValid = (photoFiles: File[], accidentFiles: File[]) => {
+  if (photoFiles.some((f) => f.size > maxUploadBytesPerFile)) return false;
+  if (accidentFiles.some((f) => f.size > maxUploadBytesPerFile)) return false;
+  return getTotalUploadSizeMb(photoFiles, accidentFiles) <= maxTotalUploadSizeMb;
+};
+
+/** Konkrete Hinweise für die Upload-Slides (sichtbar + blockiert „Weiter“). */
+const getUploadValidationMessages = (photoFiles: File[], accidentFiles: File[]): string[] => {
+  const issues: string[] = [];
+  for (const f of photoFiles) {
+    if (f.size > maxUploadBytesPerFile) {
+      issues.push(`„${f.name}“: mehr als ${maxPhotoSizeMb} MB (Fahrzeugfotos).`);
+    }
+  }
+  for (const f of accidentFiles) {
+    if (f.size > maxUploadBytesPerFile) {
+      issues.push(`„${f.name}“: mehr als ${maxPhotoSizeMb} MB (Unfall/Dokumente).`);
+    }
+  }
+  const total = getTotalUploadSizeMb(photoFiles, accidentFiles);
+  if (total > maxTotalUploadSizeMb) {
+    issues.push(
+      `Alle Dateien zusammen ca. ${total.toFixed(1)} MB – maximal ${maxTotalUploadSizeMb} MB erlaubt.`,
+    );
+  }
+  return issues;
+};
+
+const UploadLimitsCallout = ({
+  photoFiles,
+  accidentFiles,
+}: {
+  photoFiles: File[];
+  accidentFiles: File[];
+}) => {
+  const messages = getUploadValidationMessages(photoFiles, accidentFiles);
+  if (!messages.length) return null;
+  return (
+    <div
+      role="alert"
+      className="rounded-lg border border-destructive/50 bg-destructive/5 p-4 text-sm"
+    >
+      <p className="font-semibold text-destructive">Upload-Vorgaben nicht erfüllt</p>
+      <p className="mt-1 text-muted-foreground">
+        Bitte anpassen – erst dann ist <span className="font-medium text-foreground">Weiter</span> möglich
+        (max. {maxPhotoSizeMb} MB pro Datei, max. {maxTotalUploadSizeMb} MB für alle Dateien zusammen).
+      </p>
+      <ul className="mt-3 list-disc space-y-1 pl-5 text-destructive">
+        {messages.map((msg, i) => (
+          <li key={`${i}-${msg}`}>{msg}</li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 
 const toNumberInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -1739,7 +1795,7 @@ const VehiclePurchaseForm = ({
       {
         id: "condition",
         title: "Raucherfahrzeug & Unfallfreiheit",
-        isValid: () => isAccidentValid() && isUploadSizeValid(photoFiles, accidentFiles),
+        isValid: () => isAccidentValid() && areUploadsValid(photoFiles, accidentFiles),
         render: () => (
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1920,6 +1976,8 @@ const VehiclePurchaseForm = ({
                 </div>
               </div>
             )}
+
+            <UploadLimitsCallout photoFiles={photoFiles} accidentFiles={accidentFiles} />
           </div>
         ),
       },
@@ -1956,7 +2014,7 @@ const VehiclePurchaseForm = ({
       {
         id: "photos",
         title: "Fotos Upload (optional)",
-        isValid: () => isUploadSizeValid(photoFiles, accidentFiles),
+        isValid: () => areUploadsValid(photoFiles, accidentFiles),
         render: () => (
           <div className="space-y-4">
             <div
@@ -2006,11 +2064,6 @@ const VehiclePurchaseForm = ({
             {photoError && (
               <p className="mt-2 text-xs text-destructive">{photoError}</p>
             )}
-            {!isUploadSizeValid(photoFiles, accidentFiles) && (
-              <p className="mt-2 text-xs text-destructive">
-                Gesamtgröße der Uploads überschreitet {maxTotalUploadSizeMb} MB.
-              </p>
-            )}
             {photoFiles.length > 0 && (
               <div className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
                 <div className="space-y-2">
@@ -2035,6 +2088,8 @@ const VehiclePurchaseForm = ({
                 </div>
               </div>
             )}
+
+            <UploadLimitsCallout photoFiles={photoFiles} accidentFiles={accidentFiles} />
           </div>
         ),
       },
@@ -2306,8 +2361,9 @@ const VehiclePurchaseForm = ({
 
   const handleSubmit = () => {
     if (!isContactValid()) return;
-    if (getTotalUploadSizeMb(photoFiles, accidentFiles) > maxTotalUploadSizeMb) {
-      setSubmitError(`Gesamtgröße der Dateien zu hoch (max. ${maxTotalUploadSizeMb} MB).`);
+    if (!areUploadsValid(photoFiles, accidentFiles)) {
+      const msgs = getUploadValidationMessages(photoFiles, accidentFiles);
+      setSubmitError(msgs.length ? msgs.join(" ") : `Dateien zu groß (max. ${maxTotalUploadSizeMb} MB gesamt).`);
       return;
     }
     if (onSubmit) {
