@@ -6,13 +6,41 @@ import { insertPurchaseInquiry, getPurchaseInquiries } from "../db/database.js";
 
 export const purchaseInquiryRouter = Router();
 
-const upload = multer({ storage: multer.memoryStorage() });
+const MAX_FILE_SIZE_MB = 5;
+const MAX_TOTAL_UPLOAD_MB = 25;
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: MAX_FILE_SIZE_MB * 1024 * 1024,
+    files: 20,
+  },
+});
 const maybeUpload = (req: any, res: any, next: any) => {
   if (req.is("multipart/form-data")) {
     return upload.fields([
       { name: "photoFiles" },
       { name: "accidentFiles" },
-    ])(req, res, next);
+    ])(req, res, (err?: unknown) => {
+      if (!err) return next();
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(413).json({
+            success: false,
+            error: `Datei zu groß. Maximal ${MAX_FILE_SIZE_MB} MB pro Datei.`,
+          });
+        }
+        if (err.code === "LIMIT_FILE_COUNT") {
+          return res.status(413).json({
+            success: false,
+            error: "Zu viele Dateien im Upload.",
+          });
+        }
+      }
+      return res.status(400).json({
+        success: false,
+        error: "Datei-Upload fehlgeschlagen.",
+      });
+    });
   }
   return next();
 };
@@ -25,6 +53,15 @@ const supabaseUrl = process.env.SUPABASE_URL?.trim();
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 const supabaseBucket = process.env.SUPABASE_BUCKET_ANKAUF?.trim() || "ankauf-uploads";
 const signedUrlSeconds = 60 * 60 * 24 * 14;
+const SUPABASE_UPLOAD_TIMEOUT_MS = 6_000;
+const SUPABASE_SIGNED_URL_TIMEOUT_MS = 12_000;
+const SUPABASE_UPLOAD_BUDGET_MS = 60_000;
+const SUPABASE_UPLOAD_CONCURRENCY = 4;
+const RESEND_TIMEOUT_MS = 12_000;
+const DB_INSERT_TIMEOUT_MS = 3_000;
+const SUPABASE_SIGNED_URL_RETRIES = 3;
+/** Zusätzliche Versuche für Dateien, die nach dem Upload noch keine Signed-URL haben. */
+const SUPABASE_SIGNED_URL_SECOND_PASS_RETRIES = 5;
 
 const supabase =
   supabaseUrl && supabaseServiceRoleKey
@@ -60,13 +97,16 @@ const formatRow = (label: string, value?: string | number | null) => {
   return `<tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;width:180px;">${label}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;color:#111827;">${safeValue}</td></tr>`;
 };
 
-const formatFileRows = (label: string, files: { name: string; url: string }[]) => {
+const formatFileRows = (label: string, files: { name: string; url?: string }[]) => {
   if (!files.length) return formatRow(label, "-");
   const items = files
     .map((file) => {
       const name = escapeHtml(file.name);
-      const url = escapeHtml(file.url);
-      return `<li style="margin:4px 0;"><a href="${url}" target="_blank" rel="noreferrer" style="color:#0f2439;text-decoration:underline;">${name}</a></li>`;
+      if (file.url) {
+        const url = escapeHtml(file.url);
+        return `<li style="margin:4px 0;"><a href="${url}" target="_blank" rel="noreferrer" style="color:#0f2439;text-decoration:underline;">${name}</a></li>`;
+      }
+      return `<li style="margin:4px 0;">${name} <span style="color:#6b7280;">(ohne Link)</span></li>`;
     })
     .join("");
   return `<tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;width:180px;">${label}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;color:#111827;"><ul style="padding-left:18px;margin:0;">${items}</ul></td></tr>`;
@@ -83,6 +123,45 @@ const formatPrice = (value?: string | null) => {
   return `${formatted} €`;
 };
 
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timeout (${timeoutMs}ms)`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+
+const createSignedUrlWithRetry = async (
+  path: string,
+  retries: number,
+): Promise<string | null> => {
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      const { data, error } = await withTimeout(
+        supabase!.storage.from(supabaseBucket).createSignedUrl(path, signedUrlSeconds),
+        SUPABASE_SIGNED_URL_TIMEOUT_MS,
+        `supabase signed url attempt ${attempt}`,
+      );
+      if (!error && data?.signedUrl) {
+        return data.signedUrl;
+      }
+      console.error(`Supabase signed URL error (attempt ${attempt}/${retries}):`, error);
+    } catch (error) {
+      console.error(`Supabase signed URL timeout/failure (attempt ${attempt}/${retries}):`, error);
+    }
+    if (attempt < retries) {
+      await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+    }
+  }
+  return null;
+};
+
 purchaseInquiryRouter.post("/", maybeUpload, async (req, res) => {
   try {
     const payload = req.body || {};
@@ -96,52 +175,112 @@ purchaseInquiryRouter.post("/", maybeUpload, async (req, res) => {
     };
     const photoUploads = files.photoFiles ?? [];
     const accidentUploads = files.accidentFiles ?? [];
+    const totalUploadBytes = [...photoUploads, ...accidentUploads].reduce(
+      (sum, file) => sum + (file.size || 0),
+      0,
+    );
+    const maxTotalUploadBytes = MAX_TOTAL_UPLOAD_MB * 1024 * 1024;
+    if (totalUploadBytes > maxTotalUploadBytes) {
+      return res.status(413).json({
+        success: false,
+        error: `Gesamter Upload zu groß. Maximal ${MAX_TOTAL_UPLOAD_MB} MB insgesamt.`,
+      });
+    }
 
-    const uploadFiles = async (uploads: Express.Multer.File[], prefix: string) => {
-      if (!supabase || uploads.length === 0) return [];
-      const now = new Date();
-      const folder = `${prefix}/${now.toISOString().slice(0, 10)}-${now.getTime()}`;
-      const results: { name: string; url: string }[] = [];
+    type UploadListEntry = { name: string; url?: string; path?: string };
 
-      for (const file of uploads) {
-        const safeName = file.originalname.replace(/[^\w.\-]+/g, "_");
-        const path = `${folder}/${safeName}`;
-        const { error } = await supabase.storage.from(supabaseBucket).upload(path, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false,
-        });
-        if (error) {
-          console.error("Supabase upload error:", error);
-          continue;
-        }
-        const { data, error: urlError } = await supabase.storage
-          .from(supabaseBucket)
-          .createSignedUrl(path, signedUrlSeconds);
-        if (urlError || !data?.signedUrl) {
-          console.error("Supabase signed URL error:", urlError);
-          continue;
-        }
-        results.push({ name: file.originalname, url: data.signedUrl });
+    const uploadFiles = async (uploads: Express.Multer.File[], prefix: string): Promise<UploadListEntry[]> => {
+      if (uploads.length === 0) return [];
+      if (!supabase) {
+        return uploads.map((file) => ({ name: file.originalname }));
       }
 
-      return results;
+      const now = new Date();
+      const folder = `${prefix}/${now.toISOString().slice(0, 10)}-${now.getTime()}`;
+      const slot: (UploadListEntry | null)[] = new Array(uploads.length).fill(null);
+
+      const startedAt = Date.now();
+      let nextIndex = 0;
+      const workerCount = Math.max(1, Math.min(SUPABASE_UPLOAD_CONCURRENCY, uploads.length));
+
+      const uploadOne = async (file: Express.Multer.File, index: number) => {
+        const safeName = file.originalname.replace(/[^\w.\-]+/g, "_");
+        // Eindeutiger Name verhindert 409 (resource already exists) bei gleichen Dateinamen.
+        const uniqueSuffix = `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`;
+        const path = `${folder}/${uniqueSuffix}-${safeName}`;
+        const { error } = await withTimeout(
+          supabase.storage.from(supabaseBucket).upload(path, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          }),
+          SUPABASE_UPLOAD_TIMEOUT_MS,
+          "supabase upload",
+        );
+        if (error) {
+          console.error("Supabase upload error:", error);
+          slot[index] = { name: file.originalname };
+          return;
+        }
+        const signedUrl = await createSignedUrlWithRetry(path, SUPABASE_SIGNED_URL_RETRIES);
+        slot[index] = signedUrl
+          ? { name: file.originalname, path, url: signedUrl }
+          : { name: file.originalname, path };
+      };
+
+      const worker = async () => {
+        while (nextIndex < uploads.length) {
+          if (Date.now() - startedAt > SUPABASE_UPLOAD_BUDGET_MS) {
+            return;
+          }
+          const current = nextIndex;
+          nextIndex += 1;
+          const file = uploads[current];
+          try {
+            await uploadOne(file, current);
+          } catch (fileUploadError) {
+            console.error("Supabase file upload failed (skip file):", fileUploadError);
+            slot[current] = { name: file.originalname };
+          }
+        }
+      };
+
+      await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+      const merged: UploadListEntry[] = uploads.map((file, i) => slot[i] ?? { name: file.originalname });
+
+      await Promise.all(
+        merged.map(async (entry) => {
+          if (entry.path && !entry.url) {
+            const url = await createSignedUrlWithRetry(entry.path, SUPABASE_SIGNED_URL_SECOND_PASS_RETRIES);
+            if (url) entry.url = url;
+          }
+        }),
+      );
+
+      return merged;
     };
 
     const photoLinks = await uploadFiles(photoUploads, "photos");
     const accidentLinks = await uploadFiles(accidentUploads, "documents");
 
-    if (photoLinks.length) {
-      payload.photoFiles = photoLinks.map((file) => file.url).join(", ");
-    }
-    if (accidentLinks.length) {
-      payload.accidentFiles = accidentLinks.map((file) => file.url).join(", ");
-    }
+    payload.photoFiles =
+      photoLinks.length > 0
+        ? photoLinks.map((file) => file.url || `${file.name} (ohne Link)`).join(", ")
+        : "-";
+    payload.accidentFiles =
+      accidentLinks.length > 0
+        ? accidentLinks.map((file) => file.url || `${file.name} (ohne Link)`).join(", ")
+        : "-";
 
     // Datenbank ist nur Backup: Falls DB fehlschlägt, soll das Frontend trotzdem Erfolg sehen.
     let dbSaved = false;
     let dbId: number | null = null;
     try {
-      const id = await insertPurchaseInquiry(payload);
+      const id = await withTimeout(
+        insertPurchaseInquiry(payload),
+        DB_INSERT_TIMEOUT_MS,
+        "db insert purchase inquiry",
+      );
       dbSaved = true;
       dbId = id;
       console.log(`✅ Ankauf-Anfrage #${id} gespeichert`);
@@ -301,13 +440,17 @@ purchaseInquiryRouter.post("/", maybeUpload, async (req, res) => {
     ].join("\n");
 
       try {
-        await resend.emails.send({
-          from: resendFrom,
-          to: resendTo,
-          subject: `Ankauf-Anfrage ${payload.make || ""} ${payload.model || ""}`.trim(),
-          html,
-          text,
-        });
+        await withTimeout(
+          resend.emails.send({
+            from: resendFrom,
+            to: resendTo,
+            subject: `Ankauf-Anfrage ${payload.make || ""} ${payload.model || ""}`.trim(),
+            html,
+            text,
+          }),
+          RESEND_TIMEOUT_MS,
+          "resend email",
+        );
         console.log(`📧 E-Mail an ${resendTo} gesendet`);
         emailSent = true;
       } catch (emailError) {

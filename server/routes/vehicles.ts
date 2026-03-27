@@ -8,6 +8,7 @@ import {
 } from "../services/cargateApi.js";
 
 export const vehiclesRouter = Router();
+let lastKnownVehicles: Awaited<ReturnType<typeof getAllVehicles>> = [];
 
 /**
  * GET /api/vehicles
@@ -31,19 +32,26 @@ vehiclesRouter.get("/", async (req, res) => {
         } catch (dbError) {
           const dbMsg = dbError instanceof Error ? dbError.message : String(dbError);
           console.error("❌ Datenbank-Fehler nach API-Fehler:", dbMsg);
-          return res.status(500).json({
-            success: false,
-            count: 0,
-            data: [],
-            error: "Fahrzeuge konnten nicht geladen werden.",
-            message: apiMsg + " Fallback Datenbank: " + dbMsg,
-            timestamp: new Date().toISOString(),
-          });
+          if (lastKnownVehicles.length > 0) {
+            warning =
+              "Carzilla und Datenbank momentan nicht erreichbar. Es werden zuletzt bekannte Fahrzeugdaten gezeigt.";
+            vehicles = lastKnownVehicles;
+          } else {
+            return res.status(500).json({
+              success: false,
+              count: 0,
+              data: [],
+              error: "Fahrzeuge konnten nicht geladen werden.",
+              message: apiMsg + " Fallback Datenbank: " + dbMsg,
+              timestamp: new Date().toISOString(),
+            });
+          }
         }
       }
     } else {
       vehicles = await getAllVehicles();
     }
+    lastKnownVehicles = vehicles;
 
     res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60, stale-while-revalidate=300");
     res.json({
@@ -56,6 +64,15 @@ vehiclesRouter.get("/", async (req, res) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("❌ Error fetching vehicles:", errorMessage);
+    if (lastKnownVehicles.length > 0) {
+      return res.json({
+        success: true,
+        count: lastKnownVehicles.length,
+        data: lastKnownVehicles,
+        warning: "Es werden zuletzt bekannte Fahrzeugdaten gezeigt (temporärer Backend-Fehler).",
+        timestamp: new Date().toISOString(),
+      });
+    }
     res.status(500).json({
       success: false,
       count: 0,
@@ -80,7 +97,11 @@ vehiclesRouter.get("/:id", async (req, res) => {
         const vehicles = await getVehiclesFromCargateCached();
         vehicle = vehicles.find((v) => v.id === req.params.id) ?? null;
       } catch {
-        vehicle = await getVehicleById(req.params.id);
+        try {
+          vehicle = await getVehicleById(req.params.id);
+        } catch {
+          vehicle = lastKnownVehicles.find((v) => v.id === req.params.id) ?? null;
+        }
       }
     } else {
       vehicle = await getVehicleById(req.params.id);

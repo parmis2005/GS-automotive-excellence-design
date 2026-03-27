@@ -83,7 +83,9 @@ const maxOwners = 5;
 const minModelLength = 2;
 const minAccidentDescriptionLength = 10;
 const maxPhotoFiles = 10;
-const maxPhotoSizeMb = 10;
+const maxPhotoSizeMb = 5;
+const maxTotalUploadSizeMb = 25;
+const submitRequestTimeoutMs = 150_000;
 const allowedUploadTypes = [
   "image/jpeg",
   "image/png",
@@ -490,6 +492,14 @@ const formatPriceWithDots = (digits: string): string => {
   return d.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
+const getTotalUploadSizeMb = (photoFiles: File[], accidentFiles: File[]) =>
+  (photoFiles.reduce((sum, file) => sum + file.size, 0) +
+    accidentFiles.reduce((sum, file) => sum + file.size, 0)) /
+  (1024 * 1024);
+
+const isUploadSizeValid = (photoFiles: File[], accidentFiles: File[]) =>
+  getTotalUploadSizeMb(photoFiles, accidentFiles) <= maxTotalUploadSizeMb;
+
 const toNumberInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
   return digits ? Number(digits) : null;
@@ -842,7 +852,13 @@ const VehiclePurchaseForm = ({
         if (combined.length > maxPhotoFiles) {
           rejected.push(`Maximal ${maxPhotoFiles} Dateien`);
         }
-        return combined.slice(0, maxPhotoFiles);
+        const trimmed = combined.slice(0, maxPhotoFiles);
+        const totalMb = getTotalUploadSizeMb(trimmed, accidentFiles);
+        if (totalMb > maxTotalUploadSizeMb) {
+          rejected.push(`Gesamtgröße zu hoch (max. ${maxTotalUploadSizeMb} MB)`);
+          return prev;
+        }
+        return trimmed;
       });
       setPhotoError(rejected.length ? rejected.join(" | ") : "");
     });
@@ -856,7 +872,13 @@ const VehiclePurchaseForm = ({
         if (combined.length > maxPhotoFiles) {
           rejected.push(`Maximal ${maxPhotoFiles} Dateien`);
         }
-        return combined.slice(0, maxPhotoFiles);
+        const trimmed = combined.slice(0, maxPhotoFiles);
+        const totalMb = getTotalUploadSizeMb(photoFiles, trimmed);
+        if (totalMb > maxTotalUploadSizeMb) {
+          rejected.push(`Gesamtgröße zu hoch (max. ${maxTotalUploadSizeMb} MB)`);
+          return prev;
+        }
+        return trimmed;
       });
       setAccidentError(rejected.length ? rejected.join(" | ") : "");
     });
@@ -1711,7 +1733,7 @@ const VehiclePurchaseForm = ({
       {
         id: "condition",
         title: "Raucherfahrzeug & Unfallfreiheit",
-        isValid: isAccidentValid,
+        isValid: () => isAccidentValid() && isUploadSizeValid(photoFiles, accidentFiles),
         render: () => (
           <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1834,7 +1856,7 @@ const VehiclePurchaseForm = ({
                       Drag & Drop, Dokumente oder Bilder einfügen
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Max. {maxPhotoFiles} Dateien.
+                      Max. {maxPhotoFiles} Dateien, {maxPhotoSizeMb} MB pro Datei, insgesamt {maxTotalUploadSizeMb} MB.
                     </p>
                     <div className="mt-4 flex justify-center">
                       <label className="relative inline-flex cursor-pointer">
@@ -1928,7 +1950,7 @@ const VehiclePurchaseForm = ({
       {
         id: "photos",
         title: "Fotos Upload (optional)",
-        isValid: () => true,
+        isValid: () => isUploadSizeValid(photoFiles, accidentFiles),
         render: () => (
           <div className="space-y-4">
             <div
@@ -1949,7 +1971,7 @@ const VehiclePurchaseForm = ({
                 Drag & Drop, Dokumente oder Bilder einfügen
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Max. {maxPhotoFiles} Dateien.
+                Max. {maxPhotoFiles} Dateien, {maxPhotoSizeMb} MB pro Datei, insgesamt {maxTotalUploadSizeMb} MB.
               </p>
               <div className="mt-4 flex justify-center">
                 <label className="relative inline-flex cursor-pointer">
@@ -1977,6 +1999,11 @@ const VehiclePurchaseForm = ({
             </div>
             {photoError && (
               <p className="mt-2 text-xs text-destructive">{photoError}</p>
+            )}
+            {!isUploadSizeValid(photoFiles, accidentFiles) && (
+              <p className="mt-2 text-xs text-destructive">
+                Gesamtgröße der Uploads überschreitet {maxTotalUploadSizeMb} MB.
+              </p>
             )}
             {photoFiles.length > 0 && (
               <div className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
@@ -2273,6 +2300,10 @@ const VehiclePurchaseForm = ({
 
   const handleSubmit = () => {
     if (!isContactValid()) return;
+    if (getTotalUploadSizeMb(photoFiles, accidentFiles) > maxTotalUploadSizeMb) {
+      setSubmitError(`Gesamtgröße der Dateien zu hoch (max. ${maxTotalUploadSizeMb} MB).`);
+      return;
+    }
     if (onSubmit) {
       onSubmit(formData);
       return;
@@ -2339,25 +2370,40 @@ const VehiclePurchaseForm = ({
     photoFiles.forEach((file) => formDataToSend.append("photoFiles", file, file.name));
     accidentFiles.forEach((file) => formDataToSend.append("accidentFiles", file, file.name));
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), submitRequestTimeoutMs);
+
     fetch("/api/purchase-inquiry", {
       method: "POST",
       body: formDataToSend,
+      signal: controller.signal,
     })
-      .then((response) => {
+      .then(async (response) => {
+        const contentType = response.headers.get("content-type") ?? "";
+        const payload = contentType.includes("application/json")
+          ? await response.json().catch(() => null)
+          : null;
         if (!response.ok) {
-          throw new Error("Request failed");
+          const apiError = typeof payload?.error === "string" ? payload.error : "";
+          throw new Error(apiError || `Request failed (${response.status})`);
         }
-        return response.json();
+        return payload;
       })
       .then(() => {
         setSubmitSuccess(true);
         clearVehiclePurchaseDraft();
         navigate("/kontakt-erfolgreich", { replace: true });
       })
-      .catch(() => {
-        setSubmitError("Senden fehlgeschlagen. Bitte erneut versuchen.");
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "";
+        if (error instanceof DOMException && error.name === "AbortError") {
+          setSubmitError("Die Anfrage hat zu lange gedauert. Bitte erneut versuchen (ggf. weniger/kleinere Dateien).");
+          return;
+        }
+        setSubmitError(message || "Senden fehlgeschlagen. Bitte erneut versuchen.");
       })
       .finally(() => {
+        clearTimeout(timeout);
         setIsSubmitting(false);
       });
   };
@@ -2459,6 +2505,15 @@ const VehiclePurchaseForm = ({
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
+            {isSubmitting && (
+              <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-foreground flex items-start gap-3">
+                <Loader2 className="h-4 w-4 mt-0.5 animate-spin text-primary" />
+                <p>
+                  Anfrage wird verarbeitet. Bei vielen Dateien kann das bis zu 1-2 Minuten dauern.
+                  Hochgeladene Fotos: {photoFiles.length}, Gutachten/Dokumente: {accidentFiles.length}.
+                </p>
+              </div>
+            )}
             {submitError && (
               <p className="mt-4 text-sm text-destructive">{submitError}</p>
             )}
