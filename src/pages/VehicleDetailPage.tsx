@@ -1469,8 +1469,8 @@ const VehicleDetailPage = () => {
                 <div>
                   <div className="text-sm text-muted-foreground mb-2">Öffnungszeiten</div>
                   <div className="text-sm space-y-1">
-                    <div>Mo - Fr: 9:00 - 18:00 Uhr</div>
-                    <div>Sa: 9:00 - 14:00 Uhr</div>
+                    <div>Mo - Fr: 10:00 - 17:30 Uhr</div>
+                    <div>Sa: 10:00 - 13:00 Uhr</div>
                     <div>So: Geschlossen</div>
                   </div>
                 </div>
