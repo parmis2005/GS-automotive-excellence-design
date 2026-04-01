@@ -168,6 +168,9 @@ function formatDescriptionAsHtml(description: string): string {
   return parts.join("");
 }
 
+/** Figur = Text inkl. €; Block = Preis-Spalte — max(rechts) für Santander-Sync. */
+const VDP_SANTANDER_TEASER_CLEAR_IDS = ["vehicle-price-figure", "vehicle-price-block"];
+
 const VehicleDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const vehicleId = getVehicleIdFromSlug(slug || "");
@@ -181,6 +184,12 @@ const VehicleDetailPage = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [isSmUp, setIsSmUp] = useState(
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 640px)").matches : true,
+  );
+  const [isLgUp, setIsLgUp] = useState(
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true,
+  );
   const thumbnailStripRef = useRef<HTMLDivElement>(null);
   const mobileCarouselApiRef = useRef<CarouselApi | null>(null);
   const mobileCarouselOffRef = useRef<(() => void) | null>(null);
@@ -200,6 +209,22 @@ const VehicleDetailPage = () => {
     return () => {
       mobileCarouselOffRef.current?.();
     };
+  }, []);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 640px)");
+    const update = () => setIsSmUp(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsLgUp(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
   }, []);
 
   // Thumbnail-Klick: Carousel auf gewählten Slide scrollen (nur wenn Index vom Carousel abweicht, also Nutzeraktion)
@@ -912,53 +937,70 @@ const VehicleDetailPage = () => {
           </div>
 
           {/* Right Column - Details, Kaufanfrage unter Schnellinfos */}
-          <div className="flex flex-col gap-6 min-h-0">
+          <div className="flex flex-col gap-6 min-h-0 overflow-visible">
             {/* Premium Box - Header, Price, Quick Specs, CTA Buttons */}
-            <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-6 md:p-8 space-y-6">
+            <div id="vehicle-detail-card" className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-6 md:p-8 space-y-6 overflow-visible">
               <div>
-              <div className="mb-2">
-                {(() => (
-                  <VehicleTitle
-                    brand={vehicle.brand}
-                    model={vehicle.model}
-                    productionSeries={vehicle.productionSeries}
-                    modelVariant={vehicle.modelVariant}
-                    fallbackTitle={vehicle.brand + " " + vehicle.model}
-                    className="text-3xl md:text-4xl font-display font-bold text-foreground"
-                    as="h1"
-                  />
-                ))()}
+              <div className="mb-2 relative">
+                <div id="vehicle-title-block" className="min-w-0 max-w-full">
+                  {(() => (
+                    <VehicleTitle
+                      brand={vehicle.brand}
+                      model={vehicle.model}
+                      productionSeries={vehicle.productionSeries}
+                      modelVariant={vehicle.modelVariant}
+                      fallbackTitle={vehicle.brand + " " + vehicle.model}
+                      className="text-3xl md:text-4xl font-display font-bold text-foreground break-words"
+                      variantClassName="text-sm font-normal text-muted-foreground tracking-wide break-words [overflow-wrap:anywhere]"
+                      as="h1"
+                    />
+                  ))()}
+                </div>
               </div>
               {vehicle.internalNumber && (
-                <div className="mb-4">
+                <div id="vehicle-kennzeichen" className="mb-4">
                   <Badge variant="secondary" className="rounded-full px-3 py-1 font-medium">
                     Kennnr. {vehicle.internalNumber}
                   </Badge>
                 </div>
               )}
-              <div className="mb-6">
-                <div className="space-y-4">
-                  {/* Preis + Santander Kredit Widget (Desktop rechts, Mobile untereinander) */}
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <span className="text-sm text-muted-foreground">Preis</span>
-                      <div className="text-4xl font-display font-bold text-primary whitespace-nowrap leading-none">
+              <div className="mb-0">
+                <div className="flex flex-col gap-0">
+                  {/* Zwei Spalten auch mobil: Preis links, Santander rechts — keine extra Vollbreiten-Zeile darunter. */}
+                  <div className="grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-0 sm:gap-x-5 lg:items-start lg:gap-x-6">
+                    <div id="vehicle-price-block" className="min-w-0 self-start flex flex-col gap-0.5 lg:gap-1">
+                      <span className="block text-sm text-muted-foreground leading-tight">Preis</span>
+                      <div
+                        id="vehicle-price-figure"
+                        className="inline-block max-w-full pr-2 sm:pr-6 text-3xl font-display font-bold text-primary whitespace-nowrap leading-none sm:text-4xl lg:pr-8"
+                      >
                         {formatPrice(vehicle.price)} €
                       </div>
                       {vehicle.vatDisplayable !== undefined && (
-                        <div className="text-sm text-muted-foreground mt-1">
+                        <div className="text-sm text-muted-foreground leading-tight">
                           {vehicle.vatDisplayable ? "MwSt. ausweisbar" : "MwSt. nicht ausweisbar"}
                         </div>
                       )}
                     </div>
-                    <div className="lg:pt-1 lg:pl-4 lg:flex lg:items-center lg:justify-end flex-shrink-0">
-                      <SantanderKreditWidget vehicle={vehicle} />
+                    <div className="pointer-events-auto min-w-0 w-full max-w-full justify-self-stretch self-center lg:self-start">
+                      <div className={isLgUp ? "flex h-[96px] w-full min-h-[72px] min-w-[280px] max-w-[560px] items-stretch lg:min-w-[300px]" : "flex min-h-[48px] h-auto w-full max-w-full min-w-0 items-stretch"}>
+                        <SantanderKreditWidget
+                          key={`santander-${vehicle.id}`}
+                          vehicle={vehicle}
+                          mobileInlineButton={!isLgUp}
+                          teaserRightOfElementIds={VDP_SANTANDER_TEASER_CLEAR_IDS}
+                          teaserRightOfGapPx={12}
+                          teaserRightExtraBufferPx={8}
+                          teaserClampRightToElementId="vehicle-detail-card"
+                          teaserMaxWidthPx={560}
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <div id="vehicle-cta-row" className="mt-3 lg:mt-1 flex flex-col gap-3 sm:flex-row sm:items-stretch">
                     <Button
                       size="default"
-                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all group"
+                      className="w-full sm:flex-1 sm:min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all group"
                       onClick={() => {
                         document.getElementById("kaufanfrage")?.scrollIntoView({ behavior: "smooth", block: "start" });
                         window.history.replaceState(null, "", "#kaufanfrage");
@@ -970,7 +1012,7 @@ const VehicleDetailPage = () => {
                     <Button
                       size="default"
                       variant="outline"
-                      className="flex-1 bg-white/80 hover:bg-white border-gray-300/60 text-foreground hover:text-foreground font-semibold shadow-sm hover:shadow-md transition-all group border-2"
+                      className="w-full sm:flex-1 sm:min-w-0 bg-white/80 hover:bg-white border-gray-300/60 text-foreground hover:text-foreground font-semibold shadow-sm hover:shadow-md transition-all group border-2"
                       asChild
                     >
                       <Link

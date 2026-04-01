@@ -271,3 +271,255 @@
 }
 
 /* Fahrzeugdetail-Grid liegt in VehicleDetailPage.tsx (inline <style> mit #vehicle-detail-layout) */
+
+/* -------------------------------------------------------------------------- */
+/* Santander Universal Plugin – nur Teaser (nicht Vollbild-Rechner)             */
+/* Rechner: .san-widget-floating mit min-height/min-width 100% im Inline-Style. */
+/* -------------------------------------------------------------------------- */
+
+.san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+    [style*="min-width: 100%"]
+  ):not([style*="min-width:100%"]) {
+  border-radius: var(--radius);
+  box-shadow: none !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-sizing: border-box;
+  overflow: visible !important;
+  max-width: 100%;
+  /* Santander setzt teils translateX(-50%) — wuerde den Kasten relativ zu left nach links ziehen. */
+  transform: none !important;
+}
+
+@media (min-width: 1024px) {
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"]) {
+    z-index: 40 !important;
+  }
+}
+
+.san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+    [style*="min-width: 100%"]
+  ):not([style*="min-width:100%"])::before,
+.san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+    [style*="min-width: 100%"]
+  ):not([style*="min-width:100%"])::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Grosse Teaser-Karte nur ab lg (1024px). Darunter gleicher Breakpoint wie VehicleDetailPage (isLgUp). */
+@media (min-width: 1024px) {
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-floating-button-summary-outer {
+    background: linear-gradient(
+      135deg,
+      hsl(214 70% 52%) 0%,
+      hsl(215 68% 46%) 52%,
+      hsl(216 66% 40%) 100%
+    ) !important;
+    border: 1px solid hsl(var(--primary) / 0.25) !important;
+    border-radius: var(--radius) !important;
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.18),
+      inset 0 -8px 18px hsl(216 75% 22% / 0.2);
+    transition: filter 0.2s ease, box-shadow 0.2s ease;
+    /* Kein fixiertes min-height: verursachte leeren blauen Streifen unter dem Text. */
+    padding: 0.55rem 0.8rem 0.5rem 1rem !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    min-height: 0 !important;
+    height: auto !important;
+    width: calc(100% - 86px) !important;
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-floating-button-summary-outer:hover {
+    filter: brightness(1.06);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.15),
+      0 6px 20px hsl(216 65% 28% / 0.35);
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment-title,
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment,
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment-subline {
+    color: hsl(var(--primary-foreground)) !important;
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment-title,
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment-title.MuiTypography-root {
+    font-size: 0.82rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment,
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment.MuiTypography-root {
+    font-size: 1.45rem !important;
+    line-height: 1.12 !important;
+    font-weight: 700 !important;
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment-subline,
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment-subline.MuiTypography-root {
+    font-size: 0.72rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-floating-button-summary-outer
+    .MuiTypography-root {
+    color: hsl(var(--primary-foreground)) !important;
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment-subline {
+    opacity: 0.92;
+  }
+}
+
+.san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+    [style*="min-width: 100%"]
+  ):not([style*="min-width:100%"])
+  :is(.san-float-widget-btn, .san-floating-button) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  min-height: auto !important;
+  width: auto !important;
+  padding: 0 !important;
+  transform: scale(1);
+  transform-origin: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+    [style*="min-width: 100%"]
+  ):not([style*="min-width:100%"])
+  :is(.san-float-widget-btn, .san-floating-button):hover {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  transform: scale(1.04);
+}
+
+.san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+    [style*="min-width: 100%"]
+  ):not([style*="min-width:100%"])
+  .san-arrow-icon
+  :is(svg, path, line, polyline) {
+  fill: hsl(var(--primary)) !important;
+  stroke: hsl(var(--primary)) !important;
+}
+
+/* Pfeil im Teaser nur visuell ausblenden (Klickfläche bleibt auf der gesamten Karte erhalten). */
+.san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+    [style*="min-width: 100%"]
+  ):not([style*="min-width:100%"])
+  .san-arrow-icon,
+.san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+    [style*="min-width: 100%"]
+  ):not([style*="min-width:100%"])
+  .san-settings-icon-outer {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Kompakter Teaser bis unter lg — passend zum kleinen Anker in VehicleDetailPage (< 1024px). */
+/* Kein width:100% auf .san-widget-floating: wuerde per !important die JS-Breite (Anker) ueberschreiben. */
+@media (max-width: 1023px) {
+  /* Teaser-Breite nicht ueber den Viewport schieben (JS-Breite + Rundungsfehler). */
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"]) {
+    max-width: calc(100vw - 24px) !important;
+    box-sizing: border-box !important;
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-floating-button-summary-outer {
+    background: linear-gradient(
+      135deg,
+      hsl(214 70% 52%) 0%,
+      hsl(215 68% 46%) 52%,
+      hsl(216 66% 40%) 100%
+    ) !important;
+    border: 1px solid hsl(var(--primary) / 0.25) !important;
+    min-height: 0 !important;
+    height: auto !important;
+    width: 100% !important;
+    padding: 0.3rem 0.75rem !important;
+    border-radius: 0.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment,
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment.MuiTypography-root {
+    color: hsl(var(--primary-foreground)) !important;
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment-title,
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment-subline {
+    display: none !important;
+  }
+
+  .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
+      [style*="min-width: 100%"]
+    ):not([style*="min-width:100%"])
+    .san-installment.MuiTypography-root {
+    font-size: 1.25rem !important;
+    line-height: 1 !important;
+  }
+}
