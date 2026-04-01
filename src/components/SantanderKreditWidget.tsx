@@ -358,6 +358,7 @@ export default function SantanderKreditWidget({
         left = Math.max(vhpad, Math.min(left, vw - vhpad - 24));
         if (left + w > vw - vhpad) w = Math.max(48, vw - vhpad - left);
 
+        /* top nur aus Hit-Area — kein Mindestabstand zur Navbar: sonst wirkt der Teaser „am Viewport klebend“. */
         floating.style.setProperty("position", "fixed");
         floating.style.setProperty("right", "auto");
         floating.style.setProperty("bottom", "auto");
@@ -370,7 +371,8 @@ export default function SantanderKreditWidget({
         floating.style.removeProperty("opacity");
         floating.style.setProperty("pointer-events", "auto");
         floating.style.setProperty("touch-action", "manipulation");
-        floating.style.setProperty("z-index", "80");
+        /* Unter Navbar (z-50), konsistent mit Desktop-Teaser in index.css */
+        floating.style.setProperty("z-index", "40");
         return;
       }
 

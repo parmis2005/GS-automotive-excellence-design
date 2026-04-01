@@ -470,6 +470,8 @@
     ):not([style*="min-width:100%"]) {
     max-width: calc(100vw - 24px) !important;
     box-sizing: border-box !important;
+    /* Unter fixierter Navbar (z-50); Inline-Styles aus sync sollten dasselbe setzen. */
+    z-index: 40 !important;
   }
 
   .san-widget-floating:not([style*="min-height: 100%"]):not([style*="min-height:100%"]):not(
