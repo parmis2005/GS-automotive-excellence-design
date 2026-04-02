@@ -83,7 +83,7 @@ const SANTANDER_DISPLAY_PLACEMENT = (import.meta.env.VITE_SANTANDER_DISPLAY_PLAC
   | undefined) ?? "1948";
 const SANTANDER_ANNUAL_RATE = (import.meta.env.VITE_SANTANDER_ANNUAL_PERCENTAGE_RATE as
   | string
-  | undefined) ?? "5.99";
+  | undefined) ?? "6.79";
 
 function toYmdFromDate(d: string | undefined, fallbackYear: number) {
   if (d) {
