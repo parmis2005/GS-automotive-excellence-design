@@ -54,6 +54,7 @@ generalInquiryRouter.post("/", async (req, res) => {
           ${formatRow("Anfrage-Typ", type)}
           ${formatRow("Vorname", payload.firstName)}
           ${formatRow("Nachname", payload.lastName)}
+          ${formatRow("Firma", payload.company)}
           ${formatRow("E-Mail", payload.email)}
           ${formatRow("Telefon", payload.phone)}
           ${formatRow("Betreff", payload.subject)}
@@ -77,6 +78,7 @@ generalInquiryRouter.post("/", async (req, res) => {
         `Neue Anfrage – ${type}`,
         `Vorname: ${payload.firstName || "-"}`,
         `Nachname: ${payload.lastName || "-"}`,
+        `Firma: ${payload.company || "-"}`,
         `E-Mail: ${payload.email || "-"}`,
         `Telefon: ${payload.phone || "-"}`,
         `Betreff: ${payload.subject || "-"}`,

@@ -48,8 +48,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SantanderKreditWidget from "@/components/SantanderKreditWidget";
 import { type CarouselApi, Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { getPlaceholderImage, getVehicleImageWithFallback } from "@/lib/vehicleImage";
@@ -268,21 +267,13 @@ const VehicleDetailPage = () => {
     }
   }, [vehicle, slug, navigate, location.hash]);
 
-  // Form state for purchase inquiry
+  const [isKaufanfrageOpen, setIsKaufanfrageOpen] = useState(false);
   const [formData, setFormData] = useState({
-    salutation: "",
     firstName: "",
     lastName: "",
     company: "",
-    street: "",
-    houseNumber: "",
-    zipCode: "",
-    city: "",
     email: "",
     phone: "",
-    birthDay: "",
-    birthMonth: "",
-    birthYear: "",
     message: "",
     privacyAccepted: false,
   });
@@ -381,22 +372,9 @@ const VehicleDetailPage = () => {
     }
   }, [isLoading, vehicle, location.hash]);
 
-  // Scroll to purchase inquiry form if hash is present
   useEffect(() => {
-    if (location.hash === '#kaufanfrage' && !isLoading && vehicle) {
-      // Small delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        const element = document.getElementById('kaufanfrage');
-        if (element) {
-          const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
-          const offsetTop = 80; // Navbar height
-          window.scrollTo({
-            top: elementTop - offsetTop,
-            behavior: 'smooth'
-          });
-        }
-      }, 100);
-      return () => clearTimeout(timer);
+    if (location.hash === "#kaufanfrage" && !isLoading && vehicle) {
+      setIsKaufanfrageOpen(true);
     }
   }, [location.hash, isLoading, vehicle]);
 
@@ -541,9 +519,9 @@ const VehicleDetailPage = () => {
           </Button>
         </div>
 
-        {/* Wie in main: 2 Spalten – links Bilder, Ähnliche, Ausstattung; rechts Preis, Kaufanfrage. */}
+        {/* Zwei Spalten: links Galerie & ähnliche Fahrzeuge; rechts Preis & Infos. Ausstattung und Kontakt darunter volle Breite. */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
-          {/* Left Column - Images, Similar, Ausstattung */}
+          {/* Left Column - Images, Similar */}
           <div className="flex flex-col gap-4 min-h-0">
             {/* Image Gallery Container - Box with subtle background */}
             <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-3 space-y-3">
@@ -886,57 +864,9 @@ const VehicleDetailPage = () => {
                 </div>
               </div>
             )}
-
-            {/* Ausstattung – unter Ähnlichen Angeboten */}
-            {vehicle.equipment && vehicle.equipment.length > 0 ? (
-              <div className="mt-6 flex-1 min-h-0 flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                <div className="bg-[#0f2439] px-5 py-4 flex items-center gap-2 shrink-0">
-                  <CheckCircle2 className="w-5 h-5 text-white" />
-                  <h2 className="text-xl font-bold text-white tracking-tight">Ausstattung</h2>
-                </div>
-                <div className="space-y-4 overflow-y-auto pr-1 min-h-0 flex-1 p-5 pt-4">
-                  {(() => {
-                    const grouped = groupEquipmentByCategory(vehicle.equipment);
-                    const categoryLabels: Record<string, string> = {
-                      Komfort: "Komfort", Sicherheit: "Sicherheit", Multimedia: "Multimedia",
-                      "Licht & Sicht": "Licht & Sicht", Außen: "Außen", Innenausstattung: "Innenausstattung",
-                      "Fahrwerk & Antrieb": "Fahrwerk & Antrieb", Sonstiges: "Weitere Ausstattung",
-                    };
-                    const categoryIcons: Record<string, React.ReactNode> = {
-                      Komfort: <Armchair className="w-4 h-4" />, Sicherheit: <Shield className="w-4 h-4" />,
-                      Multimedia: <Radio className="w-4 h-4" />, "Licht & Sicht": <Sun className="w-4 h-4" />,
-                      Außen: <Car className="w-4 h-4" />, Innenausstattung: <Sofa className="w-4 h-4" />,
-                      "Fahrwerk & Antrieb": <Settings className="w-4 h-4" />, Sonstiges: <Sparkles className="w-4 h-4" />,
-                    };
-                    return Array.from(grouped.entries()).map(([category, items]) => {
-                      if (items.length === 0) return null;
-                      return (
-                        <section key={category} className="rounded-lg border border-border/80 bg-muted/30 p-4">
-                          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                            {categoryIcons[category]}
-                            {categoryLabels[category] ?? category}
-                          </h3>
-                          <div className="flex flex-wrap gap-2">
-                            {items.map((item, idx) => (
-                              <span key={idx} className="inline-flex items-center rounded-full bg-background px-2.5 py-1 text-xs border border-border/60">
-                                {item}
-                              </span>
-                            ))}
-                          </div>
-                        </section>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-            ) : (
-              <div className="mt-6 flex-1 min-h-0 rounded-xl border border-dashed border-border bg-muted/10 p-8 flex items-center justify-center text-sm text-muted-foreground">
-                Keine Ausstattungsdaten vorhanden
-              </div>
-            )}
           </div>
 
-          {/* Right Column - Details, Kaufanfrage unter Schnellinfos */}
+          {/* Right Column - Preis, Schnellinfos, CTAs */}
           <div className="flex flex-col gap-6 min-h-0 overflow-visible">
             {/* Premium Box - Header, Price, Quick Specs, CTA Buttons */}
             <div id="vehicle-detail-card" className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-6 md:p-8 space-y-6 overflow-visible">
@@ -1001,10 +931,7 @@ const VehicleDetailPage = () => {
                     <Button
                       size="default"
                       className="w-full sm:flex-1 sm:min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all group"
-                      onClick={() => {
-                        document.getElementById("kaufanfrage")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                        window.history.replaceState(null, "", "#kaufanfrage");
-                      }}
+                      onClick={() => setIsKaufanfrageOpen(true)}
                     >
                       <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                       Kaufanfrage
@@ -1162,328 +1089,164 @@ const VehicleDetailPage = () => {
               />
             </div>
           </div>
+          </div>
+        </div>
 
-            {/* Kaufanfrage – unter Schnellinfos */}
-            <div id="kaufanfrage" className="mt-6 bg-card border border-border rounded-2xl shadow-sm overflow-hidden scroll-mt-20 shrink-0">
+        {/* Ausstattung – volle Breite, Titelzeile wie Fahrzeugbeschreibung */}
+        {vehicle.equipment && vehicle.equipment.length > 0 ? (
+          <section className="mt-10 lg:mt-14" aria-labelledby="vehicle-equipment-heading">
+            <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
               <div className="bg-[#0f2439] px-6 py-4">
-                <h3 className="text-xl font-bold text-white tracking-tight">Kaufanfrage</h3>
+                <h2 id="vehicle-equipment-heading" className="text-xl font-bold text-white tracking-tight">
+                  Ausstattung
+                </h2>
               </div>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setInquiryError("");
-                  setInquirySuccess(false);
-
-                  if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
-                    setInquiryError("Bitte Vorname, Nachname und E-Mail ausfüllen.");
-                    return;
-                  }
-
-                  try {
-                    setIsSubmittingInquiry(true);
-                    const vehicleLabel = vehicle
-                      ? `${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)}${vehicle.internalNumber ? ` (Kennnr. ${vehicle.internalNumber})` : ` (${vehicle.id})`}`
-                      : "";
-                    const response = await fetch("/api/inquiries", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        type: "Kaufanfrage",
-                        firstName: formData.firstName,
-                        lastName: formData.lastName,
-                        email: formData.email,
-                        phone: formData.phone,
-                        subject: "Kaufanfrage",
-                        message: formData.message,
-                        vehicle: vehicleLabel,
-                        page: vehicle
-                          ? vehicle.internalNumber
-                            ? `Fahrzeugdetail Kennnr. ${vehicle.internalNumber}`
-                            : `Fahrzeugdetail ${vehicle.id}`
-                          : "Fahrzeugdetail",
-                      }),
+              <div className="p-6 md:p-8 text-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6 text-sm text-muted-foreground">
+                  <p>Serien- und Sonderausstattung nach Kategorie</p>
+                  <div className="flex items-center gap-2 text-primary shrink-0 text-xs font-semibold uppercase tracking-wider">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden />
+                    <span>{vehicle.equipment.length} Positionen</span>
+                  </div>
+                </div>
+                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {(() => {
+                    const grouped = groupEquipmentByCategory(vehicle.equipment);
+                    const categoryLabels: Record<string, string> = {
+                      Komfort: "Komfort",
+                      Sicherheit: "Sicherheit",
+                      Multimedia: "Multimedia",
+                      "Licht & Sicht": "Licht & Sicht",
+                      Außen: "Außen",
+                      Innenausstattung: "Innenausstattung",
+                      "Fahrwerk & Antrieb": "Fahrwerk & Antrieb",
+                      Sonstiges: "Weitere Ausstattung",
+                    };
+                    const categoryIcons: Record<string, React.ReactNode> = {
+                      Komfort: <Armchair className="w-4 h-4 text-primary" />,
+                      Sicherheit: <Shield className="w-4 h-4 text-primary" />,
+                      Multimedia: <Radio className="w-4 h-4 text-primary" />,
+                      "Licht & Sicht": <Sun className="w-4 h-4 text-primary" />,
+                      Außen: <Car className="w-4 h-4 text-primary" />,
+                      Innenausstattung: <Sofa className="w-4 h-4 text-primary" />,
+                      "Fahrwerk & Antrieb": <Settings className="w-4 h-4 text-primary" />,
+                      Sonstiges: <Sparkles className="w-4 h-4 text-primary" />,
+                    };
+                    return Array.from(grouped.entries()).map(([category, items]) => {
+                      if (items.length === 0) return null;
+                      return (
+                        <section
+                          key={category}
+                          className="rounded-xl bg-background/90 p-4 min-w-0 ring-1 ring-border/70 shadow-sm"
+                        >
+                          <h3 className="text-[11px] font-bold text-foreground uppercase tracking-[0.14em] mb-3 flex items-center gap-2 border-b border-border/60 pb-2">
+                            {categoryIcons[category]}
+                            {categoryLabels[category] ?? category}
+                          </h3>
+                          <ul className="flex flex-wrap gap-1.5 list-none p-0 m-0">
+                            {items.map((item, idx) => (
+                              <li key={idx}>
+                                <span className="inline-flex items-center rounded-md bg-secondary/80 px-2.5 py-1.5 text-[11px] sm:text-xs text-foreground/90 leading-snug border border-transparent hover:border-border/80 transition-colors">
+                                  {item}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      );
                     });
-                    if (!response.ok) {
-                      throw new Error("Request failed");
-                    }
-                    setInquirySuccess(true);
-                    navigate("/kontakt-erfolgreich", { replace: true });
-                  } catch {
-                    setInquiryError("Senden fehlgeschlagen. Bitte erneut versuchen.");
-                  } finally {
-                    setIsSubmittingInquiry(false);
-                  }
-                }}
-                className="p-6 lg:p-8 space-y-4"
-              >
-                <div>
-                  <Label htmlFor="salutation">Anrede *</Label>
-                  <Select
-                    value={formData.salutation}
-                    onValueChange={(value) => setFormData({ ...formData, salutation: value })}
-                    required
-                  >
-                    <SelectTrigger id="salutation">
-                      <SelectValue placeholder="Bitte wählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Herr">Herr</SelectItem>
-                      <SelectItem value="Frau">Frau</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  })()}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="firstName">Vorname *</Label>
-                    <Input
-                      id="firstName"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="lastName">Nachname *</Label>
-                    <Input
-                      id="lastName"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="company">Firma</Label>
-                  <Input
-                    id="company"
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2">
-                    <Label htmlFor="street">Straße *</Label>
-                    <Input
-                      id="street"
-                      value={formData.street}
-                      onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="houseNumber">Hausnr. *</Label>
-                    <Input
-                      id="houseNumber"
-                      value={formData.houseNumber}
-                      onChange={(e) => setFormData({ ...formData, houseNumber: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="zipCode">PLZ *</Label>
-                    <Input
-                      id="zipCode"
-                      value={formData.zipCode}
-                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="city">Ort *</Label>
-                    <Input
-                      id="city"
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="email">E-Mail *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Telefon *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label>Geburtsdatum *</Label>
-                  <div className="grid grid-cols-3 gap-4 mt-2">
-                    <div>
-                      <Label htmlFor="birthDay" className="text-xs text-muted-foreground">Tag</Label>
-                      <Input
-                        id="birthDay"
-                        type="tel"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        placeholder="TT"
-                        value={formData.birthDay}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 2);
-                          setFormData({ ...formData, birthDay: value });
-                        }}
-                        onBlur={(e) => {
-                          const numValue = parseInt(e.target.value);
-                          if (e.target.value && (isNaN(numValue) || numValue < 1 || numValue > 31)) {
-                            setFormData({ ...formData, birthDay: '' });
-                          }
-                        }}
-                        required
-                        className="text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="birthMonth" className="text-xs text-muted-foreground">Monat</Label>
-                      <Input
-                        id="birthMonth"
-                        type="tel"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        placeholder="MM"
-                        value={formData.birthMonth}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 2);
-                          setFormData({ ...formData, birthMonth: value });
-                        }}
-                        onBlur={(e) => {
-                          const numValue = parseInt(e.target.value);
-                          if (e.target.value && (isNaN(numValue) || numValue < 1 || numValue > 12)) {
-                            setFormData({ ...formData, birthMonth: '' });
-                          }
-                        }}
-                        required
-                        className="text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="birthYear" className="text-xs text-muted-foreground">Jahr</Label>
-                      <Input
-                        id="birthYear"
-                        type="tel"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        placeholder="JJJJ"
-                        value={formData.birthYear}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                          setFormData({ ...formData, birthYear: value });
-                        }}
-                        onBlur={(e) => {
-                          const numValue = parseInt(e.target.value);
-                          if (e.target.value && (isNaN(numValue) || numValue < 1900 || numValue > new Date().getFullYear())) {
-                            setFormData({ ...formData, birthYear: '' });
-                          }
-                        }}
-                        required
-                        className="text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="message">Nachricht</Label>
-                  <Textarea
-                    id="message"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    rows={4}
-                    placeholder="Ihre Nachricht an uns..."
-                  />
-                </div>
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="privacy"
-                    checked={formData.privacyAccepted}
-                    onCheckedChange={(checked) => setFormData({ ...formData, privacyAccepted: checked === true })}
-                    required
-                  />
-                  <Label
-                    htmlFor="privacy"
-                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Ich habe die{" "}
-                    <a href="/datenschutz" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-                      Datenschutzerklärung
-                    </a>{" "}
-                    gelesen und akzeptiert. *
-                  </Label>
-                </div>
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full bg-primary hover:bg-primary/90 text-white font-semibold"
-                  disabled={!formData.privacyAccepted || isSubmittingInquiry}
-                >
-                  {isSubmittingInquiry ? "Sende..." : "Kaufanfrage absenden"}
-                </Button>
-                {inquiryError && (
-                  <p className="text-sm text-destructive">{inquiryError}</p>
-                )}
-                {inquirySuccess && (
-                  <p className="text-sm text-emerald-600">Vielen Dank! Wir melden uns zeitnah.</p>
-                )}
-              </form>
-            </div>
-
-            {/* Kontakt – unter Fahrzeugankauf-Formular */}
-            <div className="mt-6 bg-card border border-border rounded-lg shadow-sm overflow-hidden shrink-0">
-              <div className="bg-[#0f2439] px-6 py-4">
-                <h3 className="text-xl font-bold text-white tracking-tight">Kontakt</h3>
               </div>
-              <div className="space-y-4 p-6 pt-4">
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Telefon</div>
-                  <a
-                    href="tel:021519422262"
-                    className="text-foreground font-semibold hover:text-primary transition-colors"
-                  >
-                    02151 94 222 62
-                  </a>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">E-Mail</div>
-                  <a
-                    href="mailto:info@gsauto.de"
-                    className="text-foreground font-semibold hover:text-primary transition-colors"
-                  >
-                    info@gsauto.de
-                  </a>
-                </div>
-                <Separator />
-                <div>
-                  <div className="text-sm text-muted-foreground mb-2">Öffnungszeiten</div>
-                  <div className="text-sm space-y-1">
-                    <div>Mo - Fr: 10:00 - 17:30 Uhr</div>
-                    <div>Sa: 10:00 - 13:00 Uhr</div>
-                    <div>So: Geschlossen</div>
+            </div>
+          </section>
+        ) : (
+          <section className="mt-10 lg:mt-14">
+            <div className="rounded-2xl border border-dashed border-border/80 bg-secondary/20 p-8 flex items-center justify-center text-sm text-muted-foreground">
+              Keine Ausstattungsdaten vorhanden
+            </div>
+          </section>
+        )}
+
+        {/* Kontakt – volle Breite, Primary-Banner + weiche Karten (unterscheidet sich von Ausstattung) */}
+        <section className="mt-10 lg:mt-12" aria-labelledby="vehicle-contact-heading">
+          <div className="rounded-3xl overflow-hidden border border-primary/20 shadow-[0_8px_40px_-8px_hsl(var(--primary)/0.25)] ring-1 ring-primary/10 bg-card">
+            <div className="bg-gradient-to-r from-primary to-primary/90 px-5 py-5 md:px-8 md:py-6 text-primary-foreground">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
+                    <Phone className="w-5 h-5" aria-hidden />
+                  </span>
+                  <div>
+                    <h2 id="vehicle-contact-heading" className="font-display text-xl md:text-2xl font-bold tracking-tight">
+                      Kontakt & Anfahrt
+                    </h2>
+                    <p className="mt-0.5 text-sm text-primary-foreground/85 max-w-xl">
+                      Wir freuen uns auf Ihre Nachricht — telefonisch, per E-Mail oder vor Ort in Krefeld.
+                    </p>
                   </div>
                 </div>
-                <Separator />
-                <div>
-                  <div className="text-sm text-muted-foreground mb-2">Fahrzeugstandort</div>
-                  <div className="text-sm space-y-0.5 text-foreground">
-                    <div className="font-medium">GS Automobile Rheinland GmbH</div>
-                    <div>Kuhleshütte 149</div>
-                    <div>47809 Krefeld</div>
+              </div>
+            </div>
+            <div className="p-6 md:p-8 bg-gradient-to-b from-primary/5 to-background">
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+                <div className="rounded-2xl border border-primary/15 bg-background p-5 min-w-0 shadow-sm">
+                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" aria-hidden />
+                    Direktkontakt
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Telefon</div>
+                      <a
+                        href="tel:021519422262"
+                        className="text-lg font-bold text-primary hover:underline underline-offset-2"
+                      >
+                        02151 94 222 62
+                      </a>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">E-Mail</div>
+                      <a
+                        href="mailto:info@gsauto.de"
+                        className="font-semibold text-foreground hover:text-primary transition-colors break-all"
+                      >
+                        info@gsauto.de
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-primary/15 bg-background p-5 min-w-0 shadow-sm">
+                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" aria-hidden />
+                    Öffnungszeiten
+                  </h3>
+                  <ul className="text-sm space-y-2.5 text-foreground list-none p-0 m-0">
+                    <li className="flex justify-between gap-4 border-b border-border/50 pb-2">
+                      <span className="text-muted-foreground">Mo – Fr</span>
+                      <span className="font-medium tabular-nums">10:00 – 17:30</span>
+                    </li>
+                    <li className="flex justify-between gap-4 border-b border-border/50 pb-2">
+                      <span className="text-muted-foreground">Samstag</span>
+                      <span className="font-medium tabular-nums">10:00 – 13:00</span>
+                    </li>
+                    <li className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">Sonntag</span>
+                      <span className="font-medium">Geschlossen</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="rounded-2xl border border-primary/15 bg-background p-5 min-w-0 shadow-sm md:col-span-2 lg:col-span-1">
+                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary shrink-0" aria-hidden />
+                    Fahrzeugstandort
+                  </h3>
+                  <div className="text-sm space-y-1 text-foreground mb-4">
+                    <div className="font-semibold">GS Automobile Rheinland GmbH</div>
+                    <div className="text-muted-foreground">Kuhleshütte 149 · 47809 Krefeld</div>
                     <a
                       href="tel:021519422262"
-                      className="inline-block mt-2 text-primary font-medium hover:underline"
+                      className="inline-block mt-2 text-sm font-medium text-primary hover:underline"
                     >
                       Tel.: 02151 94 222 62
                     </a>
@@ -1492,18 +1255,18 @@ const VehicleDetailPage = () => {
                     href="https://www.google.com/maps/search/?api=1&query=Kuhlesh%C3%BCtte+149+47809+Krefeld"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 mt-3 py-4 px-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors group"
+                    className="flex w-full items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-md hover:bg-primary/90 transition-colors group"
                     title="Standort in Google Maps anzeigen"
                   >
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <span className="font-medium text-foreground">Standort in Google Maps anzeigen</span>
-                    <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                    <MapPin className="h-4 w-4 shrink-0 opacity-90" />
+                    <span className="text-center">Route in Google Maps</span>
+                    <ExternalLink className="h-4 w-4 shrink-0 opacity-80 group-hover:opacity-100" />
                   </a>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Fahrzeugbeschreibung – Freie Gestaltung (Custom Description) von CarGate GetVehicle */}
         {(vehicle.description && vehicle.description.trim()) && (
@@ -1523,8 +1286,185 @@ const VehicleDetailPage = () => {
         )}
 
       </main>
+
+      <Dialog
+        open={isKaufanfrageOpen && !!vehicle}
+        onOpenChange={(open) => {
+          setIsKaufanfrageOpen(open);
+          if (!open) {
+            setInquiryError("");
+            setInquirySuccess(false);
+            setFormData({
+              firstName: "",
+              lastName: "",
+              company: "",
+              email: "",
+              phone: "",
+              message: "",
+              privacyAccepted: false,
+            });
+            if (location.hash === "#kaufanfrage") {
+              navigate({ pathname: location.pathname, search: location.search, hash: "" }, { replace: true });
+            }
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[560px] p-6 sm:p-8 gap-5 border border-border/60 shadow-xl bg-background/95 backdrop-blur">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">Kaufanfrage</DialogTitle>
+            <DialogDescription>
+              {vehicle
+                ? `${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)}${vehicle.internalNumber ? ` · Kennnr. ${vehicle.internalNumber}` : ""}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {vehicle && (
+            <form
+              className="grid gap-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setInquiryError("");
+                setInquirySuccess(false);
+
+                if (
+                  !formData.firstName.trim() ||
+                  !formData.lastName.trim() ||
+                  !formData.email.trim() ||
+                  !formData.phone.trim()
+                ) {
+                  setInquiryError("Bitte Vorname, Nachname, E-Mail und Telefon ausfüllen.");
+                  return;
+                }
+
+                try {
+                  setIsSubmittingInquiry(true);
+                  const vehicleLabel = `${getVehicleDisplayName(vehicle.brand, vehicle.model, vehicle.productionSeries)}${vehicle.internalNumber ? ` (Kennnr. ${vehicle.internalNumber})` : ` (${vehicle.id})`}`;
+                  const response = await fetch("/api/inquiries", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      type: "Kaufanfrage",
+                      firstName: formData.firstName,
+                      lastName: formData.lastName,
+                      company: formData.company.trim() || undefined,
+                      email: formData.email,
+                      phone: formData.phone,
+                      subject: "Kaufanfrage",
+                      message: formData.message,
+                      vehicle: vehicleLabel,
+                      page: vehicle.internalNumber
+                        ? `Fahrzeugdetail Kennnr. ${vehicle.internalNumber}`
+                        : `Fahrzeugdetail ${vehicle.id}`,
+                    }),
+                  });
+                  if (!response.ok) {
+                    throw new Error("Request failed");
+                  }
+                  setInquirySuccess(true);
+                  navigate("/kontakt-erfolgreich", { replace: true });
+                } catch {
+                  setInquiryError("Senden fehlgeschlagen. Bitte erneut versuchen.");
+                } finally {
+                  setIsSubmittingInquiry(false);
+                }
+              }}
+            >
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="vdp-inq-firstName">Vorname *</Label>
+                  <Input
+                    id="vdp-inq-firstName"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    required
+                    autoComplete="given-name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="vdp-inq-lastName">Nachname *</Label>
+                  <Input
+                    id="vdp-inq-lastName"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    required
+                    autoComplete="family-name"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="vdp-inq-company">Firma</Label>
+                <Input
+                  id="vdp-inq-company"
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  autoComplete="organization"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <Label htmlFor="vdp-inq-email">E-Mail *</Label>
+                <Input
+                  id="vdp-inq-email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  autoComplete="email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="vdp-inq-phone">Telefon *</Label>
+                <Input
+                  id="vdp-inq-phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
+                  autoComplete="tel"
+                />
+              </div>
+              <div>
+                <Label htmlFor="vdp-inq-message">Nachricht</Label>
+                <Textarea
+                  id="vdp-inq-message"
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  rows={4}
+                  placeholder="Ihre Fragen oder Wünsche zum Fahrzeug…"
+                />
+              </div>
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="vdp-inq-privacy"
+                  checked={formData.privacyAccepted}
+                  onCheckedChange={(checked) => setFormData({ ...formData, privacyAccepted: checked === true })}
+                  required
+                />
+                <Label htmlFor="vdp-inq-privacy" className="text-sm leading-snug font-normal">
+                  Ich habe die{" "}
+                  <a href="/datenschutz" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                    Datenschutzerklärung
+                  </a>{" "}
+                  gelesen und akzeptiert. *
+                </Label>
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full font-semibold"
+                disabled={!formData.privacyAccepted || isSubmittingInquiry}
+              >
+                {isSubmittingInquiry ? "Sende…" : "Kaufanfrage absenden"}
+              </Button>
+              {inquiryError && <p className="text-sm text-destructive">{inquiryError}</p>}
+              {inquirySuccess && <p className="text-sm text-emerald-600">Vielen Dank! Wir melden uns zeitnah.</p>}
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Footer />
-      
+
       {/* Zoom Dialog – Vollbild auf Desktop und Handy (iOS: -webkit-fill-available für korrekte Höhe) */}
       <Dialog open={isZoomed} onOpenChange={setIsZoomed}>
         <DialogContent 

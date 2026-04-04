@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin, ArrowUpRight } from "lucide-react";
 import { recordVisit, fetchActiveVisitorCount } from "@/lib/api/stats";
 
 const VISITOR_SESSION_KEY = "ae_visitor_session";
@@ -176,17 +176,49 @@ const Footer = () => {
             </Link>
           </div>
         </div>
-        <p className="mt-4 pt-4 border-t border-gray-800 text-center text-xs text-gray-500">
-          Entwickelt von{" "}
-          <a
-            href="https://carsite24.de"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-gray-400 hover:text-gray-200 transition-colors"
-          >
-            carsite24.de
-          </a>
-        </p>
+        <div className="mt-10 pt-10 border-t border-gray-800">
+          <div className="mx-auto max-w-xl px-1">
+            <a
+              href="https://carsite24.de"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative flex flex-col items-center gap-5 overflow-hidden rounded-3xl border border-gray-700/90 bg-gradient-to-br from-gray-800 via-gray-800 to-gray-950 px-6 py-8 text-center shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] ring-1 ring-white/5 transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/45 hover:shadow-[0_28px_60px_-12px_rgba(37,99,235,0.25)] hover:ring-blue-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 sm:gap-6 sm:px-10 sm:py-10"
+              aria-label="CARSITE24 – mehr erfahren (öffnet neues Fenster)"
+            >
+              <div
+                className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-blue-600/20 blur-3xl transition-opacity duration-300 group-hover:opacity-100 opacity-70"
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute -bottom-12 -left-12 h-36 w-36 rounded-full bg-blue-500/10 blur-2xl"
+                aria-hidden
+              />
+
+              <div className="relative space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500 group-hover:text-gray-400">
+                  Erstellt von
+                </p>
+                <p className="mx-auto max-w-[22rem] text-sm leading-relaxed text-gray-300 group-hover:text-gray-200 sm:text-base">
+                  Websites und Online-Marketing für Autohäuser — wenn Ihnen dieser Auftritt gefällt, lohnt sich ein Blick.
+                </p>
+              </div>
+
+              <span className="relative font-sans text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
+                <span className="text-white">CAR</span>
+                <span className="text-blue-400 transition-colors duration-300 group-hover:text-blue-300">SITE24</span>
+              </span>
+
+              <span className="relative inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-900/40 transition-all duration-300 group-hover:bg-blue-500 group-hover:shadow-xl group-hover:shadow-blue-800/50">
+                Mehr erfahren
+                <ArrowUpRight className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden />
+              </span>
+
+              <span className="relative text-xs text-gray-500 group-hover:text-gray-400">
+                carsite24.de · neues Fenster
+              </span>
+            </a>
+          </div>
+        </div>
       </div>
     </footer>
   );
