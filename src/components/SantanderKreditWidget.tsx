@@ -176,12 +176,17 @@ function isSantanderFloatingExpanded(el: HTMLElement) {
 
   const cs = getComputedStyle(el);
   if (cs.minHeight === "100%" || cs.minWidth === "100%") return true;
+  const ch = cs.height;
+  if (ch === "100%" || ch === "100vh" || ch === "100dvh" || ch === "100svh" || ch === "100lvh") return true;
 
   const r = el.getBoundingClientRect();
   const vw = window.visualViewport?.width ?? window.innerWidth;
   const vh = window.visualViewport?.height ?? window.innerHeight;
-  // Nur als Vollbild behandeln, wenn der Layer tatsaechlich nahezu den Viewport ausfuellt.
+  // Nahezu ganzer Viewport (Santander-Animation / Mobile-Adressleiste: etwas toleranter).
   if (r.width >= vw - 2 && r.height >= vh - 2) return true;
+  const wOk = r.width >= vw * 0.88;
+  const hOk = r.height >= vh * 0.88;
+  if (wOk && hOk && r.top <= Math.max(24, vh * 0.08) && r.left <= Math.max(16, vw * 0.04)) return true;
 
   return false;
 }
@@ -333,6 +338,8 @@ export default function SantanderKreditWidget({
         floating.style.removeProperty("opacity");
         floating.style.removeProperty("pointer-events");
         clearSantanderTeaserAnchorOffsets(floating);
+        /* Ueber fixierter Navbar (z-50) und Cookie-Banner (z-60); CSS erzwingt Teaser z-40 !important auf Mobile. */
+        floating.style.setProperty("z-index", "100", "important");
         const vw = window.visualViewport?.width ?? window.innerWidth;
         const r = floating.getBoundingClientRect();
         if (r.width < vw * 0.9) {
@@ -371,13 +378,15 @@ export default function SantanderKreditWidget({
         floating.style.removeProperty("opacity");
         floating.style.setProperty("pointer-events", "auto");
         floating.style.setProperty("touch-action", "manipulation");
-        /* Unter Navbar (z-50), konsistent mit Desktop-Teaser in index.css */
-        floating.style.setProperty("z-index", "40");
+        /* Unter Navbar (z-50); nach Vollbild ggf. z-100 important — hier zurueck auf Teaser-Stack. */
+        floating.style.setProperty("z-index", "40", "important");
         return;
       }
 
       floating.style.removeProperty("opacity");
       floating.style.removeProperty("pointer-events");
+      /* Vollbild hatte z-index important; ohne Entfernen bliebe der Teaser ueber der Navbar. */
+      floating.style.removeProperty("z-index");
 
       attachFloatObserver(floating);
 
