@@ -8,26 +8,23 @@ const Hero = () => {
       className="relative overflow-hidden"
       aria-label="Hero Section"
     >
-      {/* Background Image – reservierter Platz (aspect-ratio) reduziert CLS, Optik unverändert */}
-      <div
-        className="relative z-0 w-full overflow-hidden"
-        style={{ aspectRatio: "21/9" }}
-      >
+      {/* Bild bestimmt die Höhe (width/height am img gegen CLS) — kein fester 21:9-Kasten, daher keine Letterbox-Streifen */}
+      <div className="relative z-0 w-full overflow-hidden bg-background">
         <img
           src={backgroundImage}
           alt="GS Automobile Rheinland Autohaus mit Fahrzeugen"
           width={1920}
           height={828}
-          className="block w-full h-full object-contain lg:object-cover object-center lg:[clip-path:inset(60px_0_10px_0)] lg:-mt-[60px] lg:-mb-[10px]"
+          className="block h-auto w-full max-w-none border-0 outline-none ring-0 [vertical-align:top] origin-center scale-[1.006] transform-gpu motion-reduce:scale-100"
           loading="eager"
           fetchPriority="high"
           decoding="async"
         />
-        {/* Leichter Übergang – Mobile: weniger, ab md: etwas mehr */}
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent via-background/0 to-background/40 md:hidden" />
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-background/15 md:hidden" />
-        <div className="absolute inset-x-0 bottom-0 h-40 md:h-56 bg-gradient-to-b from-transparent via-background/5 to-background/70 hidden md:block" />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-background/25 hidden md:block" />
+        {/* Nur dezenter Verlauf unten für Lesbarkeit über dem Bild (nicht bis zur grauen Seitenfarbe) */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-black/35 md:h-36 md:to-black/40"
+          aria-hidden
+        />
 
         {/* Text-Block – tiefer gesetzt, näher an der Schnellsuche */}
         <div 
