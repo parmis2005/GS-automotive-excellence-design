@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Share2, Mail, Link2 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const WHATSAPP_SHARE_URL = "https://wa.me/?text=";
 
@@ -19,6 +20,11 @@ interface ShareVehicleButtonProps {
   className?: string;
   /** Bei Karten/Listen: onClick z.B. e.stopPropagation() */
   onClick?: (e: React.MouseEvent) => void;
+  /**
+   * Unter xl nur Share-Icon (schmale Desktop-Spalte); ab xl weiter mit Label.
+   * Setzt aria-label/title für Barrierefreiheit.
+   */
+  responsiveIconOnly?: boolean;
 }
 
 function getAbsoluteVehicleUrl(path: string): string {
@@ -34,6 +40,7 @@ export function ShareVehicleButton({
   size = "default",
   className,
   onClick,
+  responsiveIconOnly = false,
 }: ShareVehicleButtonProps) {
   const [open, setOpen] = useState(false);
   const absoluteUrl = getAbsoluteVehicleUrl(vehicleUrl);
@@ -65,14 +72,19 @@ export function ShareVehicleButton({
       <Button
         variant={variant}
         size={size}
-        className={className}
+        className={cn(
+          className,
+          responsiveIconOnly && "max-xl:flex-none max-xl:shrink-0 max-xl:basis-auto max-xl:px-3",
+        )}
+        aria-label={responsiveIconOnly ? label : undefined}
+        title={responsiveIconOnly ? label : undefined}
         onClick={(e) => {
           onClick?.(e);
           setOpen(true);
         }}
       >
-        <Share2 className="w-4 h-4 mr-2" />
-        {label}
+        <Share2 className="h-4 w-4 shrink-0" />
+        <span className={responsiveIconOnly ? "hidden xl:inline" : undefined}>{label}</span>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md rounded-2xl border-border shadow-xl p-6 sm:p-8">

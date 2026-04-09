@@ -1086,6 +1086,7 @@ const VehicleDetailPage = () => {
                 variant="outline"
                 size="default"
                 className="flex-1"
+                responsiveIconOnly
               />
             </div>
           </div>
