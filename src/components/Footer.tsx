@@ -176,44 +176,31 @@ const Footer = () => {
             </Link>
           </div>
         </div>
-        <div className="mt-10 pt-10 border-t border-gray-800">
-          <div className="mx-auto max-w-xl px-1">
+        {/* Agentur-Hinweis — bewusst zurückhaltend, im Fluss des Footers */}
+        <div className="mt-8 pt-5 border-t border-gray-800">
+          <div className="mx-auto max-w-2xl text-center">
             <a
               href="https://carsite24.de"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative flex flex-col items-center gap-5 overflow-hidden rounded-3xl border border-gray-700/90 bg-gradient-to-br from-gray-800 via-gray-800 to-gray-950 px-6 py-8 text-center shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] ring-1 ring-white/5 transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/45 hover:shadow-[0_28px_60px_-12px_rgba(37,99,235,0.25)] hover:ring-blue-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 sm:gap-6 sm:px-10 sm:py-10"
+              className="group inline-flex max-w-full flex-col items-center gap-1.5 rounded-md px-3 py-2 text-gray-500 transition-colors hover:text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               aria-label="CARSITE24 – mehr erfahren (öffnet neues Fenster)"
             >
-              <div
-                className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-blue-600/20 blur-3xl transition-opacity duration-300 group-hover:opacity-100 opacity-70"
-                aria-hidden
-              />
-              <div
-                className="pointer-events-none absolute -bottom-12 -left-12 h-36 w-36 rounded-full bg-blue-500/10 blur-2xl"
-                aria-hidden
-              />
-
-              <div className="relative space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500 group-hover:text-gray-400">
-                  Erstellt von
-                </p>
-                <p className="mx-auto max-w-[22rem] text-sm leading-relaxed text-gray-300 group-hover:text-gray-200 sm:text-base">
-                  Websites und Online-Marketing für Autohäuser — wenn Ihnen dieser Auftritt gefällt, lohnt sich ein Blick.
-                </p>
-              </div>
-
-              <span className="relative font-sans text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
-                <span className="text-white">CAR</span>
-                <span className="text-blue-400 transition-colors duration-300 group-hover:text-blue-300">SITE24</span>
+              <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-gray-600 group-hover:text-gray-500">
+                Erstellt von
               </span>
-
-              <span className="relative inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-900/40 transition-all duration-300 group-hover:bg-blue-500 group-hover:shadow-xl group-hover:shadow-blue-800/50">
+              <span className="font-sans text-lg font-bold tracking-tight text-gray-300 group-hover:text-white sm:text-xl">
+                <span className="text-gray-200">CAR</span>
+                <span className="text-blue-500/90 group-hover:text-blue-400">SITE24</span>
+              </span>
+              <span className="max-w-md text-xs leading-snug text-gray-500 group-hover:text-gray-400">
+                Websites und Online-Marketing für Autohäuser.
+              </span>
+              <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-gray-400 underline-offset-4 group-hover:text-gray-200 group-hover:underline">
                 Mehr erfahren
-                <ArrowUpRight className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden />
+                <ArrowUpRight className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
               </span>
-
-              <span className="relative text-xs text-gray-500 group-hover:text-gray-400">
+              <span className="text-[10px] text-gray-600 group-hover:text-gray-500">
                 carsite24.de · neues Fenster
               </span>
             </a>
