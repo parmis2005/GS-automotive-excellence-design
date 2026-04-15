@@ -1225,7 +1225,7 @@ const VehicleDetailPage = () => {
                   <ul className="text-sm space-y-2.5 text-foreground list-none p-0 m-0">
                     <li className="flex justify-between gap-4 border-b border-border/50 pb-2">
                       <span className="text-muted-foreground">Mo – Fr</span>
-                      <span className="font-medium tabular-nums">10:00 – 17:30</span>
+                      <span className="font-medium tabular-nums">09:30 – 17:30</span>
                     </li>
                     <li className="flex justify-between gap-4 border-b border-border/50 pb-2">
                       <span className="text-muted-foreground">Samstag</span>

@@ -835,9 +835,9 @@ const VehiclesPage = () => {
                 <div className="flex-1 min-w-0">
                   {filteredAndSortedVehicles.length > 0 ? (
                     <>
-                    <div className="flex flex-col gap-4 xl:grid xl:grid-cols-3 xl:gap-6 xl:items-stretch mb-8">
+                    <div className="space-y-4 mb-8">
                       {paginatedVehicles.map((vehicle, index) => (
-                        <div key={vehicle.id} className="min-w-0 h-full flex">
+                        <div key={vehicle.id} className="h-full">
                           <VehicleListItem
                             {...vehicle}
                             isFirst={index === 0}

@@ -137,7 +137,7 @@ const ContactSection = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center pb-2 border-b border-border">
                   <span className="text-foreground">Montag - Freitag</span>
-                  <span className="text-primary font-semibold">10:00 - 17:30 Uhr</span>
+                  <span className="text-primary font-semibold">09:30 - 17:30 Uhr</span>
                 </div>
                 <div className="flex justify-between items-center pb-2 border-b border-border">
                   <span className="text-foreground">Samstag</span>

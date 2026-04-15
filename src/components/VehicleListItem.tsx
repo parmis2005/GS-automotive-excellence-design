@@ -162,13 +162,13 @@ const VehicleListItem = ({
   })();
   
   return (
-    <div className="group bg-background border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 h-full flex flex-col min-h-[400px] min-w-0 xl:min-h-0 xl:shadow-sm xl:hover:shadow-md xl:hover:border-primary/20">
-      {/* lg–2xl: breite Zeile (Bild links); ab xl in der Fahrzeugsuche: 3er-Raster = kompakte Säule (Bild oben) */}
-      <div className="flex flex-col lg:flex-row xl:flex-col flex-1 min-h-full min-w-0">
-        {/* Image */}
+    <div className="group bg-background border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 h-full flex flex-col min-h-[400px] min-w-0">
+      {/* lg: Desktop-Kartenformat (Bild links), md: mobil (Bild oben) – Filter verschwindet bei xl zuerst */}
+      <div className="flex flex-col lg:flex-row flex-1 min-h-full min-w-0">
+        {/* Image – ab lg nebeneinander, darunter gestapelt */}
         <Link
           to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`}
-          className="relative w-full lg:w-80 lg:flex-shrink-0 xl:w-full xl:max-w-none 2xl:w-full bg-white overflow-hidden block group/image"
+          className="relative w-full lg:w-80 xl:w-96 2xl:w-[32rem] flex-shrink-0 bg-white overflow-hidden block group/image"
           onMouseEnter={handlePrefetch}
           onFocus={handlePrefetch}
           onTouchStart={handlePrefetch}
@@ -195,19 +195,19 @@ const VehicleListItem = ({
           </div>
         </Link>
 
-        {/* Content */}
-        <div className="flex-1 p-6 xl:p-4 flex flex-col min-h-full min-w-0">
+        {/* Content - Right Side */}
+        <div className="flex-1 p-6 flex flex-col min-h-full min-w-0">
           {/* Header Row */}
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between xl:flex-col xl:items-stretch gap-4 xl:gap-3 mb-4 xl:mb-3">
-            <div className="flex-1 min-w-0">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4">
+            <div className="flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap text-sm text-muted-foreground">
                 {internalNumber && (
-                  <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium tracking-wide text-primary xl:px-2 xl:py-0.5 xl:text-[10px]">
+                  <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium tracking-wide text-primary">
                     NR. {internalNumber}
                   </span>
                 )}
               </div>
-              <div className="mb-2 flex items-start justify-between gap-3 xl:flex-col xl:gap-2">
+              <div className="mb-2 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <VehicleTitle
                     brand={brand}
@@ -215,8 +215,7 @@ const VehicleListItem = ({
                     productionSeries={productionSeries}
                     modelVariant={modelVariantProp}
                     fallbackTitle={title}
-                    className="font-display text-2xl md:text-3xl xl:text-lg xl:leading-snug font-bold text-foreground xl:line-clamp-2 xl:min-h-0"
-                    variantClassName="text-sm font-normal text-muted-foreground tracking-wide xl:text-[10px] xl:leading-snug xl:line-clamp-2"
+                    className="font-display text-2xl md:text-3xl font-bold text-foreground"
                     as="h3"
                   />
                   <div className="mt-1">
@@ -236,18 +235,18 @@ const VehicleListItem = ({
               </div>
             </div>
             
-            {/* Price + CTA: breite Zeile rechts; im 3er-Raster darunter */}
-            <div className="hidden lg:block text-right xl:text-left shrink-0 xl:w-full">
-              <div className="font-display text-3xl md:text-4xl xl:text-2xl font-bold text-primary xl:tabular-nums">
+            {/* Price */}
+            <div className="hidden lg:block text-right">
+              <div className="font-display text-3xl md:text-4xl font-bold text-primary">
                 {formatPrice(price)} €
               </div>
-              <div className="text-xs text-primary mt-1 xl:text-[10px]">
+              <div className="text-xs text-primary mt-1">
                 {vatDisplayable === false ? "MwSt. nicht ausweisbar" : "inkl. MwSt."}
               </div>
-              <Link to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`} className="mt-3 inline-block xl:w-full" onClick={() => onNavigateToDetail?.()}>
+              <Link to={`/fahrzeuge/${getVehicleDetailSlug(id, brand, model)}`} className="mt-3 inline-block" onClick={() => onNavigateToDetail?.()}>
                 <Button
                   variant="default"
-                  className="bg-primary hover:bg-primary/90 text-white font-semibold xl:w-full xl:h-9 xl:text-sm"
+                  className="bg-primary hover:bg-primary/90 text-white font-semibold"
                 >
                   Details ansehen
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -256,13 +255,13 @@ const VehicleListItem = ({
             </div>
           </div>
 
-          {/* Specifications */}
-          <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-4 mb-6 xl:p-3 xl:mb-3">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-2 gap-4 xl:gap-2.5 xl:[&_svg]:h-4 xl:[&_svg]:w-4 xl:[&_.font-semibold]:text-xs xl:[&_span.text-muted-foreground]:text-[10px]">
+          {/* Specifications Grid - Premium Box */}
+          <div className="bg-gray-50/50 border border-gray-200/60 rounded-lg p-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {year && (
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
-                  <div className="flex flex-col min-w-0">
+                  <div className="flex flex-col">
                     <span className="text-xs text-muted-foreground">Erstzulassung</span>
                     <span className="font-semibold text-sm">{year}</span>
                   </div>
@@ -361,9 +360,9 @@ const VehicleListItem = ({
               </Link>
             </div>
           </div>
-          <div className="hidden lg:flex flex-wrap gap-2 xl:gap-2 mt-auto pt-4 border-t border-border xl:flex-col xl:items-stretch">
-            <Link to={inzahlungnahmeLink} className="flex-shrink-0 xl:flex-1 min-w-[10.5rem] xl:min-w-0">
-              <Button variant="outline" size="sm" className="text-xs xl:text-sm whitespace-nowrap w-full min-w-[10.5rem] xl:min-w-0 xl:h-9 xl:py-2">
+          <div className="hidden lg:flex flex-wrap gap-2 xl:gap-3 mt-auto pt-4 border-t border-border">
+            <Link to={inzahlungnahmeLink} className="flex-shrink-0 xl:flex-1 min-w-[10.5rem]">
+              <Button variant="outline" size="sm" className="text-xs xl:text-sm whitespace-nowrap w-full min-w-[10.5rem] xl:h-10 xl:py-2">
                 Inzahlungnahme
               </Button>
             </Link>
@@ -372,13 +371,13 @@ const VehicleListItem = ({
               label="Teilen"
               variant="outline"
               size="sm"
-              className="flex-shrink-0 xl:flex-1 xl:min-w-0 xl:w-full xl:h-9 xl:py-2 text-xs xl:text-sm [&_svg]:w-3.5 [&_svg]:h-3.5 xl:[&_svg]:w-4 xl:[&_svg]:h-4"
+              className="flex-shrink-0 xl:flex-1 xl:min-w-0 xl:w-full xl:h-10 xl:py-2 text-xs xl:text-sm [&_svg]:w-3.5 [&_svg]:h-3.5 xl:[&_svg]:w-4 xl:[&_svg]:h-4"
               onClick={(e) => e.stopPropagation()}
             />
             <Button
               variant="outline"
               size="sm"
-              className="flex-shrink-0 xl:flex-1 xl:min-w-0 xl:w-full xl:h-9 xl:py-2 text-xs xl:text-sm"
+              className="flex-shrink-0 xl:flex-1 xl:min-w-0 xl:w-full xl:h-10 xl:py-2 text-xs xl:text-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 window.location.href = "tel:021519422262";
@@ -390,7 +389,7 @@ const VehicleListItem = ({
             <Button
               variant="outline"
               size="sm"
-              className="flex-shrink-0 xl:flex-1 xl:min-w-0 xl:w-full xl:h-9 xl:py-2 text-xs xl:text-sm"
+              className="flex-shrink-0 xl:flex-1 xl:min-w-0 xl:w-full xl:h-10 xl:py-2 text-xs xl:text-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 window.location.href = `mailto:info@gsauto.de?subject=Anfrage zu ${encodeURIComponent(displayTitle)}`;
