@@ -668,8 +668,37 @@ const VehiclesPage = () => {
         ? `/fahrzeuge/marke/${marke}`
         : "/fahrzeuge";
 
-  // Index nur für "Hauptseiten" (Basis oder 1-Dimension-Landingpages). Stark gefilterte Kombinationen -> noindex.
-  const robots = activeFilterCount >= 2 ? "noindex,follow" : "index,follow";
+  /** Pfad-Landing: Marke/Modell/Typ aus der URL nicht gegen die noindex-Schwelle zählen (sonst z.B. Marke+Modell = 2 => noindex). */
+  const pathSlugMatchesFilter = (label: string | undefined, pathSegment: string | undefined) =>
+    !!label && !!pathSegment && slugify(label) === slugify(pathSegment);
+
+  const ignoreBrandForRobots =
+    isLandingRoute &&
+    !!marke &&
+    filters.brands.length === 1 &&
+    pathSlugMatchesFilter(filters.brands[0], marke);
+  const ignoreModelForRobots =
+    isLandingRoute &&
+    !!modell &&
+    filters.models.length === 1 &&
+    pathSlugMatchesFilter(filters.models[0], modell);
+  const ignoreVehicleTypeForRobots =
+    isLandingRoute &&
+    !!typ &&
+    filters.vehicleTypes.length === 1 &&
+    pathSlugMatchesFilter(filters.vehicleTypes[0], typ);
+
+  const effectiveFilterCountForRobots = Math.max(
+    0,
+    activeFilterCount -
+      (ignoreBrandForRobots ? 1 : 0) -
+      (ignoreModelForRobots ? 1 : 0) -
+      (ignoreVehicleTypeForRobots ? 1 : 0),
+  );
+
+  // Landing: nur zusätzliche Filter (nicht die URL-Dimension selbst) zählen für noindex.
+  const robotsFilterCount = isLandingRoute ? effectiveFilterCountForRobots : activeFilterCount;
+  const robots = robotsFilterCount >= 2 ? "noindex,follow" : "index,follow";
 
   const seoData = isLandingRoute
     ? getVehiclesLandingPageSEO({
