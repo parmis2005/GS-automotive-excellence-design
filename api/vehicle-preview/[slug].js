@@ -37,6 +37,15 @@ function formatPrice(price) {
   return Math.round(n).toLocaleString("de-DE", { maximumFractionDigits: 0, minimumFractionDigits: 0 });
 }
 
+/** Wie src/utils/seo.ts truncateSeoDescription – Meta-Länge begrenzen. */
+function truncateSeoDescription(text, max = 300) {
+  const t = String(text || "").trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trimEnd() + "…";
+}
+
 function ensureAbsoluteImageUrl(image, vehicleId) {
   if (image && image.trim()) {
     let url = image.startsWith("http") ? image : `${BASE_URL}${image}`;
@@ -201,19 +210,35 @@ export default async function handler(req, res) {
 
   const priceStr = formatPrice(price);
   const title = priceStr
-    ? `${brand} ${model} für ${priceStr} € | GS Automobile Rheinland`
-    : `${brand} ${model} ${year} | Gebrauchtwagen | GS Automobile Rheinland`;
-  const metaParts = ["Gebrauchtfahrzeug"];
-  if (mileage > 0) metaParts.push(`${mileage.toLocaleString("de-DE")} km`);
-  if (powerKw > 0 && powerPs > 0) metaParts.push(`${powerKw} kW (${powerPs} PS)`);
-  else if (powerKw > 0) metaParts.push(`${powerKw} kW`);
-  else if (powerPs > 0) metaParts.push(`${powerPs} PS`);
-  if (fuel && fuel !== "–") metaParts.push(fuel);
-  const metaDescription = metaParts.join(" • ");
+    ? `${brand} ${model} für ${priceStr} € in Krefeld | GS Automobile Rheinland`
+    : `${brand} ${model} ${year} · Gebrauchtwagen Krefeld | GS Automobile Rheinland`;
+
+  const specParts = [];
+  if (mileage > 0) specParts.push(`${mileage.toLocaleString("de-DE")} km`);
+  if (powerKw > 0 && powerPs > 0) specParts.push(`${powerKw} kW (${powerPs} PS)`);
+  else if (powerKw > 0) specParts.push(`${powerKw} kW`);
+  else if (powerPs > 0) specParts.push(`${powerPs} PS`);
+  if (fuel && fuel !== "–") specParts.push(fuel);
+  const specText = specParts.join(" · ");
+
+  let metaDescription = truncateSeoDescription(
+    specText.length > 0
+      ? `${brand} ${model} (${year}) als Gebrauchtwagen in Krefeld: ${specText}. Persönliche Beratung bei GS Automobile Rheinland.`
+      : `${brand} ${model} (${year}) – Gebrauchtwagen in Krefeld. GS Automobile Rheinland.`
+  );
+
+  const ogDescription = truncateSeoDescription(
+    specText.length > 0 ? `${brand} ${model} in Krefeld · ${specText}` : `${brand} ${model} · Gebrauchtwagen Krefeld`,
+    200
+  );
 
   const shortDesc =
-    description.slice(0, 300).replace(/\s+/g, " ").trim() + (description.length > 300 ? "…" : "") ||
-    `${brand} ${model} ${year}, ${mileage.toLocaleString("de-DE")} km, ${fuel} – Gebrauchtwagen bei GS Automobile Rheinland in Krefeld`;
+    description.trim().length > 0
+      ? truncateSeoDescription(
+          `Gebrauchtwagen in Krefeld (${brand} ${model}, ${year}): ${description.replace(/\s+/g, " ").trim()}`,
+          400
+        )
+      : metaDescription;
 
   const vehicleBodyContent = `
     <main class="seo-static-content vehicle-preview-content" aria-label="Fahrzeugdetails">
@@ -240,7 +265,7 @@ export default async function handler(req, res) {
     "@type": "Product",
     name: `${brand} ${model}`,
     image,
-    description: shortDesc,
+    description: metaDescription,
     brand: { "@type": "Brand", name: brand },
     model,
     productionDate: String(year),
@@ -296,6 +321,7 @@ export default async function handler(req, res) {
 
   const safeTitle = escapeMeta(title);
   const safeDesc = escapeMeta(metaDescription);
+  const safeOgDesc = escapeMeta(ogDescription);
 
   html = html
     .replace(/<head>/, `<head>\n<!-- vehicle-preview: ${escapeMeta(slug)} -->\n${seoStyles}\n${jsonLdScript}\n${preloadScript}`)
@@ -305,12 +331,12 @@ export default async function handler(req, res) {
     .replace(/<meta property="og:type" content="[^"]*"/, '<meta property="og:type" content="product"')
     .replace(/<meta property="og:url" content="[^"]*"/, `<meta property="og:url" content="${fullUrl}"`)
     .replace(/<meta property="og:title" content="[^"]*"/, `<meta property="og:title" content="${safeTitle}"`)
-    .replace(/<meta property="og:description" content="[^"]*"/, `<meta property="og:description" content="${safeDesc}"`)
+    .replace(/<meta property="og:description" content="[^"]*"/, `<meta property="og:description" content="${safeOgDesc}"`)
     .replace(/<meta property="og:image" content="[^"]*"/, `<meta property="og:image" content="${image}"`)
     .replace(/<meta property="og:image:alt" content="[^"]*"/, `<meta property="og:image:alt" content="${escapeMeta(`${brand} ${model} ${year}`)}"`)
     .replace(/<meta name="twitter:card" content="[^"]*"/, '<meta name="twitter:card" content="summary_large_image"')
     .replace(/<meta name="twitter:title" content="[^"]*"/, `<meta name="twitter:title" content="${safeTitle}"`)
-    .replace(/<meta name="twitter:description" content="[^"]*"/, `<meta name="twitter:description" content="${safeDesc}"`)
+    .replace(/<meta name="twitter:description" content="[^"]*"/, `<meta name="twitter:description" content="${safeOgDesc}"`)
     .replace(/<meta name="twitter:image" content="[^"]*"/, `<meta name="twitter:image" content="${image}"`);
 
   const rootWithContent = `<div id="root">${vehicleBodyContent}</div>`;

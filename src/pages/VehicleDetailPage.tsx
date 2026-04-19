@@ -494,7 +494,7 @@ const VehicleDetailPage = () => {
     vehicle.fuel,
     vehicle.image,
     vehicle.id,
-    `${vehicle.brand} ${vehicle.model} ${vehicle.year}, ${vehicle.mileage.toLocaleString("de-DE")} km, ${vehicle.fuel} – Gebrauchtwagen bei GS Automobile Rheinland in Krefeld`
+    seoData.description
   );
   const breadcrumbs = [
     { name: "Startseite", url: "/" },
