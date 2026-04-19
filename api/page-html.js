@@ -1,7 +1,8 @@
 /**
  * Vercel Serverless Function: Liefert vorgerendertes HTML für wichtige Routen
- * (/, /fahrzeuge, /unternehmen), damit Google im initialen HTML sichtbaren
- * Content sieht und keine Soft-404 meldet. React ersetzt #root-Inhalt beim Mount.
+ * (/, /fahrzeuge, /fahrzeuge/marke/…, /fahrzeuge/typ/…, /unternehmen, …), damit Google
+ * im initialen HTML sichtbaren Content sieht und keine Soft-404 meldet.
+ * React ersetzt #root-Inhalt beim Mount.
  */
 export const config = { maxDuration: 15 };
 
@@ -28,6 +29,165 @@ function getVehicleDetailSlug(id, brand, model) {
   const marke = slugify(brand || "");
   const modell = slugify(model || "");
   return [safeId, marke, modell].filter(Boolean).join("-");
+}
+
+/** Wie src/lib/vehicleNameUtils getBaseModelName – für Landing-Filter ohne TS-Import. */
+function getBaseModelNameJs(fullModelName) {
+  if (!fullModelName) return "";
+  const numberErMatch = fullModelName.match(/^(\d+er)/i);
+  if (numberErMatch) return numberErMatch[1];
+  const letterNumberMatch = fullModelName.match(/^([A-Z]\d+)/i);
+  if (letterNumberMatch) return letterNumberMatch[1];
+  const wordNumberMatch = fullModelName.match(/^([A-Za-z]+\s?\d+)/i);
+  if (wordNumberMatch) return wordNumberMatch[1].trim();
+  const firstWordMatch = fullModelName.match(/^([A-Za-z]+)/i);
+  if (firstWordMatch) return firstWordMatch[1];
+  return fullModelName.split(" ")[0] || fullModelName;
+}
+
+function humanizeSlug(slug) {
+  if (!slug) return "";
+  return String(slug)
+    .replace(/-/g, " ")
+    .split(" ")
+    .map((w) =>
+      w.length <= 3 ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+    )
+    .join(" ");
+}
+
+/** @returns {{ kind: 'marke', marke: string, modell: string | null } | { kind: 'typ', typ: string } | null} */
+function parseFahrzeugeLandingPath(routePath) {
+  if (!routePath || typeof routePath !== "string") return null;
+  const parts = routePath.split("/").filter(Boolean);
+  if (parts[0] !== "fahrzeuge") return null;
+  if (parts.length === 3 && parts[1] === "marke")
+    return { kind: "marke", marke: parts[2], modell: null };
+  if (parts.length === 4 && parts[1] === "marke")
+    return { kind: "marke", marke: parts[2], modell: parts[3] };
+  if (parts.length === 3 && parts[1] === "typ") return { kind: "typ", typ: parts[2] };
+  return null;
+}
+
+function filterVehiclesByLanding(landing, list) {
+  if (!landing || !Array.isArray(list) || list.length === 0) return list;
+  if (landing.kind === "marke") {
+    const markeS = (landing.marke || "").toLowerCase();
+    let out = list.filter((v) => slugify(v.brand || "") === markeS);
+    if (landing.modell) {
+      const ms = (landing.modell || "").toLowerCase();
+      out = out.filter((v) => {
+        const mSlug = slugify(v.model || "");
+        const baseSlug = slugify(getBaseModelNameJs(v.model || ""));
+        return mSlug === ms || baseSlug === ms || mSlug.startsWith(ms + "-") || mSlug.includes("-" + ms + "-");
+      });
+    }
+    return out;
+  }
+  if (landing.kind === "typ") {
+    const t = (landing.typ || "").toLowerCase();
+    return list.filter((v) => {
+      const vt = slugify(v.vehicleType || "");
+      const cat = slugify(v.category || "");
+      return vt === t || cat === t;
+    });
+  }
+  return list;
+}
+
+function resolveBrandLabelFromSlug(markeSlug, vehicles) {
+  const s = (markeSlug || "").toLowerCase();
+  for (const v of vehicles) {
+    const b = (v.brand || "").trim();
+    if (b && slugify(b) === s) return b;
+  }
+  return humanizeSlug(markeSlug);
+}
+
+function resolveModelLabelFromSlug(markeSlug, modellSlug, vehicles) {
+  const filtered = filterVehiclesByLanding({ kind: "marke", marke: markeSlug, modell: null }, vehicles);
+  const ms = (modellSlug || "").toLowerCase();
+  for (const v of filtered) {
+    if (slugify(v.model || "") === ms || slugify(getBaseModelNameJs(v.model || "")) === ms) {
+      return getBaseModelNameJs(v.model || "") || v.model || humanizeSlug(modellSlug);
+    }
+  }
+  return humanizeSlug(modellSlug);
+}
+
+function resolveTypLabelFromSlug(typSlug, vehicles) {
+  const t = (typSlug || "").toLowerCase();
+  for (const v of vehicles) {
+    const vt = v.vehicleType || "";
+    if (vt && slugify(vt) === t) return vt;
+    const cat = v.category || "";
+    if (cat && slugify(cat) === t) return cat;
+  }
+  return humanizeSlug(typSlug);
+}
+
+/**
+ * SEO-Metas + statischer Intro für /fahrzeuge/marke/… und /fahrzeuge/typ/…
+ * (inhaltlich an src/utils/seo getVehiclesLandingPageSEO angelehnt).
+ */
+function buildLandingPageConfig(routePath, landing, allVehicles) {
+  const list = Array.isArray(allVehicles) ? allVehicles : [];
+  const canonical = BASE_URL + routePath;
+  const withSite = (pageTitle) => `${pageTitle} | GS Automobile Rheinland`;
+
+  let topic = "Gebrauchtwagen";
+  let h1 = "Gebrauchtwagen & Jahreswagen";
+
+  if (landing.kind === "marke") {
+    const brandLabel = resolveBrandLabelFromSlug(landing.marke, list);
+    if (landing.modell) {
+      const modelLabel = resolveModelLabelFromSlug(landing.marke, landing.modell, list);
+      topic = `${brandLabel} ${modelLabel} Gebrauchtwagen`;
+      h1 = `${brandLabel} ${modelLabel}: Gebrauchtwagen & Jahreswagen`;
+    } else {
+      topic = `${brandLabel} Gebrauchtwagen`;
+      h1 = `${brandLabel} Gebrauchtwagen & Jahreswagen in Krefeld`;
+    }
+  } else if (landing.kind === "typ") {
+    const typLabel = resolveTypLabelFromSlug(landing.typ, list);
+    topic = `${typLabel} Gebrauchtwagen`;
+    h1 = `${typLabel}: Gebrauchtwagen & Jahreswagen`;
+  }
+
+  const pageTitle = `${topic} in Krefeld | Fahrzeugsuche`;
+  const title = withSite(pageTitle);
+  const description = `${topic} in Krefeld & Umgebung: große Auswahl bei GS Automobile Rheinland. Transparente Preise, geprüfte Fahrzeuge, Finanzierung & Inzahlungnahme möglich.`;
+  const ogDescription = `${topic} bei GS Automobile Rheinland in Krefeld. Jetzt passende Fahrzeuge entdecken.`;
+  const keywords = [
+    topic,
+    `${topic} Krefeld`,
+    landing.kind === "marke" ? `${resolveBrandLabelFromSlug(landing.marke, list)} Krefeld` : null,
+    landing.kind === "typ" ? `${resolveTypLabelFromSlug(landing.typ, list)} Krefeld` : null,
+    "Gebrauchtwagen kaufen",
+    "Autohaus Krefeld",
+    "GS Automobile Rheinland",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const introP2 =
+    "Nutzen Sie die Filter auf dieser Seite oder durchstöbern Sie die Fahrzeuge. GS Automobile Rheinland in Krefeld – geprüfte Qualität, faire Preise.";
+  const bodyContent = `
+    <main class="seo-static-content" aria-label="Fahrzeugsuche">
+      <h1>${escapeMeta(h1)}</h1>
+      <p>${escapeMeta(topic)} in Krefeld, Düsseldorf, Neuss, Mönchengladbach und Umgebung. Hier finden Sie unsere aktuelle Auswahl: geprüfte Gebrauchtwagen und Jahreswagen mit transparenten Angaben zu Preis, Kilometerstand und Ausstattung.</p>
+      <p>${escapeMeta(introP2)}</p>
+    </main>`;
+
+  return {
+    title,
+    description,
+    ogDescription,
+    canonical,
+    keywords,
+    bodyContent,
+    breadcrumbLabel: topic,
+  };
 }
 
 /** Preis ohne Cent für Anzeige (z. B. 25.000) */
@@ -153,18 +313,22 @@ export default async function handler(req, res) {
 
   const path = getPathFromRequest(req);
   const routePath = path === "" ? "/" : path;
-  const config = ROUTE_CONFIG[routePath];
-  if (!config) {
+  const landing = parseFahrzeugeLandingPath(routePath);
+  const staticConfig = ROUTE_CONFIG[routePath];
+  if (!staticConfig && !landing) {
     return res.status(404).end();
   }
 
-  // Für /fahrzeuge: Fahrzeugliste serverseitig laden und ins Pre-Render einbauen (SEO)
-  let bodyContentToUse = config.bodyContent;
-  /** Für JSON-LD ItemList (nur /fahrzeuge mit Fahrzeugen) */
+  const needsVehicles = routePath === "/fahrzeuge" || !!landing;
+
+  // Für /fahrzeuge und Fahrzeugsuche-Landingpages: Liste serverseitig laden (SEO + __PRELOADED_VEHICLES__)
+  let bodyContentToUse = staticConfig?.bodyContent ?? "";
+  /** Für JSON-LD ItemList */
   let vehiclesForSchema = [];
   /** Vollständige Liste für window.__PRELOADED_VEHICLES__ — Googlebot darf /api/ nicht; React braucht Hydration ohne fetch. */
   let vehiclesFullForPreload = [];
-  if (routePath === "/fahrzeuge") {
+
+  if (needsVehicles) {
     try {
       const vehiclesRes = await fetch(`${BACKEND_API}/api/vehicles`, {
         headers: { "Content-Type": "application/json" },
@@ -175,7 +339,10 @@ export default async function handler(req, res) {
         const listRaw = vehiclesData?.data ?? (vehiclesData?.vehicles ?? []);
         const list = Array.isArray(listRaw) ? listRaw : [];
         vehiclesFullForPreload = list;
-        const vehicles = list.slice(0, 80);
+        const filteredForLanding = landing ? filterVehiclesByLanding(landing, list) : list;
+        const sliceSource =
+          landing && filteredForLanding.length > 0 ? filteredForLanding : list;
+        const vehicles = sliceSource.slice(0, 80);
         vehiclesForSchema = vehicles;
         if (vehicles.length > 0) {
           const listItems = vehicles
@@ -192,7 +359,10 @@ export default async function handler(req, res) {
               return `<li><a href="${escapeMeta(href)}">${safeLabel}</a></li>`;
             })
             .join("\n          ");
-          bodyContentToUse = config.bodyContent.replace(
+          const baseMain = landing
+            ? buildLandingPageConfig(routePath, landing, list).bodyContent
+            : staticConfig.bodyContent;
+          bodyContentToUse = baseMain.replace(
             "</main>",
             `
       <section class="seo-static-content__section" aria-label="Aktuelle Gebrauchtwagen">
@@ -210,14 +380,24 @@ export default async function handler(req, res) {
     }
   }
 
+  let config = staticConfig;
+  if (landing) {
+    config = buildLandingPageConfig(routePath, landing, vehiclesFullForPreload);
+    if (vehiclesForSchema.length === 0) {
+      bodyContentToUse = config.bodyContent;
+    }
+  }
+
   // JSON-LD für SEO: ItemList (Fahrzeugliste) + BreadcrumbList
   const jsonLdScripts = [];
-  if (routePath === "/fahrzeuge" && vehiclesForSchema.length > 0) {
+  if ((routePath === "/fahrzeuge" || landing) && vehiclesForSchema.length > 0) {
     const itemList = {
       "@context": "https://schema.org",
       "@type": "ItemList",
-      name: "Gebrauchtwagen bei GS Automobile Rheinland Krefeld",
-      description: "Aktuelle Gebrauchtwagen und Jahreswagen: BMW, Opel, Mini und weitere Marken in Krefeld und Umgebung.",
+      name: landing ? `${config.breadcrumbLabel} | GS Automobile Rheinland` : "Gebrauchtwagen bei GS Automobile Rheinland Krefeld",
+      description: landing
+        ? `Aktuelle ${config.breadcrumbLabel} bei GS Automobile Rheinland in Krefeld und Umgebung.`
+        : "Aktuelle Gebrauchtwagen und Jahreswagen: BMW, Opel, Mini und weitere Marken in Krefeld und Umgebung.",
       numberOfItems: vehiclesForSchema.length,
       itemListElement: vehiclesForSchema.map((v, i) => {
         const slug = getVehicleDetailSlug(v.id, v.brand, v.model);
@@ -239,6 +419,21 @@ export default async function handler(req, res) {
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Startseite", item: { "@id": BASE_URL + "/" } },
         { "@type": "ListItem", position: 2, name: "Gebrauchtwagen", item: { "@id": BASE_URL + "/fahrzeuge" } },
+      ],
+    });
+  } else if (landing) {
+    jsonLdScripts.push({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Startseite", item: { "@id": BASE_URL + "/" } },
+        { "@type": "ListItem", position: 2, name: "Gebrauchtwagen", item: { "@id": BASE_URL + "/fahrzeuge" } },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: config.breadcrumbLabel,
+          item: { "@id": BASE_URL + routePath },
+        },
       ],
     });
   }
@@ -341,7 +536,7 @@ export default async function handler(req, res) {
   html = html.replace(/<div id="root"\s*>\s*<\/div>/, rootWithContent);
 
   // Google rendert JS, ruft aber /api/vehicles nicht an (robots.txt). Wie vehicle-preview: Daten einbetten.
-  if (routePath === "/fahrzeuge" && vehiclesFullForPreload.length > 0) {
+  if ((routePath === "/fahrzeuge" || landing) && vehiclesFullForPreload.length > 0) {
     const preloadJson = JSON.stringify(vehiclesFullForPreload).replace(/</g, "\\u003c");
     const preloadBlock =
       `<script type="application/json" id="__PRELOADED_VEHICLES__">${preloadJson}</script>` +

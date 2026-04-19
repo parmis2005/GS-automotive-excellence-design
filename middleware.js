@@ -1,6 +1,6 @@
 /**
  * Vercel Edge Middleware:
- * - /, /fahrzeuge, /unternehmen: vorgerendertes HTML (page-html API) für SEO / keine Soft-404
+ * - /, /fahrzeuge, /fahrzeuge/marke/…, /fahrzeuge/typ/…, /unternehmen: page-html API für SEO / keine Soft-404
  * - /fahrzeuge/:slug: vehicle-preview API (Link-Vorschau)
  * - Ungültige Pfade: HTTP 404 mit 404-Seite
  * - API/Assets: durchreichen
@@ -28,6 +28,15 @@ const VALID_SPA_PATHS = new Set([
 
 /** Pfade, die vorgerendertes HTML bekommen (page-html API) */
 const PRERENDER_PATHS = new Set(["/", "/fahrzeuge", "/unternehmen"]);
+
+/** SEO-Landingpages Fahrzeugsuche – wie in App.tsx; brauchen page-html + Preload (Googlebot: /api/ blockiert). */
+function isFahrzeugeSucheLandingPath(normalized) {
+  const parts = normalized.split("/").filter(Boolean);
+  if (parts.length === 3 && parts[0] === "fahrzeuge" && parts[1] === "marke") return true;
+  if (parts.length === 4 && parts[0] === "fahrzeuge" && parts[1] === "marke") return true;
+  if (parts.length === 3 && parts[0] === "fahrzeuge" && parts[1] === "typ") return true;
+  return false;
+}
 
 const HTML_404 = `<!DOCTYPE html>
 <html lang="de">
@@ -167,6 +176,18 @@ export default async function middleware(request) {
 
   // Pre-Rendering: /, /fahrzeuge, /unternehmen
   if (PRERENDER_PATHS.has(normalized)) {
+    const apiUrl = new URL("/api/page-html", request.url);
+    apiUrl.searchParams.set("path", normalized);
+    const res = await fetch(apiUrl, { method: "GET", headers: { Accept: "text/html" } });
+    const html = await res.text();
+    const headers = new Headers(res.headers);
+    headers.set("Content-Type", "text/html; charset=utf-8");
+    headers.set("X-Page-HTML", "1");
+    return new Response(html, { status: res.status, headers });
+  }
+
+  // Fahrzeugsuche-Landingpages: /fahrzeuge/marke/…, /fahrzeuge/typ/… (Preload wie /fahrzeuge)
+  if (isFahrzeugeSucheLandingPath(normalized)) {
     const apiUrl = new URL("/api/page-html", request.url);
     apiUrl.searchParams.set("path", normalized);
     const res = await fetch(apiUrl, { method: "GET", headers: { Accept: "text/html" } });
