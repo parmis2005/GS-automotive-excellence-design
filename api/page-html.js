@@ -162,6 +162,8 @@ export default async function handler(req, res) {
   let bodyContentToUse = config.bodyContent;
   /** Für JSON-LD ItemList (nur /fahrzeuge mit Fahrzeugen) */
   let vehiclesForSchema = [];
+  /** Vollständige Liste für window.__PRELOADED_VEHICLES__ — Googlebot darf /api/ nicht; React braucht Hydration ohne fetch. */
+  let vehiclesFullForPreload = [];
   if (routePath === "/fahrzeuge") {
     try {
       const vehiclesRes = await fetch(`${BACKEND_API}/api/vehicles`, {
@@ -170,8 +172,10 @@ export default async function handler(req, res) {
       });
       if (vehiclesRes.ok) {
         const vehiclesData = await vehiclesRes.json().catch(() => null);
-        const list = vehiclesData?.data ?? (vehiclesData?.vehicles ?? []);
-        const vehicles = Array.isArray(list) ? list.slice(0, 80) : [];
+        const listRaw = vehiclesData?.data ?? (vehiclesData?.vehicles ?? []);
+        const list = Array.isArray(listRaw) ? listRaw : [];
+        vehiclesFullForPreload = list;
+        const vehicles = list.slice(0, 80);
         vehiclesForSchema = vehicles;
         if (vehicles.length > 0) {
           const listItems = vehicles
@@ -335,6 +339,15 @@ export default async function handler(req, res) {
   // Sichtbaren Content in #root injizieren (wird von React beim Mount ersetzt)
   const rootWithContent = `<div id="root">${bodyContentToUse}</div>`;
   html = html.replace(/<div id="root"\s*>\s*<\/div>/, rootWithContent);
+
+  // Google rendert JS, ruft aber /api/vehicles nicht an (robots.txt). Wie vehicle-preview: Daten einbetten.
+  if (routePath === "/fahrzeuge" && vehiclesFullForPreload.length > 0) {
+    const preloadJson = JSON.stringify(vehiclesFullForPreload).replace(/</g, "\\u003c");
+    const preloadBlock =
+      `<script type="application/json" id="__PRELOADED_VEHICLES__">${preloadJson}</script>` +
+      `<script>try{window.__PRELOADED_VEHICLES__=JSON.parse(document.getElementById("__PRELOADED_VEHICLES__").textContent);}catch(e){}</script>`;
+    html = html.replace("</head>", `${preloadBlock}\n</head>`);
+  }
 
   // Mit ?raw=1 nur Pre-Render anzeigen (kein React), z. B. zum Prüfen: /api/page-html?path=/fahrzeuge&raw=1
   const rawParam = req.query?.raw;
