@@ -16,6 +16,7 @@
   ],
   "rewrites": [
     { "source": "/sitemap-fahrzeuge.xml", "destination": "http://209.38.251.38:3001/sitemap-fahrzeuge.xml" },
+    { "source": "/sitemap-fahrzeugsuche.xml", "destination": "http://209.38.251.38:3001/sitemap-fahrzeugsuche.xml" },
     { "source": "/", "destination": "/api/page-html?path=/" },
     { "source": "/fahrzeuge", "destination": "/api/page-html?path=/fahrzeuge" },
     { "source": "/unternehmen", "destination": "/api/page-html?path=/unternehmen" },

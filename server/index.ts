@@ -10,6 +10,7 @@ import { purchaseInquiryRouter } from "./routes/purchaseInquiry.js";
 import { generalInquiryRouter } from "./routes/generalInquiry.js";
 import { statsRouter } from "./routes/stats.js";
 import { sitemapFahrzeugeRouter } from "./routes/sitemapFahrzeuge.js";
+import { sitemapFahrzeugsucheRouter } from "./routes/sitemapFahrzeugsuche.js";
 import { initializeDatabase, closeDatabase } from "./db/database.js";
 import { startSyncJob, stopSyncJob } from "./services/syncService.js";
 import { isCargateApiConfigured } from "./services/cargateApi.js";
@@ -36,6 +37,7 @@ app.use("/api/purchase-inquiry", purchaseInquiryRouter);
 app.use("/api/inquiries", generalInquiryRouter);
 app.use("/api/stats", statsRouter);
 app.use("/", sitemapFahrzeugeRouter);
+app.use("/", sitemapFahrzeugsucheRouter);
 
 // Health check
 app.get("/health", (req, res) => {

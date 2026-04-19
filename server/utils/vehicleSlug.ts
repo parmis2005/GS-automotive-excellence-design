@@ -3,7 +3,7 @@
  * Format: id-marke-modell, z.B. 8879641-bmw-320i
  */
 
-function slugify(text: string): string {
+export function slugify(text: string): string {
   if (!text || typeof text !== "string") return "";
   return text
     .trim()
