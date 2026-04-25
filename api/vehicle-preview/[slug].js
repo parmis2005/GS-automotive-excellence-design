@@ -302,18 +302,25 @@ export default async function handler(req, res) {
     `<script>try{window.__PRELOADED_VEHICLE__=JSON.parse(document.getElementById("__PRELOADED_VEHICLE__").textContent);}catch(e){}</script>`;
 
   const seoStyles = `<style>
-.seo-static-content{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:48rem;margin:0 auto;padding:2rem 1rem;line-height:1.6;color:#1e293b;}
-.seo-static-content h1{font-size:1.75rem;font-weight:700;color:#1e5a9e;margin:0 0 0.5rem;}
-.seo-static-content__price{font-size:1.5rem;font-weight:600;color:#1e293b;margin:0 0 1rem;}
-.seo-static-content__specs{margin:0 0 1rem;display:grid;grid-template-columns:auto 1fr;gap:0.25rem 1.5rem;}
-.seo-static-content__specs dt{color:#64748b;} .seo-static-content__specs dd{margin:0;}
-.seo-static-content__figure{margin:0 0 1rem;}
-.seo-static-content__figure img{max-width:100%;height:auto;border-radius:0.5rem;}
-.seo-static-content__h2{font-size:1.125rem;font-weight:600;margin:0 0 0.5rem;}
-.seo-static-content__description p{margin:0;color:#475569;}
-.seo-static-content a{color:#1e5a9e;text-decoration:none;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+.seo-prerender-bar{background:#0f172a;padding:0.75rem 1.5rem;display:flex;align-items:center;gap:0.75rem;}
+.seo-prerender-bar__logo{color:#fff;font-weight:800;font-size:1rem;letter-spacing:0.05em;}
+.seo-prerender-bar__sub{color:#94a3b8;font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;}
+.seo-static-content{max-width:52rem;margin:2rem auto;padding:2rem;background:#fff;border-radius:1rem;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);color:#1e293b;}
+.seo-static-content h1{font-size:1.5rem;font-weight:800;color:#0f172a;margin:0 0 0.25rem;letter-spacing:-0.02em;line-height:1.2;}
+.seo-static-content__price{font-size:1.75rem;font-weight:700;color:#1e40af;margin:0.25rem 0 0.75rem;}
+.seo-static-content__intro{font-size:0.9375rem;color:#475569;margin:0 0 1.25rem;line-height:1.7;}
+.seo-static-content__specs{margin:0 0 1.25rem;display:grid;grid-template-columns:auto 1fr;gap:0.5rem 2rem;background:#f8fafc;border-radius:0.75rem;padding:1rem 1.25rem;}
+.seo-static-content__specs dt{color:#64748b;font-size:0.8125rem;font-weight:500;}
+.seo-static-content__specs dd{margin:0;font-weight:600;font-size:0.875rem;color:#0f172a;}
+.seo-static-content__figure{margin:0 0 1.25rem;}
+.seo-static-content__figure img{width:100%;height:auto;border-radius:0.75rem;aspect-ratio:4/3;object-fit:cover;}
+.seo-static-content a{color:#1e40af;text-decoration:none;font-weight:500;font-size:0.875rem;}
 .seo-static-content a:hover{text-decoration:underline;}
-</style>`;
+nav[aria-label="Weitere Fahrzeuge"]{display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;padding-top:1rem;border-top:1px solid #f1f5f9;}
+</style>
+<div class="seo-prerender-bar"><div><div class="seo-prerender-bar__logo">GS AUTOMOBILE</div><div class="seo-prerender-bar__sub">Rheinland</div></div></div>`;
 
   let html;
   try {

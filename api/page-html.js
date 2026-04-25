@@ -459,17 +459,24 @@ export default async function handler(req, res) {
 
   // Styling für Pre-Render-Block (sieht vor React-Load wie die Website aus)
   const seoStaticStyles = `<style>
-.seo-static-content{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:48rem;margin:0 auto;padding:2rem 1rem;line-height:1.6;color:#1e293b;}
-.seo-static-content h1{font-size:1.75rem;font-weight:700;color:#1e5a9e;margin:0 0 1rem;letter-spacing:-0.02em;}
-.seo-static-content p{margin:0 0 0.75rem;font-size:0.9375rem;color:#475569;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+.seo-prerender-bar{background:#0f172a;padding:0.75rem 1.5rem;display:flex;align-items:center;gap:0.75rem;}
+.seo-prerender-bar__logo{color:#fff;font-weight:800;font-size:1rem;letter-spacing:0.05em;}
+.seo-prerender-bar__sub{color:#94a3b8;font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;}
+.seo-static-content{max-width:52rem;margin:2rem auto;padding:2rem;background:#fff;border-radius:1rem;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);line-height:1.7;color:#1e293b;}
+.seo-static-content h1{font-size:1.625rem;font-weight:800;color:#0f172a;margin:0 0 0.75rem;letter-spacing:-0.02em;line-height:1.2;}
+.seo-static-content h2{font-size:1.0625rem;font-weight:700;color:#1e40af;margin:1.5rem 0 0.5rem;padding-top:1.25rem;border-top:1px solid #f1f5f9;}
+.seo-static-content p{margin:0 0 0.75rem;font-size:0.9375rem;color:#475569;line-height:1.7;}
 .seo-static-content p:last-child{margin-bottom:0;}
 .seo-static-content__section{margin-top:1.5rem;}
-.seo-static-content__list-title{font-size:1.125rem;font-weight:600;color:#1e293b;margin:1.25rem 0 0.5rem;}
-.seo-static-content__list{margin:0;padding-left:1.25rem;list-style:disc;}
-.seo-static-content__list li{margin-bottom:0.25rem;}
-.seo-static-content__list a{color:#1e5a9e;text-decoration:none;}
+.seo-static-content__list-title{font-size:1rem;font-weight:700;color:#0f172a;margin:1.5rem 0 0.75rem;padding-top:1.25rem;border-top:1px solid #f1f5f9;}
+.seo-static-content__list{margin:0;padding:0;list-style:none;display:grid;gap:0.375rem;}
+.seo-static-content__list li{background:#f8fafc;border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.875rem;}
+.seo-static-content__list a{color:#1e40af;text-decoration:none;font-weight:500;}
 .seo-static-content__list a:hover{text-decoration:underline;}
-</style>`;
+</style>
+<div class="seo-prerender-bar"><div><div class="seo-prerender-bar__logo">GS AUTOMOBILE</div><div class="seo-prerender-bar__sub">Rheinland</div></div></div>`;
   const jsonLdHtml =
     jsonLdScripts.length > 0
       ? jsonLdScripts
