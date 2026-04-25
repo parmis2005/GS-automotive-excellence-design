@@ -203,6 +203,8 @@ export default async function handler(req, res) {
   const fuel = (vehicle.fuel ?? "").trim() || "–";
   const powerKw = Number(vehicle.powerKw) || 0;
   const powerPs = Number(vehicle.power) || 0;
+  const transmission = (vehicle.transmission ?? "").trim() || null;
+  const color = (vehicle.exteriorColor ?? "").trim() || null;
   const description = (vehicle.description ?? "").trim();
   const image = ensureAbsoluteImageUrl(vehicle.image, vehicleId);
   const detailPath = `/fahrzeuge/${slug}`;
@@ -240,28 +242,30 @@ export default async function handler(req, res) {
         )
       : metaDescription;
 
+  const brandSlug = brand.toLowerCase().replace(/\s+/g, "-");
+  const powerStr = powerKw > 0 && powerPs > 0 ? `${powerKw} kW (${powerPs} PS)` : powerKw > 0 ? `${powerKw} kW` : powerPs > 0 ? `${powerPs} PS` : null;
+
   const vehicleBodyContent = `
     <main class="seo-static-content vehicle-preview-content" aria-label="Fahrzeugdetails">
-      <h1>${escapeMeta(`${brand} ${model} ${year}`)}</h1>
+      <h1>${escapeMeta(`${brand} ${model} ${year}`)} – Gebrauchtwagen in Krefeld</h1>
       <p class="seo-static-content__price" aria-label="Preis">${priceStr ? `${priceStr} €` : "Preis auf Anfrage"}</p>
+      <p class="seo-static-content__intro">${escapeMeta(metaDescription)}</p>
       <dl class="seo-static-content__specs">
         <dt>Erstzulassung</dt><dd>${escapeMeta(String(year))}</dd>
         <dt>Kilometerstand</dt><dd>${escapeMeta(mileage > 0 ? mileage.toLocaleString("de-DE") + " km" : "–")}</dd>
         <dt>Kraftstoff</dt><dd>${escapeMeta(fuel)}</dd>
-        ${powerKw > 0 || powerPs > 0 ? `<dt>Leistung</dt><dd>${escapeMeta(powerKw > 0 && powerPs > 0 ? `${powerKw} kW (${powerPs} PS)` : powerKw > 0 ? `${powerKw} kW` : `${powerPs} PS`)}</dd>` : ""}
+        ${powerStr ? `<dt>Leistung</dt><dd>${escapeMeta(powerStr)}</dd>` : ""}
+        ${transmission ? `<dt>Getriebe</dt><dd>${escapeMeta(transmission)}</dd>` : ""}
+        ${color ? `<dt>Farbe</dt><dd>${escapeMeta(color)}</dd>` : ""}
       </dl>
       <figure class="seo-static-content__figure">
         <img src="${escapeMeta(image)}" alt="${escapeMeta(`${brand} ${model} ${year}`)}" width="800" height="600" loading="eager" />
       </figure>
-      <section class="seo-static-content__description" aria-label="Beschreibung">
-        <h2 class="seo-static-content__h2">Beschreibung</h2>
-        <p>${escapeMeta(shortDesc)}</p>
-      </section>
-      <p><a href="${BASE_URL}/fahrzeuge">Weitere Gebrauchtwagen</a></p>
+      <nav aria-label="Weitere Fahrzeuge" style="margin-top:1rem;display:flex;gap:1rem;flex-wrap:wrap;">
+        <a href="${BASE_URL}/fahrzeuge">Alle Gebrauchtwagen in Krefeld</a>
+        <a href="${BASE_URL}/fahrzeuge/marke/${encodeURIComponent(brandSlug)}">Weitere ${escapeMeta(brand)} Gebrauchtwagen</a>
+      </nav>
     </main>`;
-
-  const transmission = (vehicle.transmission ?? "").trim() || null;
-  const color = (vehicle.exteriorColor ?? "").trim() || null;
 
   const vehicleSchema = {
     "@context": "https://schema.org",
