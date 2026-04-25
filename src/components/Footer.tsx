@@ -146,7 +146,7 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-10 pt-6 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div data-nosnippet className="mt-10 pt-6 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <p className="text-xs text-gray-500">
               © {currentYear} GS Automobile Rheinland GmbH. Alle Rechte vorbehalten.
