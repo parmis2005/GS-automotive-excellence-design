@@ -24,19 +24,8 @@ const AboutSection = () => {
         <div className="max-w-4xl mx-auto">
           {/* Main Text */}
           <div className="prose prose-lg max-w-none text-center mb-12">
-            <p className="text-muted-foreground text-lg leading-relaxed mb-6">
-              <strong className="text-foreground">Warum sich der Fahrzeugkauf bei der GS Automobile Rheinland GmbH für Sie lohnt?</strong>
-            </p>
-            <p className="text-muted-foreground leading-relaxed mb-6">
-              Als <strong className="text-foreground">Autohaus mit Standort in Krefeld</strong> und Ansprechpartner für 
-              Kunden aus <strong className="text-foreground">Krefeld, Düsseldorf, Neuss, Mönchengladbach, Duisburg, Moers, Meerbusch, Willich, Kempen, Tönisvorst und Umgebung</strong> steht die GS Automobile Rheinland GmbH 
-              seit vielen Jahren für Kompetenz, Verlässlichkeit und ein ausgezeichnetes Preis-Leistungs-Verhältnis 
-              bei <strong className="text-foreground">Gebrauchtwagen</strong> und Jahreswagen.
-            </p>
             <p className="text-muted-foreground leading-relaxed">
-              Unsere langjährige Zusammenarbeit mit renommierten Leasinggesellschaften 
-              und Flottenanbietern ermöglicht es uns, Ihnen hochwertige Fahrzeuge 
-              zu attraktiven Konditionen anzubieten.
+              GS Automobile Rheinland ist Ihr Gebrauchtwagen-Spezialist in Krefeld. Als offizieller BMW Bank Partner bieten wir über 90 geprüfte Jahres- und Gebrauchtwagen – mit Finanzierung, DEKRA-Prüfung und Garantie. Besuchen Sie uns in Krefeld oder stöbern Sie direkt online in unserem Bestand.
             </p>
           </div>
 
