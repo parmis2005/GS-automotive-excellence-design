@@ -261,7 +261,7 @@ export function generateVehicleSchema(
 
   return {
     "@context": "https://schema.org",
-    "@type": "Car",
+    "@type": ["Car", "Product"],
     "name": `${brand} ${model}`,
     "image": imageUrl,
     "description": description || `${brand} ${model} ${year}, ${mileage.toLocaleString("de-DE")} km, ${fuel}`,

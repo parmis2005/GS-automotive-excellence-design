@@ -265,7 +265,7 @@ export default async function handler(req, res) {
 
   const vehicleSchema = {
     "@context": "https://schema.org",
-    "@type": "Car",
+    "@type": ["Car", "Product"],
     name: `${brand} ${model}`,
     image,
     description: metaDescription,
