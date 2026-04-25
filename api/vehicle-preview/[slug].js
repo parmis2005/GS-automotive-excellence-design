@@ -260,15 +260,23 @@ export default async function handler(req, res) {
       <p><a href="${BASE_URL}/fahrzeuge">Weitere Gebrauchtwagen</a></p>
     </main>`;
 
+  const transmission = (vehicle.transmission ?? "").trim() || null;
+  const color = (vehicle.exteriorColor ?? "").trim() || null;
+
   const vehicleSchema = {
     "@context": "https://schema.org",
-    "@type": "Product",
+    "@type": "Car",
     name: `${brand} ${model}`,
     image,
     description: metaDescription,
     brand: { "@type": "Brand", name: brand },
+    manufacturer: { "@type": "Organization", name: brand },
     model,
     productionDate: String(year),
+    fuelType: fuel,
+    ...(transmission ? { vehicleTransmission: transmission } : {}),
+    ...(color ? { color } : {}),
+    mileageFromOdometer: { "@type": "QuantitativeValue", value: mileage, unitCode: "KMT" },
     offers: {
       "@type": "Offer",
       price,
@@ -278,8 +286,7 @@ export default async function handler(req, res) {
       seller: { "@type": "Organization", name: "GS Automobile Rheinland" },
     },
     additionalProperty: [
-      { "@type": "PropertyValue", name: "Kilometerstand", value: `${mileage.toLocaleString("de-DE")} km` },
-      { "@type": "PropertyValue", name: "Kraftstoff", value: fuel },
+      { "@type": "PropertyValue", name: "Baujahr", value: String(year) },
     ],
   };
   const jsonLdScript = `<script type="application/ld+json">${JSON.stringify(vehicleSchema).replace(/<\/script/gi, "<\\/script")}</script>`;
