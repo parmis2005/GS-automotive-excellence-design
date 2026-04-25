@@ -47,7 +47,7 @@ export function getDefaultSEO(): SEOData {
   return {
     title: "GS Automobile Rheinland GmbH | Gebrauchtwagen Krefeld",
     description:
-      "Autohaus in Krefeld: Gebrauchtwagen, BMW, Opel. Für Kunden aus Düsseldorf, Neuss, Mönchengladbach. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
+      "Ihr BMW & Opel Spezialist in Krefeld – 90+ geprüfte Gebrauchtwagen. Offizieller BMW Bank Partner mit Finanzierung, DEKRA & Garantie. Jetzt entdecken.",
     ogDescription: "Gebrauchtwagen, BMW und Opel in Krefeld. Finanzierung, DEKRA, Garantie. GS Automobile Rheinland.",
     keywords: "Autohaus Krefeld, Autohaus Düsseldorf, Autohaus Neuss, Autohaus Mönchengladbach, Autohaus Duisburg, Autohaus Moers, Autohaus Meerbusch, Autohaus Willich, Autohaus Kempen, Autohaus Tönisvorst, GS Automobile GmbH, GS Auto, Gebrauchtwagen Krefeld, Gebrauchtwagen Düsseldorf, BMW Krefeld, Opel Krefeld, Jahreswagen, Finanzierung Krefeld, Inzahlungnahme, Fahrzeugankauf",
     image: `${BASE_URL}/logo.png`,
