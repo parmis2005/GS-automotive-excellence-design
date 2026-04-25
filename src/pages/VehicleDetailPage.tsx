@@ -494,7 +494,9 @@ const VehicleDetailPage = () => {
     vehicle.fuel,
     vehicle.image,
     vehicle.id,
-    seoData.description
+    seoData.description,
+    vehicle.transmission,
+    vehicle.exteriorColor
   );
   const breadcrumbs = [
     { name: "Startseite", url: "/" },

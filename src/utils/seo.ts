@@ -235,7 +235,7 @@ export function generateLocalBusinessSchema() {
 }
 
 /**
- * Generates Product structured data (JSON-LD) for a vehicle
+ * Generates Car structured data (JSON-LD) for a vehicle
  */
 export function generateVehicleSchema(
   brand: string,
@@ -246,7 +246,9 @@ export function generateVehicleSchema(
   fuel: string,
   image?: string,
   vehicleId?: string,
-  description?: string
+  description?: string,
+  transmission?: string,
+  color?: string
 ) {
   const path = vehicleId ? `/fahrzeuge/${getVehicleDetailSlug(vehicleId, brand, model)}` : "";
   const url = path ? `${BASE_URL}${path}` : BASE_URL;
@@ -259,7 +261,7 @@ export function generateVehicleSchema(
 
   return {
     "@context": "https://schema.org",
-    "@type": "Product",
+    "@type": "Car",
     "name": `${brand} ${model}`,
     "image": imageUrl,
     "description": description || `${brand} ${model} ${year}, ${mileage.toLocaleString("de-DE")} km, ${fuel}`,
@@ -273,6 +275,14 @@ export function generateVehicleSchema(
     },
     "model": model,
     "productionDate": year.toString(),
+    "fuelType": fuel,
+    ...(transmission ? { "vehicleTransmission": transmission } : {}),
+    ...(color ? { "color": color } : {}),
+    "mileageFromOdometer": {
+      "@type": "QuantitativeValue",
+      "value": mileage,
+      "unitCode": "KMT"
+    },
     "offers": {
       "@type": "Offer",
       "price": price,
@@ -285,16 +295,6 @@ export function generateVehicleSchema(
       }
     },
     "additionalProperty": [
-      {
-        "@type": "PropertyValue",
-        "name": "Kilometerstand",
-        "value": `${mileage.toLocaleString("de-DE")} km`
-      },
-      {
-        "@type": "PropertyValue",
-        "name": "Kraftstoff",
-        "value": fuel
-      },
       {
         "@type": "PropertyValue",
         "name": "Baujahr",
