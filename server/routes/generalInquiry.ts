@@ -25,7 +25,7 @@ generalInquiryRouter.post("/", async (req, res) => {
   try {
     const payload = req.body || {};
     const type = (payload.type || "Allgemeine Anfrage").toString();
-    const now = new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+    const now = new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" });
 
     if (!resendApiKey) {
       return res.status(500).json({ success: false, error: "Resend nicht konfiguriert" });

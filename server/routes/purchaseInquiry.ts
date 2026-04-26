@@ -227,7 +227,7 @@ async function finalizePurchaseInquiry(
   let emailSent = false;
   if (resendApiKey) {
     const resend = new Resend(resendApiKey);
-    const now = new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+    const now = new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" });
 
     const html = `
 <!DOCTYPE html>
