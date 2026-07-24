@@ -7,6 +7,7 @@ export interface Vehicle {
   title?: string; // Volltitel von CarGate (z. B. "BMW 1er 118d") für Startseite
   price: number;
   year: number;
+  firstRegistrationMonth?: number; // Erstzulassungsmonat (1-12), von CarGate InitialRegistration
   mileage: number;
   fuel: string;
   isNew?: boolean;

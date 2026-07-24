@@ -9,7 +9,7 @@ import { getVehicleType, formatFuelType, getVehicleDisplayName } from "@/lib/veh
 import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
 import { VehicleTitle } from "@/components/VehicleTitle";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, formatFirstRegistration } from "@/lib/utils";
 
 interface VehicleListItemProps extends Vehicle {
   isFirst?: boolean; // Optional prop to mark first item
@@ -26,6 +26,7 @@ const VehicleListItem = ({
   title,
   price,
   year,
+  firstRegistrationMonth,
   mileage,
   fuel,
   power,
@@ -263,7 +264,7 @@ const VehicleListItem = ({
                   <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
                   <div className="flex flex-col">
                     <span className="text-xs text-muted-foreground">Erstzulassung</span>
-                    <span className="font-semibold text-sm">{year}</span>
+                    <span className="font-semibold text-sm">{formatFirstRegistration(year, firstRegistrationMonth)}</span>
                   </div>
                 </div>
               )}

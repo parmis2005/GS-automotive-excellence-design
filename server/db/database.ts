@@ -78,6 +78,9 @@ ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS cylinders INTEGER;
 -- Bildanzahl (> 4 = echte Fotos, 4 = Platzhalter wenn keine Fotos)
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS image_count INTEGER;
 
+-- Erstzulassungsmonat (1-12), von CarGate InitialRegistration
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS first_registration_month INTEGER;
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_vehicles_brand ON vehicles(brand);
 CREATE INDEX IF NOT EXISTS idx_vehicles_category ON vehicles(category);
@@ -148,6 +151,7 @@ export async function getAllVehicles(): Promise<Vehicle[]> {
         model,
         price::numeric::float8 as price,
         year,
+        first_registration_month as "firstRegistrationMonth",
         mileage,
         fuel,
         transmission,
@@ -210,6 +214,7 @@ export async function getVehicleById(id: string): Promise<Vehicle | null> {
         model,
         price::numeric::float8 as price,
         year,
+        first_registration_month as "firstRegistrationMonth",
         mileage,
         fuel,
         transmission,
@@ -304,19 +309,20 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
       await client.query(
         `
         INSERT INTO vehicles (
-          id, image, brand, model, price, year, mileage, fuel, transmission,
+          id, image, brand, model, price, year, first_registration_month, mileage, fuel, transmission,
           is_new, description, power, power_kw, exterior_color, exterior_color_full, interior_color,
           equipment, expose_url, offer_url, internal_number, arrival_date,
           category, vat_displayable, vehicle_type, previous_owners, production_series, model_variant,
           cubic_capacity, cylinders, image_count, last_synced_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
         ON CONFLICT (id) DO UPDATE SET
           image = EXCLUDED.image,
           brand = EXCLUDED.brand,
           model = EXCLUDED.model,
           price = EXCLUDED.price,
           year = EXCLUDED.year,
+          first_registration_month = EXCLUDED.first_registration_month,
           mileage = EXCLUDED.mileage,
           fuel = EXCLUDED.fuel,
           transmission = EXCLUDED.transmission,
@@ -341,7 +347,7 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           cubic_capacity = EXCLUDED.cubic_capacity,
           cylinders = EXCLUDED.cylinders,
           image_count = EXCLUDED.image_count,
-          last_synced_at = $31
+          last_synced_at = $32
         `,
         [
           id,
@@ -350,6 +356,7 @@ export async function upsertVehicles(vehicles: Vehicle[]): Promise<void> {
           model,
           vehicle.price,
           vehicle.year,
+          vehicle.firstRegistrationMonth ?? null,
           vehicle.mileage || 0,
           truncate(vehicle.fuel, MAX_LEN.fuel),
           truncate(vehicle.transmission, MAX_LEN.transmission),

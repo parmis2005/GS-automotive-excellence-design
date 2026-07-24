@@ -1027,6 +1027,48 @@ function getYearFromRaw(raw: Record<string, unknown>): number {
   return 0;
 }
 
+/** Liest Erstzulassungsmonat (1-12) aus Roh-Objekt: InitialRegistration.FormattedValue ("4 / 2025") oder .OriginalValue (.NET-Datum). */
+function getMonthFromRaw(raw: Record<string, unknown>): number {
+  const monthFromDotNet = (s: string): number => {
+    const netMatch = s.trim().match(/^\/Date\((\d+)/);
+    if (netMatch) {
+      const m = new Date(parseInt(netMatch[1], 10)).getMonth() + 1;
+      if (m >= 1 && m <= 12) return m;
+    }
+    return 0;
+  };
+
+  const regKeys = ["InitialRegistration", "initialRegistration", "FirstRegistration", "firstRegistration"];
+  for (const key of regKeys) {
+    const v = raw[key];
+    if (v != null && typeof v === "object" && !Array.isArray(v)) {
+      const o = v as Record<string, unknown>;
+      const formatted = o.FormattedValue ?? o.formattedValue;
+      if (typeof formatted === "string") {
+        const m = formatted.match(/(\d{1,2})\s*\/\s*(\d{4})/);
+        if (m) {
+          const month = parseInt(m[1], 10);
+          if (month >= 1 && month <= 12) return month;
+        }
+      }
+      const original = o.OriginalValue ?? o.originalValue ?? o.Value ?? o.value;
+      if (typeof original === "string") {
+        const m = monthFromDotNet(original);
+        if (m > 0) return m;
+      }
+    } else if (typeof v === "string") {
+      const m = monthFromDotNet(v);
+      if (m > 0) return m;
+      const ddmmyy = v.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+      if (ddmmyy) {
+        const month = parseInt(ddmmyy[2], 10);
+        if (month >= 1 && month <= 12) return month;
+      }
+    }
+  }
+  return 0;
+}
+
 /** Liest eine Zahl aus einem Objekt (direkt, String wie "150" oder "110 kW", oder Unterobjekt Value/Ps/Kw). */
 function getNumFromValue(v: unknown): number {
   if (typeof v === "number" && !Number.isNaN(v)) return v;
@@ -1182,6 +1224,7 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
   }
   const fallbackYear = new Date().getFullYear() - 1;
   let year = getYearFromRaw(raw) || getNum(raw, "FirstRegistration", "firstRegistration", "year", "Year", "initialRegistration", "ez", "EZ", "constructionYear", "Baujahr");
+  const firstRegistrationMonth = getMonthFromRaw(raw) || undefined;
   if (!year || year < 1990) {
     year = fallbackYear;
     if (!_carzillaYearStructureLogged) {
@@ -1500,6 +1543,7 @@ function mapCargateItemToVehicle(raw: Record<string, unknown>, catalog?: SearchC
     modelVariant: modelVariantFromApi || undefined,
     price,
     year: year || new Date().getFullYear() - 1,
+    firstRegistrationMonth,
     mileage,
     fuel,
     transmission,

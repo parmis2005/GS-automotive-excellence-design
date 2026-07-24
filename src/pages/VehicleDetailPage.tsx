@@ -7,7 +7,7 @@ import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getVehicleSEO, generateVehicleSchema } from "@/utils/seo";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, formatFirstRegistration } from "@/lib/utils";
 import { 
   Loader2, 
   AlertCircle, 
@@ -966,8 +966,8 @@ const VehicleDetailPage = () => {
                   <Calendar className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Baujahr</div>
-                  <div className="font-semibold">{vehicle.year}</div>
+                  <div className="text-sm text-muted-foreground">Erstzulassung</div>
+                  <div className="font-semibold">{formatFirstRegistration(vehicle.year, vehicle.firstRegistrationMonth)}</div>
                 </div>
               </div>
               {vehicle.mileage > 0 && (

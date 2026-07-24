@@ -8,7 +8,7 @@ import { ShareVehicleButton } from "@/components/ShareVehicleButton";
 import { normalizeColorToBasic } from "@/lib/colorUtils";
 import { formatFuelType, getVehicleDisplayName } from "@/lib/vehicleNameUtils";
 import { getVehicleDetailSlug } from "@/lib/vehicleSlug";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, formatFirstRegistration } from "@/lib/utils";
 import { VehicleTitle } from "@/components/VehicleTitle";
 
 interface VehicleCardProps extends Vehicle {
@@ -26,6 +26,7 @@ const VehicleCard = ({
   modelVariant: modelVariantProp,
   price,
   year,
+  firstRegistrationMonth,
   mileage,
   fuel,
   isNew: isNewProp,
@@ -252,7 +253,7 @@ const VehicleCard = ({
               <span>·</span>
             </>
           )}
-          <span>{year}</span>
+          <span>{formatFirstRegistration(year, firstRegistrationMonth)}</span>
           <span>·</span>
           <span>{formatFuelType(fuel)}</span>
           {transmission && (
